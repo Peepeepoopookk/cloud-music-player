@@ -76,7 +76,7 @@ def scrape_genre_from_track_page(spotify_id):
     logger.info(f"scrape_genre_from_track_page: Requesting track page: {track_url}")
     
     try:
-        response = requests.get(track_url, headers=HEADERS, timeout=10)
+        response = requests.get(track_url, headers=HEADERS, timeout=5)
         if response.status_code != 200:
             logger.warning(f"scrape_genre_from_track_page: Failed to fetch track page for {spotify_id}, HTTP status: {response.status_code}")
             return "Unknown"
@@ -108,7 +108,7 @@ def scrape_spotify_embed_playlist(playlist_id):
     logger.info(f"scrape_spotify_embed_playlist: Scraping embed playlist: {url}")
     tracks = []
     try:
-        response = requests.get(url, headers=HEADERS, timeout=10)
+        response = requests.get(url, headers=HEADERS, timeout=5)
         if response.status_code != 200:
             logger.warning(f"scrape_spotify_embed_playlist: Failed to fetch embed playlist {playlist_id}, HTTP status: {response.status_code}")
             return []
@@ -151,7 +151,7 @@ def get_trending_tracks(limit=10):
     logger.info("get_trending_tracks: Fetching weekly global charts data...")
     
     try:
-        response = requests.get(charts_api_url, headers=HEADERS, timeout=10)
+        response = requests.get(charts_api_url, headers=HEADERS, timeout=5)
         if response.status_code != 200:
             raise requests.HTTPError(f"Charts service returned status code {response.status_code}")
             
@@ -270,7 +270,7 @@ def fetch_new_releases():
     new_tracks = []
     
     try:
-        response = requests.get(url, headers=HEADERS, timeout=10)
+        response = requests.get(url, headers=HEADERS, timeout=5)
         if response.status_code != 200:
             logger.warning(f"fetch_new_releases: iTunes RSS feed status: {response.status_code}")
             return []
@@ -315,21 +315,24 @@ def resolve_spotify_id(title, artist):
     Queries DuckDuckGo search to locate the Spotify track URL and extract its ID.
     """
     logger.info(f"resolve_spotify_id: Resolving Spotify ID for '{title}' by '{artist}'...")
-    try:
-        time.sleep(random.uniform(1.0, 2.0))
-        query = f"site:open.spotify.com/track {title} {artist}"
-        url = f"https://html.duckduckgo.com/html/?q={requests.utils.quote(query)}"
-        r = requests.get(url, headers=HEADERS, timeout=10)
-        if r.status_code == 200:
-            spotify_ids = re.findall(r'open\.spotify\.com/track/([a-zA-Z0-9]+)', r.text)
-            if spotify_ids:
-                logger.info(f"resolve_spotify_id: Successfully resolved Spotify ID: {spotify_ids[0]}")
-                return spotify_ids[0]
-    except Exception as e:
-        logger.warning(f"resolve_spotify_id: Failed to resolve Spotify ID for '{title}': {e}")
-        
-    logger.info(f"resolve_spotify_id: Fallback to 'UnknownID' for '{title}'.")
-    return "UnknownID"
+    query = f"site:open.spotify.com/track {title} {artist}"
+    url = f"https://html.duckduckgo.com/html/?q={requests.utils.quote(query)}"
+    
+    for attempt in range(2):
+        try:
+            if attempt > 0:
+                time.sleep(random.uniform(1.0, 2.0))
+            r = requests.get(url, headers=HEADERS, timeout=5)
+            if r.status_code == 200:
+                spotify_ids = re.findall(r'open\.spotify\.com/track/([a-zA-Z0-9]+)', r.text)
+                if spotify_ids:
+                    logger.info(f"resolve_spotify_id: Successfully resolved Spotify ID: {spotify_ids[0]}")
+                    return spotify_ids[0]
+        except Exception as e:
+            logger.warning(f"resolve_spotify_id: Attempt {attempt + 1} failed for '{title}': {e}")
+            
+    logger.info(f"resolve_spotify_id: Failed after 2 attempts for '{title}'. Returning None.")
+    return None
 
 def get_track_by_spotify_url(spotify_url):
     """
@@ -349,7 +352,7 @@ def get_track_by_spotify_url(spotify_url):
     # Try embedding page scrape first (contains structured NEXT_DATA)
     embed_url = f"https://open.spotify.com/embed/track/{spotify_id}"
     try:
-        r = requests.get(embed_url, headers=HEADERS, timeout=10)
+        r = requests.get(embed_url, headers=HEADERS, timeout=5)
         if r.status_code == 200:
             next_data_match = re.findall(r'<script id="__NEXT_DATA__" type="application/json">([^<]+)</script>', r.text)
             if next_data_match:
@@ -368,7 +371,7 @@ def get_track_by_spotify_url(spotify_url):
     if not title or not artist:
         track_url = f"https://open.spotify.com/track/{spotify_id}"
         try:
-            r = requests.get(track_url, headers=HEADERS, timeout=10)
+            r = requests.get(track_url, headers=HEADERS, timeout=5)
             if r.status_code == 200:
                 og_title_match = re.findall(r'<meta[^>]+property="og:title"[^>]+content="([^"]+)"', r.text)
                 if og_title_match:
@@ -397,7 +400,7 @@ def get_track_by_spotify_url(spotify_url):
         search_term = f"{artist} {title}"
         itunes_url = "https://itunes.apple.com/search"
         params = {"term": search_term, "media": "music", "limit": 5}
-        r = requests.get(itunes_url, params=params, headers=HEADERS, timeout=10)
+        r = requests.get(itunes_url, params=params, headers=HEADERS, timeout=5)
         if r.status_code == 200:
             data = r.json()
             results = data.get("results", [])
@@ -441,7 +444,7 @@ def fetch_album_art(title, artist):
         "limit": 5
     }
     try:
-        response = requests.get(url, params=params, headers=HEADERS, timeout=10)
+        response = requests.get(url, params=params, headers=HEADERS, timeout=5)
         response.raise_for_status()
         results = response.json().get("results", [])
         if not results:
@@ -492,7 +495,7 @@ def detect_track_language(title, artist):
         time.sleep(random.uniform(0.5, 1.0))
         url = "https://itunes.apple.com/search"
         params = {"term": f"{title} {artist}", "entity": "song", "limit": 1}
-        r = requests.get(url, params=params, headers=HEADERS, timeout=8)
+        r = requests.get(url, params=params, headers=HEADERS, timeout=5)
         if r.status_code == 200:
             data = r.json()
             results = data.get("results", [])
@@ -521,7 +524,7 @@ def detect_track_language(title, artist):
             "User-Agent": "CloudMusicPlayer/1.0.0 (contact@example.com)",
             "Accept": "application/json"
         }
-        r = requests.get(url, params=params, headers=mb_headers, timeout=8)
+        r = requests.get(url, params=params, headers=mb_headers, timeout=5)
         if r.status_code == 200:
             data = r.json()
             recordings = data.get("recordings", [])
@@ -697,14 +700,14 @@ def fetch_jiosaavn_charts(languages=["malayalam", "tamil", "hindi"]):
         logger.info(f"fetch_jiosaavn_charts: Requesting main URL for {lang}: {target_url}")
         
         try:
-            r = requests.get(target_url, headers=HEADERS, timeout=10)
+            r = requests.get(target_url, headers=HEADERS, timeout=5)
             if r.status_code == 200:
                 tracks = parse_tracks(r.text)
             
             if not tracks:
                 logger.info(f"fetch_jiosaavn_charts: Main URL failed or returned empty. Trying fallback URL for {lang}: {fallback_url}")
                 time.sleep(random.uniform(0.5, 1.2))
-                r_fallback = requests.get(fallback_url, headers=HEADERS, timeout=10)
+                r_fallback = requests.get(fallback_url, headers=HEADERS, timeout=5)
                 if r_fallback.status_code == 200:
                     tracks = parse_tracks(r_fallback.text)
         except Exception as e:
@@ -712,7 +715,7 @@ def fetch_jiosaavn_charts(languages=["malayalam", "tamil", "hindi"]):
             try:
                 logger.info(f"fetch_jiosaavn_charts: Exception on main. Trying fallback URL for {lang}: {fallback_url}")
                 time.sleep(random.uniform(0.5, 1.2))
-                r_fallback = requests.get(fallback_url, headers=HEADERS, timeout=10)
+                r_fallback = requests.get(fallback_url, headers=HEADERS, timeout=5)
                 if r_fallback.status_code == 200:
                     tracks = parse_tracks(r_fallback.text)
             except Exception as fallback_err:
@@ -736,7 +739,7 @@ def fetch_indian_charts():
     itunes_url = "https://rss.applemarketingtools.com/api/v2/in/music/most-played/50/songs.json"
     logger.info(f"fetch_indian_charts: Fetching iTunes India charts: {itunes_url}")
     try:
-        response = requests.get(itunes_url, headers=HEADERS, timeout=10)
+        response = requests.get(itunes_url, headers=HEADERS, timeout=5)
         if response.status_code == 200:
             data = response.json()
             feed = data.get("feed", {})
