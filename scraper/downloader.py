@@ -117,6 +117,8 @@ def download_track(title, artist, output_dir):
         'extract_flat': True,  # Fetch metadata without downloading
         'extractor_args': {'youtube': {'player_client': ['android']}},
     }
+    if os.path.exists('/tmp/cookies.txt'):
+        ydl_opts_search['cookiefile'] = '/tmp/cookies.txt'
     
     try:
         with yt_dlp.YoutubeDL(ydl_opts_search) as ydl:
@@ -177,6 +179,8 @@ def download_track(title, artist, output_dir):
                     'quiet': True,
                     'extractor_args': {'youtube': {'player_client': ['android']}},
                 }
+                if os.path.exists('/tmp/cookies.txt'):
+                    ydl_opts_info['cookiefile'] = '/tmp/cookies.txt'
                 with yt_dlp.YoutubeDL(ydl_opts_info) as ydl:
                     video_info = ydl.extract_info(video_url, download=False)
                     
@@ -225,6 +229,8 @@ def download_track(title, artist, output_dir):
                     'quiet': False,
                     'extractor_args': {'youtube': {'player_client': ['android']}},
                 }
+                if os.path.exists('/tmp/cookies.txt'):
+                    ydl_opts_download['cookiefile'] = '/tmp/cookies.txt'
                 
                 if ffmpeg_available:
                     pp_opts = {

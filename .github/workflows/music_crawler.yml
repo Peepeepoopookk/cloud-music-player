@@ -56,6 +56,11 @@ jobs:
           EOF
           chmod 600 .env
 
+      - name: "Write YouTube cookies"
+        run: |
+          echo "${{ secrets.YOUTUBE_COOKIES }}" > /tmp/cookies.txt
+          chmod 600 /tmp/cookies.txt
+
       - name: Run Scraper
         env:
           SONGS_PER_RUN: ${{ github.event.inputs.songs_per_run || '7' }}
