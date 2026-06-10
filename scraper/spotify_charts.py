@@ -310,10 +310,17 @@ def fetch_new_releases():
         
     return new_tracks
 
+_spotify_id_cache = {}
+
 def resolve_spotify_id(title, artist):
     """
     Queries DuckDuckGo search to locate the Spotify track URL and extract its ID.
     """
+    cache_key = f"{title}::{artist}".lower()
+    if cache_key in _spotify_id_cache:
+        logger.info(f"resolve_spotify_id: Cache hit for '{title}' by '{artist}'")
+        return _spotify_id_cache[cache_key]
+
     logger.info(f"resolve_spotify_id: Resolving Spotify ID for '{title}' by '{artist}'...")
     query = f"site:open.spotify.com/track {title} {artist}"
     url = f"https://html.duckduckgo.com/html/?q={requests.utils.quote(query)}"
@@ -322,16 +329,21 @@ def resolve_spotify_id(title, artist):
         try:
             if attempt > 0:
                 time.sleep(random.uniform(1.0, 2.0))
-            r = requests.get(url, headers=HEADERS, timeout=5)
+            r = requests.get(url, headers=HEADERS, timeout=3)
+            if r.status_code == 429:
+                logger.warning("resolve_spotify_id: HTTP 429 Rate Limit detected. Aborting resolution for this track.")
+                return None
             if r.status_code == 200:
                 spotify_ids = re.findall(r'open\.spotify\.com/track/([a-zA-Z0-9]+)', r.text)
                 if spotify_ids:
                     logger.info(f"resolve_spotify_id: Successfully resolved Spotify ID: {spotify_ids[0]}")
+                    _spotify_id_cache[cache_key] = spotify_ids[0]
                     return spotify_ids[0]
         except Exception as e:
             logger.warning(f"resolve_spotify_id: Attempt {attempt + 1} failed for '{title}': {e}")
             
     logger.info(f"resolve_spotify_id: Failed after 2 attempts for '{title}'. Returning None.")
+    _spotify_id_cache[cache_key] = None
     return None
 
 def get_track_by_spotify_url(spotify_url):
@@ -862,6 +874,9 @@ def build_song_pool(config):
     # 3. Filter and resolve missing fields
     logger.info(f"build_song_pool: Processing pool with filter_mode: '{filter_mode}'")
     
+    ddg_consecutive_failures = 0
+    ddg_circuit_broken = False
+    
     filtered_pool = []
     for track in unique_tracks:
         title = track.get("title")
@@ -939,9 +954,26 @@ def build_song_pool(config):
                 
         # Resolve missing Spotify ID
         sp_id = track.get("spotify_id")
-        if not sp_id or sp_id == "UnknownID":
-            sp_id = resolve_spotify_id(title, artist)
-            track["spotify_id"] = sp_id
+        source = track.get("source", "")
+        
+        if sp_id and sp_id not in ("UnknownID", "unknown"):
+            logger.info(f"build_song_pool: Skip resolution, track already has Spotify ID: {sp_id}")
+        elif "Global Charts" in source or "Regional Chart" in source or "Genre Chart" in source:
+            logger.info(f"build_song_pool: Skip resolution, track is from a chart source with known IDs: {source}")
+        else:
+            if ddg_circuit_broken:
+                logger.warning("DuckDuckGo unavailable, skipping Spotify ID resolution for remaining tracks")
+            else:
+                logger.info(f"build_song_pool: Attempting resolution for '{title}' from source '{source}'")
+                new_sp_id = resolve_spotify_id(title, artist)
+                if new_sp_id is None:
+                    ddg_consecutive_failures += 1
+                    if ddg_consecutive_failures >= 3:
+                        logger.warning("DuckDuckGo unavailable, skipping Spotify ID resolution for remaining tracks")
+                        ddg_circuit_broken = True
+                else:
+                    ddg_consecutive_failures = 0
+                    track["spotify_id"] = new_sp_id
             
         filtered_pool.append(track)
         
