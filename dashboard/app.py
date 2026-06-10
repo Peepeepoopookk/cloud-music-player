@@ -1,0 +1,586 @@
+import os
+import sys
+import subprocess
+import logging
+from flask import Flask, render_template, jsonify, request
+from dotenv import load_dotenv
+
+# Load env variables from .env in project root
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+env_path = os.path.join(project_root, '.env')
+load_dotenv(dotenv_path=env_path)
+
+# Import drive client functions
+# Since dashboard/ is a package or directory, we can import directly or adjust sys.path
+sys.path.append(project_root)
+from dashboard.drive_client import list_files, download_json, upload_json, delete_file, get_storage_quota, get_file_metadata, get_oauth_drive_service
+from scraper.state_manager import load_config, save_config, load_state, save_state, is_duplicate
+from scraper.spotify_charts import get_track_by_spotify_url, fetch_album_art
+from scraper.downloader import download_track
+from scraper.drive_uploader import upload_track, update_database, normalize_database
+import ctypes
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
+
+app = Flask(__name__, 
+            template_folder=os.path.join(project_root, 'dashboard', 'templates'),
+            static_folder=os.path.join(project_root, 'dashboard', 'static'))
+
+db_file_id_cache = None
+
+def is_scraper_running():
+    pid_file = os.path.join(project_root, 'temp', 'scraper.pid')
+    if not os.path.exists(pid_file):
+        return False
+    try:
+        with open(pid_file, 'r') as f:
+            pid = int(f.read().strip())
+        
+        # Check if pid is running on Windows
+        kernel32 = ctypes.windll.kernel32
+        PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
+        h_process = kernel32.OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, False, pid)
+        if h_process:
+            exit_code = ctypes.c_ulong()
+            kernel32.GetExitCodeProcess(h_process, ctypes.byref(exit_code))
+            kernel32.CloseHandle(h_process)
+            return exit_code.value == 259
+        return False
+    except Exception:
+        return False
+
+def get_db_file_id():
+    """
+    Retrieves the database.json file ID from env, or lists files to find/initialize it.
+    """
+    global db_file_id_cache
+    if db_file_id_cache:
+        return db_file_id_cache
+
+    db_file_id = os.environ.get('GDRIVE_DB_FILE_ID')
+    if db_file_id:
+        db_file_id_cache = db_file_id
+        return db_file_id
+
+    folder_id = os.environ.get('GDRIVE_FOLDER_ID')
+    logger.info(f"GDRIVE_DB_FILE_ID not set. Searching for 'database.json' in folder: {folder_id}")
+    
+    files = []
+    try:
+        files = list_files(folder_id)
+    except Exception as e:
+        logger.error(f"Failed to list files in folder {folder_id}: {e}")
+        return None
+
+    db_folder_id = None
+    for f in files:
+        if f.get('name') == 'database.json':
+            db_file_id = f.get('id')
+            logger.info(f"Found 'database.json' with ID: {db_file_id}")
+            break
+        elif f.get('name') == 'database' and f.get('mimeType') == 'application/vnd.google-apps.folder':
+            db_folder_id = f.get('id')
+
+    # Check database subfolder if database.json not found in main folder
+    if not db_file_id and db_folder_id:
+        logger.info(f"Searching for 'database.json' inside 'database' subfolder: {db_folder_id}")
+        try:
+            sub_files = list_files(db_folder_id)
+            for sf in sub_files:
+                if sf.get('name') == 'database.json':
+                    db_file_id = sf.get('id')
+                    logger.info(f"Found 'database.json' inside subfolder with ID: {db_file_id}")
+                    break
+        except Exception as e:
+            logger.error(f"Failed to list files in subfolder {db_folder_id}: {e}")
+
+    # If still not found, initialize a new database.json on Google Drive!
+    if not db_file_id:
+        target_folder = db_folder_id if db_folder_id else folder_id
+        logger.info(f"database.json not found. Initializing new database.json in folder ID: {target_folder}")
+        try:
+            new_file = upload_json(None, [], 'database.json', parent_id=target_folder)
+            db_file_id = new_file.get('id')
+            logger.info(f"Created new database.json on Google Drive with ID: {db_file_id}")
+        except Exception as e:
+            logger.critical(
+                f"Failed to auto-create database.json in Google Drive due to storage/quota restrictions: {e}. "
+                "CRITICAL: If using a standard service account without a Shared Drive, please pre-create an empty database.json file "
+                "in your Google Drive folder manually, share the folder with the service account email, and set its ID in the GDRIVE_DB_FILE_ID "
+                "environment variable in your .env file."
+            )
+            return None
+
+    db_file_id_cache = db_file_id
+    return db_file_id
+
+@app.route('/')
+def index():
+    """
+    GET / — serves the main dashboard page
+    """
+    try:
+        return render_template('index.html')
+    except Exception as e:
+        logger.error(f"Error rendering index.html: {e}", exc_info=True)
+        return f"Error loading page: {str(e)}", 500
+
+@app.route('/api/tracks', methods=['GET'])
+def get_tracks():
+    """
+    GET /api/tracks — fetches and returns the contents of database.json from Drive.
+    Also dynamically maps track file sizes from Drive.
+    """
+    try:
+        db_file_id = get_db_file_id()
+        if not db_file_id:
+            return jsonify([])
+        data = download_json(db_file_id)
+        
+        # Ensure it is a list
+        tracks = []
+        if isinstance(data, list):
+            tracks = data
+        elif isinstance(data, dict):
+            if 'tracks' in data and isinstance(data['tracks'], list):
+                tracks = data['tracks']
+            else:
+                tracks = list(data.values())
+        
+        # Query media folder files to map sizes dynamically
+        media_folder_id = os.environ.get('GDRIVE_MEDIA_FOLDER_ID')
+        media_files = []
+        if media_folder_id:
+            try:
+                media_files = list_files(media_folder_id)
+            except Exception as e:
+                logger.error(f"Failed to list media files for size mapping: {e}")
+                
+        # Create map of file ID to size
+        size_map = {}
+        for f in media_files:
+            fid = f.get('id')
+            if fid:
+                size_map[fid] = f.get('size')
+                
+        # Inject size into each track
+        for track in tracks:
+            fid = track.get('driveFileId') or track.get('id')
+            track['size'] = size_map.get(fid)
+            
+        return jsonify(tracks)
+    except Exception as e:
+        logger.error(f"Error in GET /api/tracks: {e}", exc_info=True)
+        return jsonify([])
+
+@app.route('/api/storage', methods=['GET'])
+def get_storage():
+    """
+    GET /api/storage — returns total tracks, media size, quota, and database update timestamp.
+    """
+    try:
+        # 1. Total tracks from tracks list in database.json
+        db_file_id = get_db_file_id()
+        total_tracks = 0
+        album_art_count = 0
+        last_updated = None
+        if db_file_id:
+            try:
+                db_data = download_json(db_file_id)
+                tracks = []
+                if isinstance(db_data, list):
+                    tracks = db_data
+                elif isinstance(db_data, dict):
+                    if 'tracks' in db_data and isinstance(db_data['tracks'], list):
+                        tracks = db_data['tracks']
+                    else:
+                        tracks = list(db_data.values())
+                total_tracks = len(tracks)
+                album_art_count = sum(1 for t in tracks if t.get('album_art') is not None)
+            except Exception as e:
+                logger.error(f"Failed to read database.json size: {e}")
+            
+            # Get modifiedTime from Drive file metadata
+            try:
+                meta = get_file_metadata(db_file_id)
+                last_updated = meta.get('modifiedTime')
+            except Exception as e:
+                logger.error(f"Failed to get database.json metadata: {e}")
+                
+        # 2. Sum of all media file sizes from GDRIVE_MEDIA_FOLDER_ID
+        media_folder_id = os.environ.get('GDRIVE_MEDIA_FOLDER_ID')
+        media_size = 0
+        if media_folder_id:
+            try:
+                media_files = list_files(media_folder_id)
+                media_size = sum(int(f.get('size', 0)) for f in media_files if f.get('size'))
+            except Exception as e:
+                logger.error(f"Failed to list media folder sizes: {e}")
+                
+        # 3. Google Drive Storage Quota limit and usage using about.get
+        drive_limit = 15.0 * 1024 * 1024 * 1024  # Default fallback 15 GB
+        drive_usage = 0
+        try:
+            quota = get_storage_quota()
+            drive_limit = int(quota.get('limit', drive_limit))
+            drive_usage = int(quota.get('usage', 0))
+        except Exception as e:
+            logger.error(f"Failed to get storage quota: {e}")
+            
+        album_art_storage_bytes = album_art_count * 150 * 1024
+        return jsonify({
+            "total_tracks": total_tracks,
+            "media_size_bytes": media_size,
+            "media_storage_bytes": media_size,
+            "drive_limit_bytes": drive_limit,
+            "drive_usage_bytes": drive_usage,
+            "last_updated": last_updated,
+            "album_art_count": album_art_count,
+            "album_art_storage_bytes": album_art_storage_bytes
+        })
+    except Exception as e:
+        logger.error(f"Error in GET /api/storage: {e}", exc_info=True)
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/delete/<file_id>', methods=['POST'])
+def delete_track(file_id):
+    """
+    POST /api/delete/<file_id> — deletes a track from Drive and updates database.json
+    """
+    try:
+        db_file_id = get_db_file_id()
+        
+        # 1. Download database.json
+        db_data = download_json(db_file_id)
+        
+        # 2. Update database structure (assuming it's a list of tracks or a dict)
+        updated = False
+        if isinstance(db_data, list):
+            new_db_data = []
+            for track in db_data:
+                if track.get('id') == file_id or track.get('file_id') == file_id:
+                    updated = True
+                else:
+                    new_db_data.append(track)
+            db_data = new_db_data
+        elif isinstance(db_data, dict):
+            if 'tracks' in db_data and isinstance(db_data['tracks'], list):
+                db_data['tracks'] = [t for t in db_data['tracks'] if t.get('id') != file_id and t.get('file_id') != file_id]
+                updated = True
+            elif file_id in db_data:
+                del db_data[file_id]
+                updated = True
+        
+        # 3. Save updated database.json back to Drive
+        upload_json(db_file_id, db_data, 'database.json')
+        
+        # 4. Delete media file from Drive
+        delete_file(file_id)
+        
+        return jsonify({"status": "success", "message": f"Track {file_id} deleted successfully."})
+    except Exception as e:
+        logger.error(f"Error in POST /api/delete/{file_id}: {e}", exc_info=True)
+        return jsonify({"error": str(e)}), 500
+    except Exception as e:
+        logger.error(f"Error in POST /api/delete/{file_id}: {e}", exc_info=True)
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/scrape', methods=['POST'])
+def trigger_scrape():
+    """
+    POST /api/scrape — triggers the scraper in the background and saves its PID
+    """
+    try:
+        scraper_script = os.path.join(project_root, 'scraper', 'main.py')
+        log_path = os.path.join(project_root, 'scraper.log')
+        
+        # Open the log file in append mode
+        log_file = open(log_path, 'a', encoding='utf-8')
+        
+        # Launch scraper/main.py as background process
+        process = subprocess.Popen(
+            [sys.executable, scraper_script],
+            stdout=log_file,
+            stderr=log_file,
+            cwd=project_root
+        )
+        
+        # Save PID to temp file
+        pid_file = os.path.join(project_root, 'temp', 'scraper.pid')
+        os.makedirs(os.path.dirname(pid_file), exist_ok=True)
+        with open(pid_file, 'w') as f:
+            f.write(str(process.pid))
+            
+        return jsonify({"status": "success", "message": "Scraper started in the background."})
+    except Exception as e:
+        logger.error(f"Error in POST /api/scrape: {e}", exc_info=True)
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/scraper/status', methods=['GET'])
+def scraper_status():
+    """
+    GET /api/scraper/status — checks if background scraper is currently running
+    """
+    running = is_scraper_running()
+    return jsonify({"status": "running" if running else "idle"})
+
+@app.route('/api/logs', methods=['GET'])
+def get_logs():
+    """
+    GET /api/logs — returns the last 50 lines of scraper.log
+    """
+    try:
+        log_path = os.path.join(project_root, 'scraper.log')
+        if not os.path.exists(log_path):
+            return jsonify({"logs": []})
+            
+        with open(log_path, 'r', encoding='utf-8', errors='ignore') as f:
+            lines = f.readlines()
+            
+        last_50 = [line.rstrip('\r\n') for line in lines[-50:]]
+        return jsonify({"logs": last_50})
+    except Exception as e:
+        logger.error(f"Error in GET /api/logs: {e}", exc_info=True)
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/config', methods=['GET'])
+def get_config():
+    """
+    GET /api/config — downloads and returns scraper_config.json from Drive, 
+    along with state metadata for dashboard display.
+    """
+    try:
+        config = load_config()
+        state = load_state()
+        
+        # Merge state info into config response structure under a 'state' key
+        config['state'] = {
+            "cursor": state.get("cursor", 0),
+            "pool_size": len(state.get("pool", []))
+        }
+        return jsonify(config)
+    except Exception as e:
+        logger.error(f"Error in GET /api/config: {e}", exc_info=True)
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/config', methods=['POST'])
+def post_config():
+    """
+    POST /api/config — receives updated config JSON and saves it to Drive using save_config
+    """
+    try:
+        new_config = request.json
+        if not new_config:
+            return jsonify({"error": "No JSON payload provided"}), 400
+            
+        # Clean config from state key if it was passed by client
+        new_config.pop('state', None)
+        
+        # Validate data types
+        if 'songs_per_run' in new_config:
+            new_config['songs_per_run'] = int(new_config['songs_per_run'])
+        if 'auto_refresh_days' in new_config:
+            new_config['auto_refresh_days'] = int(new_config['auto_refresh_days'])
+            
+        save_config(new_config)
+        
+        # Reset pool_date in state to force a pool refresh on the next run
+        try:
+            state = load_state()
+            state["pool_date"] = None
+            save_state(state)
+            logger.info("post_config: Reset pool_date in scraper_state.json to null to force rebuild on next run.")
+        except Exception as state_err:
+            logger.error(f"post_config: Failed to reset pool_date in scraper_state.json: {state_err}")
+            
+        return jsonify({"status": "success", "message": "Scraper configuration saved successfully and pool reset."})
+    except Exception as e:
+        logger.error(f"Error in POST /api/config: {e}", exc_info=True)
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/pool/refresh', methods=['POST'])
+def refresh_pool():
+    """
+    POST /api/pool/refresh — sets pool_date to null in scraper_state.json to force a pool refresh on next scraper run
+    """
+    try:
+        state = load_state()
+        state["pool_date"] = None
+        save_state(state)
+        return jsonify({"status": "success", "message": "Pool expiration state set. A fresh song pool will be built on the next run."})
+    except Exception as e:
+        logger.error(f"Error in POST /api/pool/refresh: {e}", exc_info=True)
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/library/normalize', methods=['POST'])
+def normalize_library():
+    """
+    POST /api/library/normalize — Normalizes all database tracks fields with defaults and backs up the database.
+    """
+    try:
+        tracks_changed, total_tracks = normalize_database()
+        return jsonify({
+            "status": "success",
+            "message": f"Database normalized successfully. {tracks_changed} of {total_tracks} tracks were updated.",
+            "tracks_changed": tracks_changed,
+            "total_tracks": total_tracks
+        })
+    except Exception as e:
+        logger.error(f"Error in POST /api/library/normalize: {e}", exc_info=True)
+        return jsonify({"error": str(e)}), 500
+
+def get_audio_duration_local(file_path):
+    """
+    Retrieves the duration of the audio file in MM:SS format using ffprobe.
+    """
+    try:
+        cmd = [
+            'ffprobe', '-v', 'error', 
+            '-show_entries', 'format=duration', 
+            '-of', 'default=noprint_wrappers=1:nokey=1', 
+            file_path
+        ]
+        result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        if result.returncode == 0:
+            duration_seconds = float(result.stdout.strip())
+            minutes = int(duration_seconds // 60)
+            seconds = int(duration_seconds % 60)
+            return f"{minutes:02d}:{seconds:02d}"
+    except Exception as e:
+        logger.warning(f"Could not read audio duration using ffprobe: {e}")
+    return "--:--"
+
+@app.route('/api/preview-song', methods=['GET'])
+def preview_song():
+    """
+    GET /api/preview-song?url=...
+    Calls get_track_by_spotify_url and returns metadata without downloading anything.
+    """
+    try:
+        url = request.args.get('url')
+        if not url:
+            return jsonify({"error": "Missing 'url' query parameter"}), 400
+        
+        metadata = get_track_by_spotify_url(url)
+        return jsonify(metadata)
+    except ValueError as ve:
+        logger.warning(f"Validation error in GET /api/preview-song: {ve}")
+        return jsonify({"error": str(ve)}), 400
+    except Exception as e:
+        logger.error(f"Error in GET /api/preview-song: {e}", exc_info=True)
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/add-song', methods=['POST'])
+def add_song():
+    """
+    POST /api/add-song
+    Receives spotify_url in json body, gets metadata, checks duplicates,
+    downloads audio, uploads to Drive, and updates database.json.
+    """
+    temp_file_path = None
+    try:
+        body = request.json or {}
+        spotify_url = body.get('spotify_url')
+        if not spotify_url:
+            return jsonify({"error": "Missing 'spotify_url' in request body"}), 400
+            
+        # 1. Fetch metadata
+        metadata = get_track_by_spotify_url(spotify_url)
+        title = metadata["title"]
+        artist = metadata["artist"]
+        spotify_id = metadata["spotify_id"]
+        genre = metadata["genre"]
+        album_art = metadata.get("album_art") or fetch_album_art(title, artist)
+        language = metadata["language"]
+        
+        # 2. Check duplicates
+        state = load_state()
+        existing_tracks = []
+        db_file_id = get_db_file_id()
+        if db_file_id:
+            try:
+                existing_data = download_json(db_file_id)
+                if isinstance(existing_data, list):
+                    existing_tracks = existing_data
+                elif isinstance(existing_data, dict) and 'tracks' in existing_data:
+                    existing_tracks = existing_data['tracks']
+            except Exception as e:
+                logger.warning(f"Could not retrieve existing tracks for duplicate check: {e}")
+                
+        # Format track search object for duplicate check
+        track_to_check = {
+            "title": title,
+            "artist": artist,
+            "spotify_id": spotify_id
+        }
+        
+        if is_duplicate(track_to_check, state, existing_tracks):
+            return jsonify({"error": "Song already exists in database"}), 409
+            
+        # 3. Create temp download folder
+        temp_dir = os.environ.get('TEMP_DIR')
+        if not temp_dir:
+            temp_dir = os.path.join(project_root, 'temp')
+        os.makedirs(temp_dir, exist_ok=True)
+        
+        # 4. Download track
+        logger.info(f"Downloading track '{title}' by '{artist}' to {temp_dir}")
+        temp_file_path = download_track(title, artist, temp_dir)
+        
+        # 5. Upload track
+        logger.info(f"Uploading file '{temp_file_path}' to Google Drive...")
+        drive_file_id = upload_track(temp_file_path)
+        
+        # 6. Extract duration using local ffprobe helper
+        duration = get_audio_duration_local(temp_file_path)
+        
+        # Add to metadata dict
+        db_metadata = {
+            "title": title,
+            "artist": artist,
+            "album": "Single",
+            "genre": genre,
+            "duration": duration,
+            "spotify_id": spotify_id,
+            "album_art": album_art,
+            "language": language
+        }
+        
+        # 7. Update database on Drive
+        update_database(drive_file_id, db_metadata)
+        
+        # Return success with new track data
+        new_track_data = {
+            "id": drive_file_id,
+            "driveFileId": drive_file_id,
+            "title": title,
+            "artist": artist,
+            "album": "Single",
+            "genre": genre,
+            "duration": duration,
+            "spotify_id": spotify_id,
+            "album_art": album_art,
+            "language": language
+        }
+        return jsonify({"status": "success", "track": new_track_data})
+        
+    except ValueError as ve:
+        logger.warning(f"Validation error in POST /api/add-song: {ve}")
+        return jsonify({"error": str(ve)}), 400
+    except Exception as e:
+        logger.error(f"Error in POST /api/add-song: {e}", exc_info=True)
+        return jsonify({"error": str(e)}), 500
+    finally:
+        # Cleanup temp file
+        if temp_file_path and os.path.exists(temp_file_path):
+            try:
+                os.remove(temp_file_path)
+                logger.info(f"Cleaned up temp audio file: {temp_file_path}")
+            except Exception as cleanup_err:
+                logger.warning(f"Could not remove local temp file {temp_file_path}: {cleanup_err}")
+
+if __name__ == '__main__':
+    # Run development server
+    app.run(host='0.0.0.0', port=5000, debug=True)

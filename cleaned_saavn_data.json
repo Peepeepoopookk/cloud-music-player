@@ -1,0 +1,878 @@
+{
+    "dragdrop": {
+        "hasDropped": false,
+        "isDragging": false,
+        "isValid": false,
+        "items": [],
+        "target": {}
+    },
+    "overflow": {
+        "isFixed": false,
+        "isOpen": false,
+        "isPlayer": false,
+        "isQueue": false,
+        "current": {},
+        "optionsMenu": {},
+        "handleOption": null,
+        "handleBack": null,
+        "stream_event_item": {},
+        "x": 0,
+        "y": 0
+    },
+    "homeView": {
+        "fetching_home": true,
+        "fetched_home": false,
+        "modules": [],
+        "serverSideLoad": false,
+        "weeklyPlaylistData": [],
+        "fetchingWeeklyPlaylistData": false,
+        "fetchedWeeklyPlaylistData": false
+    },
+    "albumView": {
+        "fetching_album": true,
+        "fetched_album": false,
+        "album": {},
+        "modules": [],
+        "loadAutoPlay": false,
+        "modules_api_sources": [],
+        "modules_fetching": 0,
+        "serverSideLoad": false
+    },
+    "modalView": {
+        "isOpen": false,
+        "isAction": false,
+        "isAlt": false,
+        "isNative": false,
+        "isTakeover": false,
+        "btnText": null,
+        "modal": null,
+        "title": null,
+        "current_item": null,
+        "modalData": {}
+    },
+    "player": {
+        "artwork": [],
+        "bitrate": "128",
+        "isAdPlaying": false,
+        "isArtChanging": false,
+        "isBuffering": false,
+        "isDisabled": true,
+        "isEmpty": true,
+        "isFull": false,
+        "isPlaying": false,
+        "isRadio": false,
+        "lastLoaded": 1781023759604,
+        "nowPlaying": {
+            "id": "",
+            "image": [],
+            "title": {
+                "text": "",
+                "action": ""
+            },
+            "subtitle": [],
+            "duration": 0,
+            "type": "",
+            "perma_url": "",
+            "encrypted_media_url": "",
+            "uuid": "",
+            "top_src": {},
+            "bot_src": {}
+        },
+        "playerProgress": 0,
+        "playerSetupComplete": false,
+        "radioSongLiked": false,
+        "repeat_one": false,
+        "repeat_all": false,
+        "showPlayModal": false,
+        "textForModal": "",
+        "volume": 31,
+        "streamPause": false
+    },
+    "queue": {
+        "queueMode": "queue",
+        "isShuffle": false,
+        "isEditing": false,
+        "isSorting": false,
+        "selection": [],
+        "originalQueue": [],
+        "playerQueue": [],
+        "poppedHistory": [],
+        "editing_item_ids_state": [],
+        "shuffled_item_ids": [],
+        "items": {},
+        "isAutoPlayToggled": true,
+        "autoPlayQueue": [],
+        "autoPlaystationid": "",
+        "latestAddedLibraryItem": {},
+        "libraryModeShuffledOffset": 0,
+        "poppedLibraryHistory": []
+    },
+    "toast": {
+        "messages": []
+    },
+    "mediaElement": {
+        "isAdPlaying": false,
+        "adLastPlayed": null,
+        "streamedSongCount": 0,
+        "playTime": 0,
+        "streamTime": 0,
+        "freezeStreamTime": false,
+        "start_time": 0,
+        "updateStreamTimeFromBuffer": true
+    },
+    "playlist": {
+        "fetching_playlist": true,
+        "fetched_playlist": false,
+        "fetching_more": true,
+        "fetched_more": false,
+        "playlist": {},
+        "modules": [],
+        "modules_fetching": 0,
+        "p": 1,
+        "isEmpty": false,
+        "loadAutoPlay": false,
+        "serverSideLoad": false,
+        "modules_api_sources": []
+    },
+    "song": {
+        "status": "pending",
+        "song": {},
+        "modules": [],
+        "loadAutoPlay": false,
+        "serverSideLoad": false,
+        "modules_fetching": 0,
+        "modules_api_sources": []
+    },
+    "artistView": {
+        "status": {
+            "filter": "uninitialized",
+            "page": "pending",
+            "pagination": "uninitialized"
+        },
+        "isEmptyAlbums": false,
+        "isEmptySongs": false,
+        "loadAutoPlay": false,
+        "serverSideLoad": false,
+        "showPlay": false,
+        "artist": {},
+        "category": "",
+        "extra_songs": [],
+        "modules": [],
+        "modules_api_sources": [],
+        "p": 0,
+        "sort_order": ""
+    },
+    "login": {
+        "verification_id": "",
+        "phone_number": "",
+        "email": "",
+        "error": "",
+        "errorVersion": 0,
+        "isAttempting": false,
+        "login_type": "email",
+        "forgot_password_link_verified": false,
+        "captcha_bypass_key": null
+    },
+    "thirdPartyLogin": {
+        "verification_id": "",
+        "phone_number": "",
+        "email": "",
+        "error": "",
+        "isAttempting": false,
+        "login_type": "email",
+        "forgot_password_link_verified": false,
+        "captcha_bypass_key": null,
+        "params": {},
+        "partners_logo": ""
+    },
+    "search": {
+        "fetching_view_all": false,
+        "fetched_view_all": true,
+        "fetching_search": false,
+        "initData": {},
+        "searchData": {
+            "albums": [],
+            "songs": [],
+            "playlists": [],
+            "shows": [],
+            "artists": [],
+            "topquery": [],
+            "searchDuration": 0
+        },
+        "searchQuery": "",
+        "browseData": {
+            "album": {
+                "data": [],
+                "p": 1,
+                "isNextEmpty": false,
+                "total": 0
+            },
+            "song": {
+                "data": [],
+                "p": 1,
+                "isNextEmpty": false,
+                "total": 0
+            },
+            "playlist": {
+                "data": [],
+                "p": 1,
+                "isNextEmpty": false,
+                "total": 0
+            },
+            "show": {
+                "data": [],
+                "p": 1,
+                "isNextEmpty": false,
+                "total": 0
+            },
+            "artist": {
+                "data": [],
+                "p": 1,
+                "isNextEmpty": false,
+                "total": 0
+            },
+            "query": ""
+        },
+        "recentSearches": [],
+        "trendingSearches": []
+    },
+    "radio": {
+        "station_id": "",
+        "radioName": "",
+        "type": ""
+    },
+    "footer": {
+        "isServerSideLoad": true,
+        "data": {},
+        "language": "",
+        "status": "pending",
+        "type": "static",
+        "update_ts": 0
+    },
+    "event": {
+        "top_src": {
+            "screen_name": "no_match_screen",
+            "sec_title": "",
+            "sec_id": "",
+            "sec_type": "",
+            "sec_pos": "",
+            "entity_name": "",
+            "entity_id": "",
+            "entity_type": "",
+            "entity_pos": ""
+        },
+        "purchase_funnel_top_src": {
+            "screen_name": "",
+            "screen_page_id": "",
+            "sec_title": "",
+            "sec_id": "",
+            "sec_type": "",
+            "sec_pos": "",
+            "entity_name": "",
+            "entity_id": "",
+            "entity_type": "",
+            "entity_pos": "",
+            "pro_product": "",
+            "vendor": ""
+        },
+        "bot_src": {},
+        "mid_src": {
+            "screen_name": ""
+        },
+        "radio_top_src": {
+            "screen_name": "NULL"
+        }
+    },
+    "user": {
+        "playlists": {
+            "list": [],
+            "isEmpty": false
+        },
+        "userData": {},
+        "isLoggedIn": false,
+        "fetchingPlaylist": false,
+        "fetchedPlaylist": false,
+        "rawServerData": {},
+        "isPro": false,
+        "isZeroStreamer": false
+    },
+    "userProfile": {
+        "fetching_user_details": true,
+        "fetched_user_details": false,
+        "user": {},
+        "rawServerData": []
+    },
+    "settings": {
+        "resetForm": false,
+        "localPhoneState": "",
+        "firstname": "",
+        "lastname": "",
+        "username": "",
+        "email": "",
+        "old_email": "",
+        "fbid": null,
+        "phone_number": "",
+        "dob": "",
+        "gender": "",
+        "password": "",
+        "changed_pwd": "",
+        "merge": 0,
+        "mergeType": "",
+        "accountA": "",
+        "accountB": "",
+        "email_login": "true",
+        "non_email": "true",
+        "mergeAccounts": false,
+        "linkFacebook": false,
+        "idToken": "",
+        "correlation_id": "",
+        "otp": "",
+        "subscription": {
+            "fetchingSubscription": true,
+            "fetchedSubscription": false,
+            "subscription_data": {}
+        }
+    },
+    "library": {
+        "init_complete": false,
+        "init_failed": false,
+        "library_search_init": false,
+        "library_search_complete": true,
+        "library_data": {
+            "songs": {
+                "data": [],
+                "p": 1,
+                "isNextEmpty": false
+            },
+            "playlists": {
+                "data": [],
+                "p": 1,
+                "isNextEmpty": false
+            },
+            "albums": {
+                "data": [],
+                "p": 1,
+                "isNextEmpty": false
+            },
+            "artists": {
+                "data": [],
+                "p": 1,
+                "isNextEmpty": false
+            },
+            "shows": {
+                "data": [],
+                "p": 1,
+                "isNextEmpty": false
+            }
+        },
+        "album_data": [],
+        "artist_data": {
+            "artist": {},
+            "albums": []
+        },
+        "isInLibrary": {
+            "song": {},
+            "album": {},
+            "artist": {},
+            "playlist": {},
+            "show": {}
+        },
+        "librarySearchResults": {
+            "query": "",
+            "songs": {
+                "data": []
+            },
+            "playlists": {
+                "data": []
+            },
+            "albums": {
+                "data": []
+            },
+            "artists": {
+                "data": []
+            },
+            "shows": {
+                "data": []
+            }
+        },
+        "shuffleSongIds": []
+    },
+    "browse": {
+        "fetching_browse_page": true,
+        "fetched_browse_page": false,
+        "current_page": "new-releases",
+        "current_language": "",
+        "browse_list": [],
+        "fetchedTrendingPodcasts": false,
+        "trendingPodcasts": [],
+        "p": 1,
+        "fetching_more": true,
+        "fetched_more": false,
+        "category": "",
+        "sort_order": "",
+        "isEmpty": false,
+        "serverSideLoad": false
+    },
+    "flyout": {
+        "enabled": true
+    },
+    "banner": {
+        "isActive": true
+    },
+    "app": {
+        "deepLink": "",
+        "loadScriptSuccess": false,
+        "loadScriptError": false
+    },
+    "global": {
+        "globalConfig": {
+            "greeting": "Sleep Well",
+            "supported_languages": {
+                "supported_languages": [
+                    "hindi",
+                    "english",
+                    "tamil",
+                    "telugu",
+                    "punjabi",
+                    "marathi",
+                    "gujarati",
+                    "bengali",
+                    "kannada",
+                    "bhojpuri",
+                    "malayalam",
+                    "sanskrit",
+                    "haryanvi",
+                    "rajasthani",
+                    "odia",
+                    "assamese"
+                ],
+                "radio_supported_languages": [
+                    "hindi",
+                    "english",
+                    "tamil",
+                    "telugu",
+                    "kannada",
+                    "punjabi",
+                    "marathi",
+                    "malayalam"
+                ]
+            }
+        },
+        "currentTopPlaylist": {
+            "id": "",
+            "perma_url": ""
+        },
+        "isMobile": false,
+        "isBot": false,
+        "pageTitle": "",
+        "currentScreenName": "no_match_screen",
+        "plyrSetupComplete": false,
+        "adsSciptsLoaded": false,
+        "showAnimation": false,
+        "updateQueueForZeroStreamer": true,
+        "fetchedConfigData": false,
+        "webExperimentFlags": {
+            "playerBanner": false
+        },
+        "streamLimit": 9007199254740991,
+        "streamLimitFlag": false,
+        "csrfToken": null,
+        "social": {}
+    },
+    "listeningHistory": {
+        "fetching_listening_history": true,
+        "fetched_listening_history": false,
+        "fetching_more": true,
+        "fetched_more": false,
+        "listening_history": {},
+        "p": 0,
+        "isEmpty": false
+    },
+    "signup": {
+        "signup_type": "email",
+        "captcha_bypass_key": null
+    },
+    "mix": {
+        "fetching_mix": true,
+        "fetched_mix": false,
+        "mix": {},
+        "modules": [],
+        "p": 1,
+        "isEmpty": false,
+        "serverSideLoad": false
+    },
+    "labelView": {
+        "fetching_label": true,
+        "fetched_label": false,
+        "fetching_more": false,
+        "fetched_label_header": false,
+        "label": {},
+        "p": 0,
+        "category": "latest",
+        "sort_order": "desc",
+        "language": "",
+        "isEmptySongs": false,
+        "isEmptyAlbums": false,
+        "serverSideLoad": false
+    },
+    "ad": {
+        "parsedDaastXml": {},
+        "isConfigUsed": false,
+        "configFirstUsedTime": null,
+        "expirationTime": null,
+        "adPlayerSetupComplete": false,
+        "mediaAdPlayed": false,
+        "globalAdParams": {},
+        "isBannerAdLoaded": false
+    },
+    "showView": {
+        "fetching_season": true,
+        "fetched_season": false,
+        "fetching_season_episodes": true,
+        "fetched_season_episodes": false,
+        "fetching_season_more": true,
+        "fetched_season_more": false,
+        "fetching_episode": true,
+        "fetched_episode": false,
+        "current_page": "season",
+        "current_id": 0,
+        "current_sort_order": "",
+        "show": {},
+        "season": {
+            "current": 0,
+            "episodes": [],
+            "p": 1,
+            "isEmpty": true
+        },
+        "episode": {},
+        "serverSideLoad": false
+    },
+    "header": {
+        "mega_menu": {
+            "top_artists": [
+                {
+                    "title": "Shah Rukh Khan",
+                    "perma_url": "https://www.jiosaavn.com/artist/shah-rukh-khan-songs/tkXMVGTn-A0_"
+                },
+                {
+                    "title": "Arijit Singh",
+                    "perma_url": "https://www.jiosaavn.com/artist/arijit-singh-songs/LlRWpHzy3Hk_"
+                },
+                {
+                    "title": "Kishore Kumar",
+                    "perma_url": "https://www.jiosaavn.com/artist/kishore-kumar-songs/yMoPyl3ZzyY_"
+                },
+                {
+                    "title": "Akshay Kumar",
+                    "perma_url": "https://www.jiosaavn.com/artist/akshay-kumar-songs/ZZntYtxiAAM_"
+                },
+                {
+                    "title": "Udit Narayan",
+                    "perma_url": "https://www.jiosaavn.com/artist/udit-narayan-songs/kLtmb7Vh8Rs_"
+                },
+                {
+                    "title": "Lata Mangeshkar",
+                    "perma_url": "https://www.jiosaavn.com/artist/lata-mangeshkar-songs/FCtl69DObYg_"
+                },
+                {
+                    "title": "Emraan Hashmi",
+                    "perma_url": "https://www.jiosaavn.com/artist/emraan-hashmi-songs/M4ByRDEAbdI_"
+                },
+                {
+                    "title": "Rajesh Khanna",
+                    "perma_url": "https://www.jiosaavn.com/artist/rajesh-khanna-songs/qjB1i35xlqk_"
+                },
+                {
+                    "title": "Pritam",
+                    "perma_url": "https://www.jiosaavn.com/artist/pritam-songs/OaFg9HPZgq8_"
+                },
+                {
+                    "title": "Varun Dhawan",
+                    "perma_url": "https://www.jiosaavn.com/artist/varun-dhawan-songs/nPLp3EdUdaA_"
+                }
+            ],
+            "top_playlists": [
+                {
+                    "title": "Surprise Me",
+                    "perma_url": "https://www.jiosaavn.com/featured/surprise-me/1ZOczFTRyFw_"
+                },
+                {
+                    "title": "Let's Play - Sonam Kapoor",
+                    "perma_url": "https://www.jiosaavn.com/featured/lets-play-sonam-kapoor/FfQ9qe2UsV0_"
+                },
+                {
+                    "title": "Dumdaar Hits",
+                    "perma_url": "https://www.jiosaavn.com/featured/dumdaar-hits/8MT-LQlP35c_"
+                },
+                {
+                    "title": "Best Of Romance - Hindi",
+                    "perma_url": "https://www.jiosaavn.com/featured/best-of-romance-hindi/SBKnUgjNeMIwkg5tVhI3fw__"
+                },
+                {
+                    "title": "Jhakaas Remakes",
+                    "perma_url": "https://www.jiosaavn.com/featured/jhakaas-remakes/7e2LtwVBX6JFo9wdEAzFBA__"
+                },
+                {
+                    "title": "Let's Play - Arijit Singh - Hindi",
+                    "perma_url": "https://www.jiosaavn.com/featured/lets-play-arijit-singh-hindi/Iz0pi7nkjUE_"
+                },
+                {
+                    "title": "Punjab Se Bollywood",
+                    "perma_url": "https://www.jiosaavn.com/featured/punjab-se-bollywood/obx07Zza,rHuCJW60TJk1Q__"
+                },
+                {
+                    "title": "Best Of 2000s - Hindi",
+                    "perma_url": "https://www.jiosaavn.com/featured/best-of-2000s-hindi/w,zEBfumNkQGSw2I1RxdhQ__"
+                },
+                {
+                    "title": "Let's Play - Pritam - Hindi",
+                    "perma_url": "https://www.jiosaavn.com/featured/lets-play-pritam-hindi/MjVxP7sdcAo_"
+                },
+                {
+                    "title": "Best Of 70s - Hindi",
+                    "perma_url": "https://www.jiosaavn.com/featured/best-of-70s-hindi/GnSiP1i2G6ZFo9wdEAzFBA__"
+                }
+            ],
+            "new_releases": [
+                {
+                    "title": "VALLAH (From \u201cCocktail 2\u201d)",
+                    "perma_url": "https://www.jiosaavn.com/album/vallah-from-%e2%80%9ccocktail-2%e2%80%9d/L4RAKC7Wvwo_"
+                },
+                {
+                    "title": "Ucha Lamba Kad Forever (From &quot;Welcome To The Jungle&quot;)",
+                    "perma_url": "https://www.jiosaavn.com/song/ucha-lamba-kad-forever-from-welcome-to-the-jungle/NC8nAQ0HbVQ"
+                },
+                {
+                    "title": "Ishq Mastana (From &quot;Main Vaapas Aaunga&quot;)",
+                    "perma_url": "https://www.jiosaavn.com/song/ishq-mastana-from-main-vaapas-aaunga/CV8ddRdFTnE"
+                },
+                {
+                    "title": "Chunnari Chunnari - Let\u2019s Go! (From &quot;Hai Jawani Toh Ishq Hona Hai&quot;)",
+                    "perma_url": "https://www.jiosaavn.com/song/chunnari-chunnari-let%e2%80%99s-go-from-hai-jawani-toh-ishq-hona-hai/CiUfX0BRekU"
+                },
+                {
+                    "title": "Welcome To The Jungle - Title Track (From \u201cWelcome To The Jungle\u201d)",
+                    "perma_url": "https://www.jiosaavn.com/song/welcome-to-the-jungle-title-track-from-%e2%80%9cwelcome-to-the-jungle%e2%80%9d/BT4kexgBZVU"
+                },
+                {
+                    "title": "Chand Mera Dil",
+                    "perma_url": "https://www.jiosaavn.com/album/chand-mera-dil/46Lu03yG5zs_"
+                },
+                {
+                    "title": "Hai Jawani Toh Ishq Hona Hai (Title Track)",
+                    "perma_url": "https://www.jiosaavn.com/song/hai-jawani-toh-ishq-hona-hai-title-track/OhpGWhBdWHk"
+                },
+                {
+                    "title": "Nabz Nabz - Female Version (From &quot;Bharat Bhhagya Viddhaata&quot;)",
+                    "perma_url": "https://www.jiosaavn.com/song/nabz-nabz-female-version-from-bharat-bhhagya-viddhaata/IjotAxsCRQM"
+                },
+                {
+                    "title": "Maskara (From &quot;Main Vaapas Aaunga&quot;)",
+                    "perma_url": "https://www.jiosaavn.com/song/maskara-from-main-vaapas-aaunga/MyYtaRlSZmQ"
+                },
+                {
+                    "title": "Haunted 3D: Echoes Of The Past",
+                    "perma_url": "https://www.jiosaavn.com/album/haunted-3d-echoes-of-the-past/oMfQdVsh79I_"
+                }
+            ]
+        },
+        "mega_menu_default": {
+            "top_artists": [
+                {
+                    "title": "Shah Rukh Khan",
+                    "perma_url": "https://www.jiosaavn.com/artist/shah-rukh-khan-songs/tkXMVGTn-A0_"
+                },
+                {
+                    "title": "Arijit Singh",
+                    "perma_url": "https://www.jiosaavn.com/artist/arijit-singh-songs/LlRWpHzy3Hk_"
+                },
+                {
+                    "title": "Kishore Kumar",
+                    "perma_url": "https://www.jiosaavn.com/artist/kishore-kumar-songs/yMoPyl3ZzyY_"
+                },
+                {
+                    "title": "Akshay Kumar",
+                    "perma_url": "https://www.jiosaavn.com/artist/akshay-kumar-songs/ZZntYtxiAAM_"
+                },
+                {
+                    "title": "Udit Narayan",
+                    "perma_url": "https://www.jiosaavn.com/artist/udit-narayan-songs/kLtmb7Vh8Rs_"
+                },
+                {
+                    "title": "Lata Mangeshkar",
+                    "perma_url": "https://www.jiosaavn.com/artist/lata-mangeshkar-songs/FCtl69DObYg_"
+                },
+                {
+                    "title": "Emraan Hashmi",
+                    "perma_url": "https://www.jiosaavn.com/artist/emraan-hashmi-songs/M4ByRDEAbdI_"
+                },
+                {
+                    "title": "Rajesh Khanna",
+                    "perma_url": "https://www.jiosaavn.com/artist/rajesh-khanna-songs/qjB1i35xlqk_"
+                },
+                {
+                    "title": "Pritam",
+                    "perma_url": "https://www.jiosaavn.com/artist/pritam-songs/OaFg9HPZgq8_"
+                },
+                {
+                    "title": "Varun Dhawan",
+                    "perma_url": "https://www.jiosaavn.com/artist/varun-dhawan-songs/nPLp3EdUdaA_"
+                }
+            ],
+            "top_playlists": [
+                {
+                    "title": "Surprise Me",
+                    "perma_url": "https://www.jiosaavn.com/featured/surprise-me/1ZOczFTRyFw_"
+                },
+                {
+                    "title": "Let's Play - Sonam Kapoor",
+                    "perma_url": "https://www.jiosaavn.com/featured/lets-play-sonam-kapoor/FfQ9qe2UsV0_"
+                },
+                {
+                    "title": "Dumdaar Hits",
+                    "perma_url": "https://www.jiosaavn.com/featured/dumdaar-hits/8MT-LQlP35c_"
+                },
+                {
+                    "title": "Best Of Romance - Hindi",
+                    "perma_url": "https://www.jiosaavn.com/featured/best-of-romance-hindi/SBKnUgjNeMIwkg5tVhI3fw__"
+                },
+                {
+                    "title": "Jhakaas Remakes",
+                    "perma_url": "https://www.jiosaavn.com/featured/jhakaas-remakes/7e2LtwVBX6JFo9wdEAzFBA__"
+                },
+                {
+                    "title": "Let's Play - Arijit Singh - Hindi",
+                    "perma_url": "https://www.jiosaavn.com/featured/lets-play-arijit-singh-hindi/Iz0pi7nkjUE_"
+                },
+                {
+                    "title": "Punjab Se Bollywood",
+                    "perma_url": "https://www.jiosaavn.com/featured/punjab-se-bollywood/obx07Zza,rHuCJW60TJk1Q__"
+                },
+                {
+                    "title": "Best Of 2000s - Hindi",
+                    "perma_url": "https://www.jiosaavn.com/featured/best-of-2000s-hindi/w,zEBfumNkQGSw2I1RxdhQ__"
+                },
+                {
+                    "title": "Let's Play - Pritam - Hindi",
+                    "perma_url": "https://www.jiosaavn.com/featured/lets-play-pritam-hindi/MjVxP7sdcAo_"
+                },
+                {
+                    "title": "Best Of 70s - Hindi",
+                    "perma_url": "https://www.jiosaavn.com/featured/best-of-70s-hindi/GnSiP1i2G6ZFo9wdEAzFBA__"
+                }
+            ],
+            "new_releases": [
+                {
+                    "title": "VALLAH (From \u201cCocktail 2\u201d)",
+                    "perma_url": "https://www.jiosaavn.com/album/vallah-from-%e2%80%9ccocktail-2%e2%80%9d/L4RAKC7Wvwo_"
+                },
+                {
+                    "title": "Ucha Lamba Kad Forever (From &quot;Welcome To The Jungle&quot;)",
+                    "perma_url": "https://www.jiosaavn.com/song/ucha-lamba-kad-forever-from-welcome-to-the-jungle/NC8nAQ0HbVQ"
+                },
+                {
+                    "title": "Ishq Mastana (From &quot;Main Vaapas Aaunga&quot;)",
+                    "perma_url": "https://www.jiosaavn.com/song/ishq-mastana-from-main-vaapas-aaunga/CV8ddRdFTnE"
+                },
+                {
+                    "title": "Chunnari Chunnari - Let\u2019s Go! (From &quot;Hai Jawani Toh Ishq Hona Hai&quot;)",
+                    "perma_url": "https://www.jiosaavn.com/song/chunnari-chunnari-let%e2%80%99s-go-from-hai-jawani-toh-ishq-hona-hai/CiUfX0BRekU"
+                },
+                {
+                    "title": "Welcome To The Jungle - Title Track (From \u201cWelcome To The Jungle\u201d)",
+                    "perma_url": "https://www.jiosaavn.com/song/welcome-to-the-jungle-title-track-from-%e2%80%9cwelcome-to-the-jungle%e2%80%9d/BT4kexgBZVU"
+                },
+                {
+                    "title": "Chand Mera Dil",
+                    "perma_url": "https://www.jiosaavn.com/album/chand-mera-dil/46Lu03yG5zs_"
+                },
+                {
+                    "title": "Hai Jawani Toh Ishq Hona Hai (Title Track)",
+                    "perma_url": "https://www.jiosaavn.com/song/hai-jawani-toh-ishq-hona-hai-title-track/OhpGWhBdWHk"
+                },
+                {
+                    "title": "Nabz Nabz - Female Version (From &quot;Bharat Bhhagya Viddhaata&quot;)",
+                    "perma_url": "https://www.jiosaavn.com/song/nabz-nabz-female-version-from-bharat-bhhagya-viddhaata/IjotAxsCRQM"
+                },
+                {
+                    "title": "Maskara (From &quot;Main Vaapas Aaunga&quot;)",
+                    "perma_url": "https://www.jiosaavn.com/song/maskara-from-main-vaapas-aaunga/MyYtaRlSZmQ"
+                },
+                {
+                    "title": "Haunted 3D: Echoes Of The Past",
+                    "perma_url": "https://www.jiosaavn.com/album/haunted-3d-echoes-of-the-past/oMfQdVsh79I_"
+                }
+            ]
+        },
+        "language": "user_preferred",
+        "is_entity_page": false
+    },
+    "familyDuo": {
+        "memberList": [],
+        "planType": "",
+        "memberLimit": 0,
+        "inviteCTA": false,
+        "invitePage": {}
+    },
+    "accountDeletion": {
+        "userDetails": {},
+        "isAttempting": true,
+        "showFacebook": false,
+        "accountDeleteConfirmation": false,
+        "faceBookSuccess": false,
+        "alreadyOpted": false
+    },
+    "pro": {
+        "fetching_products_list": false,
+        "fetched_products_list": false,
+        "currentPack": {},
+        "vendor_order": [],
+        "detail_page_title": "",
+        "categories_section": {},
+        "tiered_products": {},
+        "triggerMatrix": {},
+        "upsellMatrix": {},
+        "proPageBanner": {},
+        "empty_list_reason": "",
+        "couponsData": {},
+        "applyCouponData": {},
+        "productsData": {},
+        "rec_tier": "",
+        "upgradedText": {},
+        "redirect_url": "",
+        "webviewOriginPlatform": "",
+        "webviewOriginPlatformVersion": "",
+        "paymentData": {
+            "fetchingPaymentLink": false,
+            "fetchedPaymentLink": false,
+            "errorOccured": false,
+            "errorMessage": "",
+            "iframeLink": "",
+            "order_id": "",
+            "packageSummary": {},
+            "pollingData": {}
+        },
+        "deeplinkFlow": false,
+        "details_section_title": "DETAILS"
+    },
+    "updatePrompt": {
+        "urlParams": {},
+        "buttonLink": "https://jiosaavn.go.link/open?adj_t=1b33q3du"
+    },
+    "osUpdatePrompt": {
+        "urlParams": {},
+        "buttonLink": "https://jiosaavn.go.link/open?adj_t=1b33q3du"
+    },
+    "socialProfile": {
+        "fetching_user_details": true,
+        "fetched_user_details": false,
+        "user": {},
+        "rawServerData": [],
+        "publicPlaylist": [],
+        "fetching_playlist_data": true,
+        "isEmpty": false,
+        "page": 1,
+        "fetching_more": true,
+        "fetched_more": false
+    }
+}

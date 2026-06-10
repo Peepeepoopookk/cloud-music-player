@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cloud Music Player Dashboard</title>
+    <meta name="description" content="Manage your cloud music library, scraper jobs, storage limits, and service logs in a unified dark control center.">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <!-- Top Navbar -->
+    <header class="navbar" id="app-navbar">
+        <div class="nav-brand">
+            <svg class="brand-icon" viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M17.5 19C19.93 19 21.9 17.03 21.9 14.6C21.9 12.35 20.21 10.49 18 10.23C17.52 6.64 14.43 4 10.75 4C7.8 4 5.26 5.68 4.21 8.24C2.17 8.79 0.75 10.63 0.75 12.8C0.75 15.67 3.08 18 5.95 18H17.5M10 17v-6l4.5 3-4.5 3z" />
+            </svg>
+            <h1>Cloud Music Player</h1>
+            <span class="nav-badge" id="navbar-song-badge">0</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 16px;">
+            <button class="btn btn-primary" id="btn-open-add-song-modal" style="display: flex; align-items: center; gap: 8px;">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+                <span>Add Song</span>
+            </button>
+            <div class="connection-status" id="drive-connection-status">
+                <span class="status-indicator-dot pulsing" id="status-dot"></span>
+                <span class="status-text" id="status-label">Checking Drive Connection...</span>
+            </div>
+        </div>
+    </header>
+
+    <div class="app-layout">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar" id="app-sidebar">
+            <nav class="nav-menu">
+                <button class="nav-item active" id="nav-btn-library" data-target="section-library">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M9 18V5l12-2v13M9 9l12-2M9 18c0 1.66-1.34 3-3 3s-3-1.34-3-3 1.34-3 3-3 3 1.34 3 3zm12-2c0 1.66-1.34 3-3 3s-3-1.34-3-3 1.34-3 3-3 3 1.34 3 3z"/>
+                    </svg>
+                    <span>Library</span>
+                </button>
+                <button class="nav-item" id="nav-btn-storage" data-target="section-storage">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M22 12H2M22 6H2M22 18H2M6 12v.01M6 6v.01M6 18v.01"/>
+                    </svg>
+                    <span>Storage</span>
+                </button>
+                <button class="nav-item" id="nav-btn-logs" data-target="section-logs">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="4 17 10 11 15 16 20 9"/>
+                        <polyline points="13 9 20 9 20 16"/>
+                    </svg>
+                    <span>Logs</span>
+                </button>
+                <button class="nav-item" id="nav-btn-settings" data-target="section-settings">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="3"></circle>
+                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                    </svg>
+                    <span>Settings</span>
+                </button>
+            </nav>
+            <div class="sidebar-footer">
+                <span class="footer-version">v1.0.0</span>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="main-content" id="main-viewports">
+            <!-- LIBRARY SECTION -->
+            <section class="content-section active" id="section-library">
+                <div class="section-header">
+                    <div class="section-title-wrap">
+                        <h2>Music Library</h2>
+                        <p class="section-desc">Manage tracks stored in Google Drive and update index database. <span id="db-update-time" class="db-update-time"></span></p>
+                    </div>
+                    <button class="btn btn-primary" id="btn-run-scraper">
+                        <svg class="icon-spin hidden" id="scraper-spinner" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="3">
+                            <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+                        </svg>
+                        <span id="btn-scraper-text">Run Scraper</span>
+                    </button>
+                </div>
+
+                <!-- Search and Filters Bar -->
+                <div class="table-toolbar">
+                    <div class="search-box">
+                        <svg class="search-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="11" cy="11" r="8"></circle>
+                            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                        </svg>
+                        <input type="text" id="search-input" placeholder="Search by title or artist...">
+                    </div>
+                </div>
+
+                <div class="card library-card">
+                    <div class="table-container">
+                        <table class="tracks-table" id="tracks-table">
+                            <thead>
+                                <tr>
+                                    <th class="artwork-col"></th>
+                                    <th class="sortable" data-sort="index"># <span class="sort-icon"></span></th>
+                                    <th class="sortable" data-sort="title">Title <span class="sort-icon"></span></th>
+                                    <th class="sortable" data-sort="album">Album <span class="sort-icon"></span></th>
+                                    <th class="sortable" data-sort="duration">Duration <span class="sort-icon"></span></th>
+                                    <th class="sortable" data-sort="timestamp">Date Added <span class="sort-icon"></span></th>
+                                    <th class="sortable" data-sort="size">Size <span class="sort-icon"></span></th>
+                                    <th class="actions-col">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tracks-table-body">
+                                <tr>
+                                    <td colspan="8" class="table-placeholder">Loading tracks...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- STORAGE SECTION -->
+            <section class="content-section" id="section-storage">
+                <div class="section-header">
+                    <div class="section-title-wrap">
+                        <h2>Storage Overview</h2>
+                        <p class="section-desc">Monitor Google Drive space consumption and media library metrics.</p>
+                    </div>
+                </div>
+
+                <div class="storage-metrics-grid">
+                    <div class="card metric-card storage-card-1">
+                        <div class="metric-icon-wrap blue">
+                            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M9 18V5l12-2v13"/>
+                                <circle cx="6" cy="18" r="3"/>
+                                <circle cx="18" cy="16" r="3"/>
+                            </svg>
+                        </div>
+                        <div class="metric-info">
+                            <span class="metric-label">Total Tracks</span>
+                            <h3 class="metric-value" id="storage-total-tracks">0</h3>
+                        </div>
+                    </div>
+                    
+                    <div class="card metric-card storage-card-2">
+                        <div class="metric-icon-wrap purple">
+                            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21.21 15.89A10 10 0 1 1 8 2.83M22 12A10 10 0 0 0 12 2v10z"/>
+                            </svg>
+                        </div>
+                        <div class="metric-info">
+                            <span class="metric-label">Library Size</span>
+                            <h3 class="metric-value" id="storage-used-size">0 Bytes</h3>
+                        </div>
+                    </div>
+
+                    <div class="card metric-card storage-card-3">
+                        <div class="metric-icon-wrap orange">
+                            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M22 12H2M22 6H2M22 18H2M6 12v.01M6 6v.01M6 18v.01"/>
+                            </svg>
+                        </div>
+                        <div class="metric-info">
+                            <span class="metric-label">Drive Used</span>
+                            <h3 class="metric-value" id="storage-drive-used">0 Bytes</h3>
+                        </div>
+                    </div>
+
+                    <div class="card metric-card storage-card-4">
+                        <div class="metric-icon-wrap green">
+                            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                                <polyline points="22 4 12 14.01 9 11.01"/>
+                            </svg>
+                        </div>
+                        <div class="metric-info">
+                            <span class="metric-label">Drive Remaining</span>
+                            <h3 class="metric-value" id="storage-remaining-size">0 Bytes</h3>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card storage-progress-card">
+                    <div class="card-header">
+                        <h3>Drive Usage Distribution</h3>
+                        <span class="usage-percentage" id="usage-percentage-label">0% Used</span>
+                    </div>
+                    <div class="progress-bar-container">
+                        <div class="progress-bar-fill" id="storage-progress-fill" style="width: 0%"></div>
+                    </div>
+                    <div class="progress-details">
+                        <span>Used: <strong id="progress-used-text">0 Bytes</strong></span>
+                        <span>Total Drive Limit: <strong id="progress-limit-text">0 Bytes</strong></span>
+                    </div>
+                </div>
+
+                <div class="card storage-album-art-card" style="margin-top: 24px;">
+                    <div class="card-header" style="margin-bottom: 12px;">
+                        <h3>Album Art Status</h3>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 16px;">
+                        <div class="metric-icon-wrap" style="color: var(--primary); background-color: rgba(255, 255, 255, 0.04); display: flex; align-items: center; justify-content: center; width: 48px; height: 48px; border-radius: 50%;">
+                            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                                <circle cx="8.5" cy="8.5" r="1.5"/>
+                                <polyline points="21 15 16 10 5 21"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <span class="metric-label" style="font-size: 0.85rem; color: var(--tertiary); display: block;">Coverage</span>
+                            <span id="storage-album-art-info" style="font-size: 1.25rem; font-weight: 600; color: #ffffff;">0 / 0 tracks have album art</span>
+                            <span id="storage-album-art-size" style="font-size: 0.85rem; color: var(--tertiary); display: block; margin-top: 4px;">~0 Bytes estimated</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- LOGS SECTION -->
+            <section class="content-section" id="section-logs">
+                <div class="section-header">
+                    <div class="section-title-wrap">
+                        <h2>System Logs</h2>
+                        <p class="section-desc">Inspect real-time execution outputs from backend scrapers and crawlers.</p>
+                    </div>
+                    <button class="btn btn-secondary" id="btn-refresh-logs">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" id="logs-refresh-icon">
+                            <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+                        </svg>
+                        <span>Refresh Logs</span>
+                    </button>
+                </div>
+
+                <div class="card logs-card">
+                    <div class="terminal-header">
+                        <div class="terminal-buttons">
+                            <span class="term-dot close"></span>
+                            <span class="term-dot minimize"></span>
+                            <span class="term-dot maximize"></span>
+                        </div>
+                        <div class="terminal-title">scraper.log</div>
+                    </div>
+                    <div class="terminal-body">
+                        <pre class="terminal-output" id="logs-output-area">Loading scraper.log output...</pre>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SETTINGS SECTION -->
+            <section class="content-section" id="section-settings">
+                <div class="section-header">
+                    <div class="section-title-wrap">
+                        <h2>Scraper Settings</h2>
+                        <p class="section-desc">Manage allowed genres, languages, crawler limits, and refresh state.</p>
+                    </div>
+                </div>
+
+                <div class="settings-grid">
+                    <!-- Status Card -->
+                    <div class="card settings-status-card">
+                        <h3>Scraper State Info</h3>
+                        <div class="status-info-row">
+                            <span>Current Cursor Position:</span>
+                            <strong id="settings-cursor">Loading...</strong>
+                        </div>
+                        <div class="status-info-row">
+                            <span>Active Pool Size:</span>
+                            <strong id="settings-pool-size">Loading...</strong>
+                        </div>
+                        <button class="btn btn-secondary" id="btn-force-refresh-pool" style="margin-top: 16px; width: 100%;">
+                            Force Refresh Pool
+                        </button>
+                        <button class="btn btn-secondary" id="btn-normalize-db" style="margin-top: 12px; width: 100%;">
+                            Normalize Database
+                        </button>
+                    </div>
+
+                    <!-- Config Card -->
+                    <div class="card settings-config-card">
+                        <!-- Filter Mode Toggle Switch -->
+                        <div class="settings-group" style="margin-bottom: 28px;">
+                            <label class="settings-group-title">Filter Mode</label>
+                            <div class="filter-mode-toggle-container">
+                                <span class="filter-mode-opt active" id="opt-mode-filtered">Filtered</span>
+                                <label class="switch">
+                                    <input type="checkbox" id="toggle-filter-mode">
+                                    <span class="slider"></span>
+                                </label>
+                                <span class="filter-mode-opt" id="opt-mode-random">Random (No Filters)</span>
+                            </div>
+                        </div>
+
+                        <div class="settings-group" id="group-allowed-genres">
+                            <label class="settings-group-title">Allowed Genres</label>
+                            <div class="checkbox-grid" id="genre-checkbox-container">
+                                <label class="checkbox-label"><input type="checkbox" name="allowed_genres" value="pop"> pop</label>
+                                <label class="checkbox-label"><input type="checkbox" name="allowed_genres" value="hip-hop"> hip-hop</label>
+                                <label class="checkbox-label"><input type="checkbox" name="allowed_genres" value="r&b"> r&b</label>
+                                <label class="checkbox-label"><input type="checkbox" name="allowed_genres" value="electronic"> electronic</label>
+                                <label class="checkbox-label"><input type="checkbox" name="allowed_genres" value="rock"> rock</label>
+                                <label class="checkbox-label"><input type="checkbox" name="allowed_genres" value="latin"> latin</label>
+                                <label class="checkbox-label"><input type="checkbox" name="allowed_genres" value="k-pop"> k-pop</label>
+                                <label class="checkbox-label"><input type="checkbox" name="allowed_genres" value="classical"> classical</label>
+                                <label class="checkbox-label"><input type="checkbox" name="allowed_genres" value="jazz"> jazz</label>
+                                <label class="checkbox-label"><input type="checkbox" name="allowed_genres" value="blues"> blues</label>
+                                <label class="checkbox-label"><input type="checkbox" name="allowed_genres" value="country"> country</label>
+                                <label class="checkbox-label"><input type="checkbox" name="allowed_genres" value="metal"> metal</label>
+                                <label class="checkbox-label"><input type="checkbox" name="allowed_genres" value="indie"> indie</label>
+                                <label class="checkbox-label"><input type="checkbox" name="allowed_genres" value="alternative"> alternative</label>
+                                <label class="checkbox-label"><input type="checkbox" name="allowed_genres" value="reggae"> reggae</label>
+                                <label class="checkbox-label"><input type="checkbox" name="allowed_genres" value="soul"> soul</label>
+                                <label class="checkbox-label"><input type="checkbox" name="allowed_genres" value="funk"> funk</label>
+                                <label class="checkbox-label"><input type="checkbox" name="allowed_genres" value="disco"> disco</label>
+                                <label class="checkbox-label"><input type="checkbox" name="allowed_genres" value="house"> house</label>
+                                <label class="checkbox-label"><input type="checkbox" name="allowed_genres" value="techno"> techno</label>
+                                <label class="checkbox-label"><input type="checkbox" name="allowed_genres" value="ambient"> ambient</label>
+                                <label class="checkbox-label"><input type="checkbox" name="allowed_genres" value="folk"> folk</label>
+                                <label class="checkbox-label"><input type="checkbox" name="allowed_genres" value="punk"> punk</label>
+                                <label class="checkbox-label"><input type="checkbox" name="allowed_genres" value="gospel"> gospel</label>
+                                <label class="checkbox-label"><input type="checkbox" name="allowed_genres" value="afrobeats"> afrobeats</label>
+                                <label class="checkbox-label"><input type="checkbox" name="allowed_genres" value="dancehall"> dancehall</label>
+                                <label class="checkbox-label"><input type="checkbox" name="allowed_genres" value="trap"> trap</label>
+                                <label class="checkbox-label"><input type="checkbox" name="allowed_genres" value="drill"> drill</label>
+                                <label class="checkbox-label"><input type="checkbox" name="allowed_genres" value="phonk"> phonk</label>
+                                <label class="checkbox-label"><input type="checkbox" name="allowed_genres" value="synthwave"> synthwave</label>
+                                <label class="checkbox-label"><input type="checkbox" name="allowed_genres" value="lo-fi"> lo-fi</label>
+                                <label class="checkbox-label"><input type="checkbox" name="allowed_genres" value="bollywood"> bollywood</label>
+                                <label class="checkbox-label"><input type="checkbox" name="allowed_genres" value="indian-classical"> indian-classical</label>
+                                <label class="checkbox-label"><input type="checkbox" name="allowed_genres" value="carnatic"> carnatic</label>
+                                <label class="checkbox-label"><input type="checkbox" name="allowed_genres" value="devotional"> devotional</label>
+                                <label class="checkbox-label"><input type="checkbox" name="allowed_genres" value="anime"> anime</label>
+                                <label class="checkbox-label"><input type="checkbox" name="allowed_genres" value="j-pop"> j-pop</label>
+                                <label class="checkbox-label"><input type="checkbox" name="allowed_genres" value="c-pop"> c-pop</label>
+                            </div>
+                        </div>
+
+                        <div class="settings-group" id="group-allowed-languages" style="margin-top: 24px;">
+                            <label class="settings-group-title">Allowed Languages</label>
+                            <div class="checkbox-grid" id="language-checkbox-container">
+                                <label class="checkbox-label"><input type="checkbox" name="allowed_languages" value="english"> english</label>
+                                <label class="checkbox-label"><input type="checkbox" name="allowed_languages" value="malayalam"> malayalam</label>
+                                <label class="checkbox-label"><input type="checkbox" name="allowed_languages" value="tamil"> tamil</label>
+                                <label class="checkbox-label"><input type="checkbox" name="allowed_languages" value="hindi"> hindi</label>
+                                <label class="checkbox-label"><input type="checkbox" name="allowed_languages" value="indian"> indian</label>
+                            </div>
+                        </div>
+
+                        <div class="settings-group" style="margin-top: 24px;">
+                            <label for="input-songs-per-run" class="settings-group-title">Songs per Run</label>
+                            <input type="number" id="input-songs-per-run" class="settings-number-input" min="1" max="20" value="5">
+                        </div>
+
+                        <div class="settings-footer" style="margin-top: 32px; display: flex; justify-content: flex-end;">
+                            <button class="btn btn-primary" id="btn-save-settings">Save Settings</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Custom Modal Dialog (Confirmation Modal) -->
+    <div class="modal-overlay hidden" id="confirm-modal">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>Confirm Deletion</h3>
+                <button class="modal-close" id="modal-cancel-x">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete <strong id="modal-track-title">this track</strong> from Google Drive? This action cannot be undone.</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="modal-btn-cancel">Cancel</button>
+                <button class="btn btn-danger" id="modal-btn-confirm">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Song Modal Dialog -->
+    <div class="modal-overlay hidden" id="add-song-modal">
+        <div class="modal-card add-song-modal-card">
+            <div class="modal-header">
+                <h3>Add Song by Spotify Link</h3>
+                <button class="modal-close" id="add-song-modal-close-x">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p class="modal-instruction-text">Paste a Spotify track link to retrieve metadata and download it to your library.</p>
+                <div class="form-group" style="margin-top: 16px;">
+                    <input type="text" id="input-spotify-url" class="settings-text-input" placeholder="https://open.spotify.com/track/..." style="width: 100%; box-sizing: border-box;">
+                </div>
+                
+                <!-- Preview Container -->
+                <div class="song-preview-container hidden" id="song-preview-container">
+                    <div class="song-preview-card">
+                        <img src="" alt="Album Art" class="song-preview-artwork" id="song-preview-artwork">
+                        <div class="song-preview-details">
+                            <h4 class="song-preview-title" id="song-preview-title">Song Title</h4>
+                            <p class="song-preview-artist" id="song-preview-artist">Artist Name</p>
+                            <div class="song-preview-tags">
+                                <span class="badge badge-language" id="song-preview-language">english</span>
+                                <span class="badge badge-genre" id="song-preview-genre">Pop</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Progress / Status Indicator -->
+                <div class="song-progress-container hidden" id="song-progress-container">
+                    <div class="spinner-small" id="song-progress-spinner"></div>
+                    <span class="song-progress-text" id="song-progress-text">Processing song...</span>
+                </div>
+                
+                <div class="song-status-message hidden" id="song-status-message"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="btn-preview-song">Preview</button>
+                <button class="btn btn-secondary" id="add-song-modal-btn-cancel">Cancel</button>
+                <button class="btn btn-primary disabled" id="btn-confirm-add-song" disabled>Add to Library</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notifications Container -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>

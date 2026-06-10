@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.env
+venv/
+.venv/
+
+# Secrets
+service_account.json
+*.json.key
+token.json
+oauth_credentials.json
+oauth_credentials.json.json
+
+
+# Flask
+instance/
+
+# OS
+.DS_Store
+Thumbs.db
