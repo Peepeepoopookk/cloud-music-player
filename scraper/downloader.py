@@ -115,7 +115,7 @@ def download_track(title, artist, output_dir):
         'format': 'bestaudio/best',
         'quiet': True,
         'extract_flat': True,  # Fetch metadata without downloading
-        'extractor_args': {'youtube': {'player_client': ['android']}},
+        'extractor_args': {'youtube': {'player_client': ['ios']}},
     }
     if os.path.exists('/tmp/cookies.txt'):
         ydl_opts_search['cookiefile'] = '/tmp/cookies.txt'
@@ -177,7 +177,7 @@ def download_track(title, artist, output_dir):
                 ydl_opts_info = {
                     'format': 'bestaudio/best',
                     'quiet': True,
-                    'extractor_args': {'youtube': {'player_client': ['android']}},
+                    'extractor_args': {'youtube': {'player_client': ['ios']}},
                 }
                 if os.path.exists('/tmp/cookies.txt'):
                     ydl_opts_info['cookiefile'] = '/tmp/cookies.txt'
@@ -227,7 +227,7 @@ def download_track(title, artist, output_dir):
                     'outtmpl': os.path.join(output_dir, f"{out_filename}.%(ext)s"),
                     'max_filesize': 20 * 1024 * 1024,
                     'quiet': False,
-                    'extractor_args': {'youtube': {'player_client': ['android']}},
+                    'extractor_args': {'youtube': {'player_client': ['ios']}},
                 }
                 if os.path.exists('/tmp/cookies.txt'):
                     ydl_opts_download['cookiefile'] = '/tmp/cookies.txt'

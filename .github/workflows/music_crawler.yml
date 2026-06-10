@@ -13,7 +13,7 @@ on:
 jobs:
   scrape-and-upload:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 35
     
     steps:
       - name: Checkout repository
@@ -65,7 +65,7 @@ jobs:
         env:
           SONGS_PER_RUN: ${{ github.event.inputs.songs_per_run || '7' }}
         run: |
-          timeout 1200 python scraper/main.py
+          timeout 1800 python scraper/main.py
 
       - name: Upload scraper log
         if: always()
