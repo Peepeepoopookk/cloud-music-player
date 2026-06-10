@@ -8,11 +8,12 @@ on:
       songs_per_run:
         description: 'Number of songs to download per run'
         required: false
-        default: '5'
+        default: '7'
 
 jobs:
   scrape-and-upload:
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     
     steps:
       - name: Checkout repository
@@ -34,29 +35,32 @@ jobs:
 
       - name: Write OAUTH_TOKEN secret
         run: |
-          cat << 'EOF' > token.json
+          cat > token.json << 'EOF'
           ${{ secrets.OAUTH_TOKEN }}
           EOF
+          chmod 600 token.json
 
       - name: Write OAUTH_CREDENTIALS secret
         run: |
-          cat << 'EOF' > oauth_credentials.json
+          cat > oauth_credentials.json << 'EOF'
           ${{ secrets.OAUTH_CREDENTIALS }}
           EOF
+          chmod 600 oauth_credentials.json
 
       - name: Create .env file
         run: |
-          cat << 'EOF' > .env
-          GOOGLE_SERVICE_ACCOUNT=${{ secrets.GOOGLE_SERVICE_ACCOUNT }}
+          cat > .env << 'EOF'
           GDRIVE_FOLDER_ID=${{ secrets.GDRIVE_FOLDER_ID }}
           GDRIVE_MEDIA_FOLDER_ID=${{ secrets.GDRIVE_MEDIA_FOLDER_ID }}
+          GDRIVE_DB_FILE_ID=${{ secrets.GDRIVE_DB_FILE_ID }}
           EOF
+          chmod 600 .env
 
       - name: Run Scraper
         env:
-          SONGS_PER_RUN: ${{ github.event.inputs.songs_per_run || '5' }}
+          SONGS_PER_RUN: ${{ github.event.inputs.songs_per_run || '7' }}
         run: |
-          python scraper/main.py
+          timeout 1200 python scraper/main.py
 
       - name: Upload scraper log
         if: always()
@@ -65,3 +69,4 @@ jobs:
           name: scraper-log
           path: scraper.log
           retention-days: 7
+

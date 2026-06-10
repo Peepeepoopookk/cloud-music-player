@@ -551,6 +551,17 @@ def add_song():
         # 7. Update database on Drive
         update_database(drive_file_id, db_metadata)
         
+        # Update scraper state on Drive
+        try:
+            current_state = load_state()
+            if spotify_id is not None:
+                current_state.setdefault("downloaded_ids", []).append(spotify_id)
+            current_state.setdefault("downloaded_titles", []).append(f"{title} {artist}")
+            save_state(current_state)
+        except Exception as state_err:
+            logger.error(f"Failed to update scraper state: {state_err}", exc_info=True)
+        
+        
         # Return success with new track data
         new_track_data = {
             "id": drive_file_id,

@@ -136,6 +136,31 @@ def run_scraper():
     logger.info("Starting pool-based Spotify Charts crawler and uploader job...")
     logger.info("=" * 60)
     
+    # Startup validation
+    gdrive_folder_id = os.environ.get('GDRIVE_FOLDER_ID')
+    gdrive_media_folder_id = os.environ.get('GDRIVE_MEDIA_FOLDER_ID')
+    gdrive_db_file_id = os.environ.get('GDRIVE_DB_FILE_ID')
+    
+    if not gdrive_folder_id:
+        logger.error("GDRIVE_FOLDER_ID is not set in environment variables.")
+        sys.exit(1)
+    if not gdrive_media_folder_id:
+        logger.error("GDRIVE_MEDIA_FOLDER_ID is not set in environment variables.")
+        sys.exit(1)
+    if not gdrive_db_file_id:
+        logger.error("GDRIVE_DB_FILE_ID is not set in environment variables.")
+        sys.exit(1)
+        
+    try:
+        from dashboard.drive_client import get_file_metadata
+        get_file_metadata(gdrive_db_file_id)
+    except Exception as e:
+        if "404" in str(e):
+            logger.error("GDRIVE_DB_FILE_ID is invalid or account does not have access to this file")
+        else:
+            logger.error(f"Drive API test call failed: {e}")
+        sys.exit(1)
+        
     # Run backfill first
     backfill_album_art()
     
