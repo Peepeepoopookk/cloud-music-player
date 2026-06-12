@@ -295,3 +295,145 @@ def get_file_metadata(file_id):
         logger.error(f"Unexpected error in get_file_metadata: {e}", exc_info=True)
         raise
 
+
+def get_valid_access_token():
+    """
+    Returns a valid OAuth 2.0 access token string, refreshing it automatically if expired.
+    Falls back to service account credentials if OAuth is unavailable.
+    """
+    credentials = None
+    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    token_paths = [
+        'token.json',
+        os.path.join(project_root, 'token.json')
+    ]
+    
+    token_path = None
+    for path in token_paths:
+        if os.path.exists(path):
+            token_path = path
+            break
+            
+    if token_path:
+        try:
+            credentials = Credentials.from_authorized_user_file(token_path, SCOPES)
+            if credentials:
+                if not credentials.valid:
+                    if credentials.expired and credentials.refresh_token:
+                        logger.info("OAuth token is expired, refreshing automatically...")
+                        credentials.refresh(Request())
+                        with open(token_path, 'w') as token_file:
+                            token_file.write(credentials.to_json())
+                        logger.info("OAuth token refreshed and saved successfully.")
+                if credentials.valid:
+                    return credentials.token
+        except Exception as e:
+            logger.error(f"Failed to load or refresh OAuth credentials from {token_path}: {e}")
+            credentials = None
+
+    # Fallback to Service Account
+    try:
+        sa_env = os.environ.get('GOOGLE_SERVICE_ACCOUNT')
+        if sa_env:
+            try:
+                info = json.loads(sa_env)
+                credentials = service_account.Credentials.from_service_account_info(
+                    info, scopes=SCOPES
+                )
+            except Exception as e:
+                logger.error(f"Failed to load credentials from GOOGLE_SERVICE_ACCOUNT env: {e}")
+
+        if not credentials:
+            fallback_paths = [
+                'service_account.json',
+                os.path.join(project_root, 'service_account.json')
+            ]
+            for path in fallback_paths:
+                if os.path.exists(path):
+                    try:
+                        credentials = service_account.Credentials.from_service_account_file(
+                            path, scopes=SCOPES
+                        )
+                        break
+                    except Exception as e:
+                        logger.error(f"Failed to load credentials from file {path}: {e}")
+
+        if credentials:
+            if not credentials.valid:
+                credentials.refresh(Request())
+            return credentials.token
+    except Exception as e:
+        logger.error(f"Failed to get service account access token: {e}")
+
+    return None
+
+
+def refresh_and_get_access_token():
+    """
+    Forces a refresh of the credentials (saving the refreshed credentials to token.json if using OAuth)
+    and returns the new token string.
+    """
+    credentials = None
+    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    token_paths = [
+        'token.json',
+        os.path.join(project_root, 'token.json')
+    ]
+    
+    token_path = None
+    for path in token_paths:
+        if os.path.exists(path):
+            token_path = path
+            break
+            
+    if token_path:
+        try:
+            credentials = Credentials.from_authorized_user_file(token_path, SCOPES)
+            if credentials:
+                logger.info("Force refreshing OAuth credentials...")
+                credentials.refresh(Request())
+                with open(token_path, 'w') as token_file:
+                    token_file.write(credentials.to_json())
+                logger.info("OAuth token refreshed and saved successfully during retry.")
+                return credentials.token
+        except Exception as e:
+            logger.error(f"Failed to force refresh OAuth credentials from {token_path}: {e}")
+            credentials = None
+
+    # Fallback to Service Account
+    try:
+        sa_env = os.environ.get('GOOGLE_SERVICE_ACCOUNT')
+        if sa_env:
+            try:
+                info = json.loads(sa_env)
+                credentials = service_account.Credentials.from_service_account_info(
+                    info, scopes=SCOPES
+                )
+            except Exception as e:
+                logger.error(f"Failed to load credentials from GOOGLE_SERVICE_ACCOUNT env: {e}")
+
+        if not credentials:
+            fallback_paths = [
+                'service_account.json',
+                os.path.join(project_root, 'service_account.json')
+            ]
+            for path in fallback_paths:
+                if os.path.exists(path):
+                    try:
+                        credentials = service_account.Credentials.from_service_account_file(
+                            path, scopes=SCOPES
+                        )
+                        break
+                    except Exception as e:
+                        logger.error(f"Failed to load credentials from file {path}: {e}")
+
+        if credentials:
+            logger.info("Force refreshing Service Account credentials...")
+            credentials.refresh(Request())
+            return credentials.token
+    except Exception as e:
+        logger.error(f"Failed to force refresh service account access token: {e}")
+
+    return None
+
+

@@ -2,7 +2,8 @@ import os
 import sys
 import subprocess
 import logging
-from flask import Flask, render_template, jsonify, request
+import requests
+from flask import Flask, render_template, jsonify, request, stream_with_context, Response
 from dotenv import load_dotenv
 
 # Load env variables from .env in project root
@@ -13,7 +14,7 @@ load_dotenv(dotenv_path=env_path)
 # Import drive client functions
 # Since dashboard/ is a package or directory, we can import directly or adjust sys.path
 sys.path.append(project_root)
-from dashboard.drive_client import list_files, download_json, upload_json, delete_file, get_storage_quota, get_file_metadata, get_oauth_drive_service
+from dashboard.drive_client import list_files, download_json, upload_json, delete_file, get_storage_quota, get_file_metadata, get_oauth_drive_service, get_valid_access_token, refresh_and_get_access_token
 from scraper.state_manager import load_config, save_config, load_state, save_state, is_duplicate
 from scraper.spotify_charts import get_track_by_spotify_url, fetch_album_art
 from scraper.downloader import download_track
@@ -592,6 +593,73 @@ def add_song():
             except Exception as cleanup_err:
                 logger.warning(f"Could not remove local temp file {temp_file_path}: {cleanup_err}")
 
+
+@app.route('/stream/<drive_file_id>', methods=['GET'])
+def stream_track(drive_file_id):
+    """
+    GET /stream/<drive_file_id>
+    Streams an audio file from Google Drive, supporting HTTP Range requests.
+    """
+    token = get_valid_access_token()
+    if not token:
+        logger.error("Could not obtain access token for streaming.")
+        return jsonify({"error": "Unauthorized: No valid credentials found"}), 401
+        
+    url = f"https://www.googleapis.com/drive/v3/files/{drive_file_id}?alt=media"
+    headers = {
+        "Authorization": f"Bearer {token}"
+    }
+    
+    # Forward the incoming Range header if present
+    range_header = request.headers.get('Range')
+    if range_header:
+        headers['Range'] = range_header
+        
+    try:
+        res = requests.get(url, headers=headers, stream=True)
+        
+        # If 401, refresh token and retry once
+        if res.status_code == 401:
+            logger.info("Drive returned 401, refreshing token and retrying once...")
+            token = refresh_and_get_access_token()
+            if token:
+                headers["Authorization"] = f"Bearer {token}"
+                res = requests.get(url, headers=headers, stream=True)
+                
+        # If Drive returns any error, return the same status code
+        if res.status_code >= 400:
+            logger.error(f"Google Drive API error for file {drive_file_id}: Status {res.status_code}")
+            return Response(res.content, status=res.status_code, headers={'Content-Type': res.headers.get('Content-Type', 'application/json')})
+            
+        # Prepare headers to forward
+        response_headers = {
+            'Content-Type': 'audio/ogg',
+            'Accept-Ranges': 'bytes'
+        }
+        if 'Content-Range' in res.headers:
+            response_headers['Content-Range'] = res.headers['Content-Range']
+        if 'Content-Length' in res.headers:
+            response_headers['Content-Length'] = res.headers['Content-Length']
+            
+        def generate():
+            try:
+                for chunk in res.iter_content(chunk_size=40960):  # 40 KB chunk size
+                    if chunk:
+                        yield chunk
+            finally:
+                res.close()
+                
+        return Response(
+            stream_with_context(generate()),
+            status=res.status_code,
+            headers=response_headers
+        )
+    except Exception as e:
+        logger.error(f"Error occurred while streaming file {drive_file_id}: {e}", exc_info=True)
+        return jsonify({"error": str(e)}), 500
+
+
 if __name__ == '__main__':
     # Run development server
     app.run(host='0.0.0.0', port=5000, debug=True)
+
