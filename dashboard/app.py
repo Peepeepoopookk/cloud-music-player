@@ -600,7 +600,10 @@ def stream_track(drive_file_id):
     GET /stream/<drive_file_id>
     Streams a publicly shared Google Drive file, supporting HTTP Range requests.
     """
-    url = f"https://drive.google.com/uc?export=download&confirm=t&id={drive_file_id}"
+    import re
+    
+    # Try newer Google Drive download endpoint first
+    primary_url = f"https://drive.usercontent.google.com/download?id={drive_file_id}&export=download&authuser=0&confirm=t"
     
     headers = {
         "User-Agent": "Mozilla/5.0"
@@ -612,12 +615,51 @@ def stream_track(drive_file_id):
         headers['Range'] = range_header
         
     try:
-        res = requests.get(url, headers=headers, stream=True, timeout=30, allow_redirects=True)
+        res = requests.get(primary_url, headers=headers, stream=True, timeout=30, allow_redirects=True)
+        used_url_desc = "drive.usercontent.google.com"
+
+        content_type = res.headers.get('Content-Type', '').lower()
         
+        # If it returns HTML (confirmation page), fallback
+        if res.status_code == 200 and 'text/html' in content_type:
+            logger.info(f"Primary URL returned HTML confirmation page for {drive_file_id}. Attempting fallback...")
+            html_content = res.text
+            res.close()
+            
+            download_url = None
+            # Look for typical Google Drive confirmation link or form action
+            match = re.search(r'href="(/uc\?export=download(?:&amp;|&)confirm=[^"]+)"', html_content)
+            if match:
+                download_url = "https://drive.google.com" + match.group(1).replace('&amp;', '&')
+            else:
+                match = re.search(r'action="([^"]+)"', html_content)
+                if match and 'export=download' in match.group(1):
+                    download_url = match.group(1).replace('&amp;', '&')
+                    if download_url.startswith('/'):
+                        download_url = "https://drive.google.com" + download_url
+
+            if download_url:
+                logger.info(f"Extracted real download URL from HTML for {drive_file_id}")
+                used_url_desc = "Extracted confirmation URL"
+                res = requests.get(download_url, headers=headers, stream=True, timeout=30, allow_redirects=True)
+            else:
+                # Fallback to googleapis approach if we have an API key
+                api_key = os.environ.get('GOOGLE_API_KEY')
+                if api_key:
+                    logger.info(f"Using googleapis fallback with API key for {drive_file_id}")
+                    api_url = f"https://www.googleapis.com/drive/v3/files/{drive_file_id}?alt=media&key={api_key}"
+                    used_url_desc = "googleapis API"
+                    res = requests.get(api_url, headers=headers, stream=True, timeout=30, allow_redirects=True)
+                else:
+                    logger.error(f"Could not extract download URL and no GOOGLE_API_KEY available for {drive_file_id}")
+                    return jsonify({"error": "Failed to bypass Google Drive confirmation page and no API key available"}), 500
+
         # If Drive returns any error, return the same status code
         if res.status_code >= 400:
-            logger.error(f"Google Drive error for file {drive_file_id}: Status {res.status_code}")
+            logger.error(f"Google Drive error for file {drive_file_id} via {used_url_desc}: Status {res.status_code}")
             return Response(res.content, status=res.status_code, headers={'Content-Type': res.headers.get('Content-Type', 'application/json')})
+            
+        logger.info(f"Successfully established stream for {drive_file_id} via {used_url_desc}")
             
         # Prepare headers to forward
         response_headers = {
