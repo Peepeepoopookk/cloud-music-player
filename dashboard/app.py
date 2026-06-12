@@ -598,16 +598,12 @@ def add_song():
 def stream_track(drive_file_id):
     """
     GET /stream/<drive_file_id>
-    Streams an audio file from Google Drive, supporting HTTP Range requests.
+    Streams a publicly shared Google Drive file, supporting HTTP Range requests.
     """
-    token = get_valid_access_token()
-    if not token:
-        logger.error("Could not obtain access token for streaming.")
-        return jsonify({"error": "Unauthorized: No valid credentials found"}), 401
-        
-    url = f"https://www.googleapis.com/drive/v3/files/{drive_file_id}?alt=media"
+    url = f"https://drive.google.com/uc?export=download&confirm=t&id={drive_file_id}"
+    
     headers = {
-        "Authorization": f"Bearer {token}"
+        "User-Agent": "Mozilla/5.0"
     }
     
     # Forward the incoming Range header if present
@@ -616,24 +612,16 @@ def stream_track(drive_file_id):
         headers['Range'] = range_header
         
     try:
-        res = requests.get(url, headers=headers, stream=True)
+        res = requests.get(url, headers=headers, stream=True, timeout=30, allow_redirects=True)
         
-        # If 401, refresh token and retry once
-        if res.status_code == 401:
-            logger.info("Drive returned 401, refreshing token and retrying once...")
-            token = refresh_and_get_access_token()
-            if token:
-                headers["Authorization"] = f"Bearer {token}"
-                res = requests.get(url, headers=headers, stream=True)
-                
         # If Drive returns any error, return the same status code
         if res.status_code >= 400:
-            logger.error(f"Google Drive API error for file {drive_file_id}: Status {res.status_code}")
+            logger.error(f"Google Drive error for file {drive_file_id}: Status {res.status_code}")
             return Response(res.content, status=res.status_code, headers={'Content-Type': res.headers.get('Content-Type', 'application/json')})
             
         # Prepare headers to forward
         response_headers = {
-            'Content-Type': 'audio/ogg',
+            'Content-Type': res.headers.get('Content-Type') or 'audio/ogg',
             'Accept-Ranges': 'bytes'
         }
         if 'Content-Range' in res.headers:
@@ -649,9 +637,10 @@ def stream_track(drive_file_id):
             finally:
                 res.close()
                 
+        status_code = 206 if range_header else 200
         return Response(
             stream_with_context(generate()),
-            status=res.status_code,
+            status=status_code,
             headers=response_headers
         )
     except Exception as e:
