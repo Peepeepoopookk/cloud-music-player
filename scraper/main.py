@@ -41,7 +41,7 @@ from dotenv import load_dotenv
 load_dotenv(dotenv_path=os.path.join(project_root, '.env'))
 
 # Import functions from other modules
-from scraper.spotify_charts import build_song_pool, fetch_album_art
+from scraper.spotify_charts import build_song_pool, fetch_album_art, detect_track_language
 from scraper.downloader import download_track
 from scraper.drive_uploader import upload_track, update_database, get_db_file_id
 from dashboard.drive_client import download_json, upload_json
@@ -161,6 +161,68 @@ def backfill_durations():
     except Exception as e:
         logger.error(f"backfill_durations: Error during backfilling check: {e}", exc_info=True)
 
+def determine_language_from_source(source, current_language="unknown"):
+    source_lower = (source or "").lower()
+    if "jiosaavn" in source_lower:
+        if "malayalam" in source_lower: return "malayalam"
+        if "tamil" in source_lower: return "tamil"
+        if "hindi" in source_lower: return "hindi"
+        if "indian" in source_lower or "india" in source_lower: return "indian"
+    if "itunes india" in source_lower: return "indian"
+    if "global" in source_lower or "genre" in source_lower: return "english"
+    if "regional" in source_lower and ("(us)" in source_lower or "(gb)" in source_lower):
+        return "english"
+    return current_language if current_language else "unknown"
+
+def backfill_languages():
+    """
+    Checks database for tracks missing language or labeled 'unknown', and backfills them.
+    """
+    logger.info("Starting language backfill check task...")
+    db_file_id, parent_folder_id = get_db_file_id()
+    if not db_file_id:
+        return
+        
+    try:
+        db_data = download_json(db_file_id)
+        if not db_data:
+            return
+            
+        tracks = []
+        if isinstance(db_data, list):
+            tracks = db_data
+        elif isinstance(db_data, dict) and 'tracks' in db_data:
+            tracks = db_data['tracks']
+        else:
+            return
+            
+        updated_count = 0
+        for track in tracks:
+            lang = track.get("language", "unknown").lower()
+            if lang == "unknown" or lang == "":
+                new_lang = determine_language_from_source(track.get("source"), lang)
+                if new_lang == "unknown" and (not track.get("source") or track.get("source").lower() == "unknown"):
+                    detected_lang, _ = detect_track_language(track.get("title"), track.get("artist"))
+                    new_lang = detected_lang
+                    
+                if new_lang != lang and new_lang != "unknown":
+                    track["language"] = new_lang
+                    updated_count += 1
+                    logger.info(f"backfill_languages: Updated '{track.get('title')}' language to {new_lang}")
+                    
+        if updated_count > 0:
+            logger.info(f"backfill_languages: Uploading updated database with {updated_count} language backfills...")
+            if isinstance(db_data, dict) and 'tracks' in db_data:
+                db_data['tracks'] = tracks
+                upload_json(db_file_id, db_data, 'database.json', parent_id=parent_folder_id)
+            else:
+                upload_json(db_file_id, tracks, 'database.json', parent_id=parent_folder_id)
+        else:
+            logger.info("backfill_languages: All tracks have valid languages or no updates needed.")
+            
+    except Exception as e:
+        logger.error(f"backfill_languages: Error during language backfilling: {e}", exc_info=True)
+
 def run_scraper():
     """
     Orchestrates the scraping job using a pool-based structure:
@@ -200,6 +262,7 @@ def run_scraper():
     # Run backfill first
     backfill_album_art()
     backfill_durations()
+    backfill_languages()
     
     # 1. Load config and state
     config = load_config()
@@ -283,6 +346,8 @@ def run_scraper():
         artist = track.get("artist")
         spotify_id = track.get("spotify_id")
         genre = track.get("genre", "Unknown")
+        source = track.get("source", "Unknown")
+        language = determine_language_from_source(source, track.get("language", "unknown"))
         
         # Triple check duplicate
         if is_duplicate(track, state, existing_tracks):
@@ -322,7 +387,9 @@ def run_scraper():
                 "duration": duration,
                 "durationSeconds": duration_seconds,
                 "spotify_id": spotify_id,
-                "album_art": album_art
+                "album_art": album_art,
+                "language": language,
+                "source": source
             }
             
             logger.info("Updating central database.json index on Google Drive...")
@@ -339,6 +406,8 @@ def run_scraper():
                 "duration": duration,
                 "durationSeconds": duration_seconds,
                 "album_art": album_art,
+                "language": language,
+                "source": source,
                 "timestamp": datetime.datetime.utcnow().isoformat() + 'Z',
                 "spotify_id": spotify_id
             })

@@ -507,7 +507,7 @@ def detect_track_language(title, artist):
         time.sleep(random.uniform(0.5, 1.0))
         url = "https://itunes.apple.com/search"
         params = {"term": f"{title} {artist}", "entity": "song", "limit": 1}
-        r = requests.get(url, params=params, headers=HEADERS, timeout=5)
+        r = requests.get(url, params=params, headers=HEADERS, timeout=3)
         if r.status_code == 200:
             data = r.json()
             results = data.get("results", [])
@@ -536,7 +536,7 @@ def detect_track_language(title, artist):
             "User-Agent": "CloudMusicPlayer/1.0.0 (contact@example.com)",
             "Accept": "application/json"
         }
-        r = requests.get(url, params=params, headers=mb_headers, timeout=5)
+        r = requests.get(url, params=params, headers=mb_headers, timeout=3)
         if r.status_code == 200:
             data = r.json()
             recordings = data.get("recordings", [])
