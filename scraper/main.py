@@ -4,6 +4,7 @@ import time
 import logging
 import datetime
 import subprocess
+import json
 
 # Set project root and add to sys.path first to ensure absolute imports resolve correctly
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -54,26 +55,26 @@ from scraper.state_manager import (
     get_effective_pool
 )
 
-def get_audio_duration(file_path):
+def extract_duration(file_path):
     """
-    Retrieves the duration of the audio file in MM:SS format using ffprobe.
+    Extracts accurate duration using ffprobe.
+    Returns (duration_string, duration_seconds) e.g., ("03:35", 215).
     """
     try:
         cmd = [
-            'ffprobe', '-v', 'error', 
-            '-show_entries', 'format=duration', 
-            '-of', 'default=noprint_wrappers=1:nokey=1', 
-            file_path
+            'ffprobe', '-v', 'quiet', '-print_format', 'json', '-show_streams', file_path
         ]
-        result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=30)
         if result.returncode == 0:
-            duration_seconds = float(result.stdout.strip())
-            minutes = int(duration_seconds // 60)
-            seconds = int(duration_seconds % 60)
-            return f"{minutes:02d}:{seconds:02d}"
+            data = json.loads(result.stdout)
+            duration_float = float(data['streams'][0]['duration'])
+            duration_seconds = int(round(duration_float))
+            minutes = duration_seconds // 60
+            seconds = duration_seconds % 60
+            return f"{minutes:02d}:{seconds:02d}", duration_seconds
     except Exception as e:
         logger.warning(f"Could not read audio duration using ffprobe: {e}")
-    return "--:--"
+    return "--:--", None
 
 def backfill_album_art():
     """
@@ -125,6 +126,41 @@ def backfill_album_art():
     except Exception as e:
         logger.error(f"backfill_album_art: Error during backfilling: {e}", exc_info=True)
 
+def backfill_durations():
+    """
+    Checks database for tracks missing duration backfill and logs the count.
+    """
+    logger.info("Starting duration backfill check task...")
+    db_file_id, parent_folder_id = get_db_file_id()
+    if not db_file_id:
+        return
+        
+    try:
+        db_data = download_json(db_file_id)
+        if not db_data:
+            return
+            
+        tracks = []
+        if isinstance(db_data, list):
+            tracks = db_data
+        elif isinstance(db_data, dict) and 'tracks' in db_data:
+            tracks = db_data['tracks']
+        else:
+            return
+            
+        needs_backfill = 0
+        for track in tracks:
+            if track.get("durationSeconds") is None or track.get("duration") == "--:--":
+                needs_backfill += 1
+                
+        if needs_backfill > 0:
+            logger.info(f"backfill_durations: {needs_backfill} tracks still need duration backfill, but local files are unavailable. Skipping.")
+        else:
+            logger.info("backfill_durations: All tracks have valid durations.")
+            
+    except Exception as e:
+        logger.error(f"backfill_durations: Error during backfilling check: {e}", exc_info=True)
+
 def run_scraper():
     """
     Orchestrates the scraping job using a pool-based structure:
@@ -163,6 +199,7 @@ def run_scraper():
         
     # Run backfill first
     backfill_album_art()
+    backfill_durations()
     
     # 1. Load config and state
     config = load_config()
@@ -274,8 +311,8 @@ def run_scraper():
             drive_file_id = upload_track(local_file_path)
             
             # Step C: Extract duration and update index database on Drive
-            duration = get_audio_duration(local_file_path)
-            logger.info(f"Extracted audio duration: {duration}")
+            duration, duration_seconds = extract_duration(local_file_path)
+            logger.info(f"Extracted audio duration: {duration} ({duration_seconds}s)")
             
             metadata = {
                 "title": title,
@@ -283,6 +320,7 @@ def run_scraper():
                 "album": "Single",
                 "genre": genre,
                 "duration": duration,
+                "durationSeconds": duration_seconds,
                 "spotify_id": spotify_id,
                 "album_art": album_art
             }
@@ -299,6 +337,7 @@ def run_scraper():
                 "album": "Single",
                 "genre": genre,
                 "duration": duration,
+                "durationSeconds": duration_seconds,
                 "album_art": album_art,
                 "timestamp": datetime.datetime.utcnow().isoformat() + 'Z',
                 "spotify_id": spotify_id
