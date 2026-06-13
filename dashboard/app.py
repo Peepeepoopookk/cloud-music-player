@@ -678,8 +678,16 @@ def stream_track(drive_file_id):
         return jsonify({"error": str(e)}), 500
 
 
-if __name__ == '__main__':
-    # Run development server
-    port = int(os.environ.get('PORT', 8080))
-    app.run(host='0.0.0.0', port=port, debug=True)
+@app.route('/ping', methods=['GET'])
+def ping():
+    import datetime
+    return jsonify({
+        "status": "alive",
+        "timestamp": datetime.datetime.utcnow().isoformat() + 'Z'
+    })
+
+
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port, debug=False, use_reloader=False, threaded=True)
 
