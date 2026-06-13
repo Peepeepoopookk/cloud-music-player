@@ -115,7 +115,10 @@ def download_track(title, artist, output_dir):
         'format': 'bestaudio/best',
         'quiet': True,
         'extract_flat': True,  # Fetch metadata without downloading
-        'extractor_args': {'youtube': {'player_client': ['ios']}},
+        'prefer_free_formats': True,
+        'socket_timeout': 30,
+        'retries': 3,
+        'extractor_args': {'youtube': {'player_client': ['ios', 'android', 'web']}},
     }
     if os.path.exists('/tmp/cookies.txt'):
         ydl_opts_search['cookiefile'] = '/tmp/cookies.txt'
@@ -177,7 +180,10 @@ def download_track(title, artist, output_dir):
                 ydl_opts_info = {
                     'format': 'bestaudio/best',
                     'quiet': True,
-                    'extractor_args': {'youtube': {'player_client': ['ios']}},
+                    'prefer_free_formats': True,
+                    'socket_timeout': 30,
+                    'retries': 3,
+                    'extractor_args': {'youtube': {'player_client': ['ios', 'android', 'web']}},
                 }
                 if os.path.exists('/tmp/cookies.txt'):
                     ydl_opts_info['cookiefile'] = '/tmp/cookies.txt'
@@ -227,7 +233,10 @@ def download_track(title, artist, output_dir):
                     'outtmpl': os.path.join(output_dir, f"{out_filename}.%(ext)s"),
                     'max_filesize': 20 * 1024 * 1024,
                     'quiet': False,
-                    'extractor_args': {'youtube': {'player_client': ['ios']}},
+                    'prefer_free_formats': True,
+                    'socket_timeout': 30,
+                    'retries': 3,
+                    'extractor_args': {'youtube': {'player_client': ['ios', 'android', 'web']}},
                 }
                 if os.path.exists('/tmp/cookies.txt'):
                     ydl_opts_download['cookiefile'] = '/tmp/cookies.txt'
@@ -256,11 +265,24 @@ def download_track(title, artist, output_dir):
                     logger.info(f"Successfully saved track as Opus: {final_opus_path}")
                     return os.path.abspath(final_opus_path)
                     
-                # If ffmpeg is not available, let's search for native file formats
+                # If yt-dlp failed to convert, or if ffmpeg was not available during download, let's search for native file formats
                 for ext in ['webm', 'm4a', 'mp3', 'ogg', 'wav']:
                     native_path = os.path.join(output_dir, f"{out_filename}.{ext}")
                     if os.path.exists(native_path):
-                        if ext == 'webm' and 'opus' in source_codec.lower():
+                        if ffmpeg_available:
+                            logger.info(f"Converting {ext} to opus using ffmpeg directly: {native_path}")
+                            try:
+                                subprocess.run([
+                                    'ffmpeg', '-y', '-i', native_path,
+                                    '-c:a', 'libopus', '-b:a', '192k',
+                                    final_opus_path
+                                ], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                                os.remove(native_path)
+                                return os.path.abspath(final_opus_path)
+                            except subprocess.CalledProcessError as e:
+                                logger.error(f"FFmpeg manual conversion failed: {e.stderr.decode('utf-8', errors='ignore')}")
+                                return os.path.abspath(native_path)
+                        elif ext == 'webm' and 'opus' in source_codec.lower():
                             os.rename(native_path, final_opus_path)
                             logger.info(f"Renamed native webm/opus file to .opus: {final_opus_path}")
                             return os.path.abspath(final_opus_path)

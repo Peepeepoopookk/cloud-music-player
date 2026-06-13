@@ -1,17 +1,24 @@
 import os
+import sys
 import json
 import logging
 import time
 import re
 import requests
 
-from scraper.spotify_charts import scrape_spotify_embed_playlist, HEADERS, fetch_album_art, detect_track_language
-from scraper.downloader import download_track
-from scraper.main import extract_duration
-from scraper.drive_uploader import upload_track, update_database, get_db_file_id
+# Add project root to sys.path to resolve imports when run directly or as a module
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from .spotify_charts import scrape_spotify_embed_playlist, HEADERS, fetch_album_art, detect_track_language
+from .downloader import download_track
+from .utils import extract_duration
+from .drive_uploader import upload_track, update_database, get_db_file_id
 from dashboard.drive_client import upload_json, download_json, search_file_by_name
 
 logger = logging.getLogger(__name__)
+
+# In-memory dictionary to track active playlist imports without querying Google Drive repeatedly
+active_imports = {}
 
 def get_playlist_preview(playlist_url):
     match = re.search(r'playlist/([a-zA-Z0-9]+)', playlist_url)
@@ -77,6 +84,8 @@ def start_playlist_import(playlist_url, batch_size=15):
     return playlist_id
 
 def get_playlist_status(playlist_id):
+    if playlist_id in active_imports:
+        return active_imports[playlist_id]
     db_file_id, parent_id = get_db_file_id()
     state_filename = f"playlist_import_state_{playlist_id}.json"
     file_id = search_file_by_name(state_filename, parent_id)
@@ -85,10 +94,31 @@ def get_playlist_status(playlist_id):
     return download_json(file_id)
 
 def run_playlist_import(playlist_id, batch_size=15):
+    from datetime import datetime
     logger.info(f"Starting background playlist import for {playlist_id}")
     db_file_id, parent_id = get_db_file_id()
     state_filename = f"playlist_import_state_{playlist_id}.json"
     
+    playlist_name = "Spotify Playlist"
+    if parent_id:
+        try:
+            f_id = search_file_by_name(state_filename, parent_id)
+            if f_id:
+                st = download_json(f_id)
+                if st:
+                    playlist_name = st.get("playlist_name", playlist_name)
+        except Exception as e:
+            logger.warning(f"Could not load state to get playlist_name: {e}")
+            
+    # Write a separator line to scraper.log
+    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    log_path = os.path.join(project_root, 'scraper.log')
+    try:
+        with open(log_path, "a", encoding="utf-8") as f:
+            f.write(f"\n{'='*60}\nNEW PLAYLIST IMPORT SESSION: {playlist_name} - {datetime.utcnow().isoformat()}\n{'='*60}\n")
+    except Exception as e:
+        logger.warning(f"Could not write separator line to scraper.log: {e}")
+
     temp_dir = os.environ.get('TEMP_DIR', os.path.join(os.path.dirname(os.path.dirname(__file__)), 'temp'))
     os.makedirs(temp_dir, exist_ok=True)
     
@@ -110,6 +140,7 @@ def run_playlist_import(playlist_id, batch_size=15):
             break
             
         state = download_json(file_id)
+        active_imports[playlist_id] = state
         if state.get("status") in ("cancelled", "completed"):
             logger.info(f"Import {playlist_id} is {state.get('status')}. Stopping.")
             break
@@ -119,15 +150,18 @@ def run_playlist_import(playlist_id, batch_size=15):
         
         if processed >= len(tracks):
             state["status"] = "completed"
+            active_imports[playlist_id] = state
             upload_json(file_id, state, state_filename, parent_id=parent_id)
             break
             
         batch = tracks[processed:processed+batch_size]
-        for t in batch:
-            current_state = download_json(file_id)
-            if current_state.get("status") == "cancelled":
-                logger.info(f"Import {playlist_id} cancelled.")
-                return
+        for idx, t in enumerate(batch):
+            cursor = processed + idx
+            state = download_json(file_id)
+            active_imports[playlist_id] = state
+            if state.get("status") == "cancelled":
+                logger.info(f"Import cancelled by user at cursor {cursor}")
+                break
                 
             title = t.get("title")
             artist = t.get("artist")
@@ -175,7 +209,7 @@ def run_playlist_import(playlist_id, batch_size=15):
                     
                     state["downloaded"] += 1
                 except Exception as e:
-                    logger.error(f"Failed to process {title}: {e}")
+                    logger.error(f"Failed to process {title}: {e}", exc_info=True)
                     state["failed"] += 1
                 finally:
                     if local_file_path and os.path.exists(local_file_path):
@@ -184,5 +218,15 @@ def run_playlist_import(playlist_id, batch_size=15):
                         except:
                             pass
                             
-            state["processed"] += 1
+            latest_state = download_json(file_id)
+            if latest_state.get("status") == "cancelled":
+                active_imports[playlist_id] = latest_state
+                logger.info(f"Import cancelled by user at cursor {cursor}")
+                break
+            latest_state["processed"] = cursor + 1
+            latest_state["downloaded"] = state["downloaded"]
+            latest_state["skipped"] = state["skipped"]
+            latest_state["failed"] = state["failed"]
+            state = latest_state
+            active_imports[playlist_id] = state
             upload_json(file_id, state, state_filename, parent_id=parent_id)

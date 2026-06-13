@@ -18,6 +18,13 @@
             <span class="nav-badge" id="navbar-song-badge">0</span>
         </div>
         <div style="display: flex; align-items: center; gap: 16px;">
+            <!-- Background Task Indicators -->
+            <div class="background-indicators" id="background-task-indicators" title="Active background tasks">
+                <span class="task-indicator-dot idle" id="indicator-scraper" title="Scraper: Idle"></span>
+                <span class="task-indicator-dot idle" id="indicator-playlist" title="Playlist Import: Idle"></span>
+                <span class="task-indicator-dot idle" id="indicator-backfill" title="Backfill Engine: Idle"></span>
+                <span class="task-indicator-dot idle" id="indicator-single" title="Single Add: Idle"></span>
+            </div>
             <div class="connection-status" id="drive-connection-status">
                 <span class="status-indicator-dot pulsing" id="status-dot"></span>
                 <span class="status-text" id="status-label">Checking Drive Connection...</span>
@@ -194,6 +201,63 @@
                         <div class="progress-bar-container">
                             <div class="progress-bar-fill" id="playlist-progress-fill" style="width: 0%"></div>
                         </div>
+                    </div>
+                </div>
+
+                <!-- Playlist Import Logs Card -->
+                <div class="card playlist-import-logs-card" style="margin-top: 24px;">
+                    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                        <h3>Import Logs</h3>
+                        <div style="display: flex; gap: 12px; align-items: center;">
+                            <label style="display: flex; align-items: center; gap: 6px; font-size: 0.85rem; color: var(--tertiary); cursor: pointer;">
+                                <input type="checkbox" id="toggle-playlist-logs-auto-refresh"> Auto Refresh
+                            </label>
+                            <button class="btn btn-secondary" id="btn-copy-playlist-logs" style="padding: 6px 12px; font-size: 0.85rem;">Copy Logs</button>
+                            <button class="btn btn-secondary" id="btn-refresh-playlist-logs" style="padding: 6px 12px; font-size: 0.85rem;">Refresh Logs</button>
+                        </div>
+                    </div>
+                    <div class="terminal-body" style="background: #0a0a0a; border-radius: 8px; padding: 12px; border: 1px solid var(--border);">
+                        <pre id="playlist-logs-output-area" style="margin: 0; font-family: monospace; font-size: 12px; height: 300px; overflow-y: auto; white-space: pre-wrap; word-break: break-all; color: #fff;"></pre>
+                    </div>
+                </div>
+
+                <!-- Backfill Engine Card -->
+                <div class="card backfill-engine-card" style="margin-top: 24px;">
+                    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                        <div>
+                            <h3>Backfill Engine</h3>
+                            <p class="section-desc">Find and fill missing metadata across your entire library.</p>
+                        </div>
+                        <div style="display: flex; gap: 12px; align-items: center;">
+                            <span class="badge" id="backfill-status-badge" style="background-color: rgba(255, 255, 255, 0.05); color: var(--tertiary); padding: 4px 10px; border-radius: 12px; font-size: 0.85rem;">Idle</span>
+                            <button class="btn btn-primary" id="btn-run-all-backfill" style="padding: 6px 16px; font-size: 0.85rem;">Run All</button>
+                        </div>
+                    </div>
+                    
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 20px;">
+                        <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 12px; padding: 16px;">
+                            <h4 style="margin-bottom: 8px; color: #fff; font-size: 0.95rem;">Album Art</h4>
+                            <p style="color: var(--tertiary); font-size: 0.85rem; margin-bottom: 12px;" id="backfill-art-text">Loading...</p>
+                            <button class="btn btn-secondary btn-run-backfill" data-type="album_art" style="width: 100%; font-size: 0.8rem; padding: 6px;">Run</button>
+                        </div>
+                        <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 12px; padding: 16px;">
+                            <h4 style="margin-bottom: 8px; color: #fff; font-size: 0.95rem;">Duration</h4>
+                            <p style="color: var(--tertiary); font-size: 0.85rem; margin-bottom: 12px;" id="backfill-dur-text">Loading...</p>
+                            <button class="btn btn-secondary btn-run-backfill" data-type="duration" style="width: 100%; font-size: 0.8rem; padding: 6px;">Run</button>
+                        </div>
+                        <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 12px; padding: 16px;">
+                            <h4 style="margin-bottom: 8px; color: #fff; font-size: 0.95rem;">Language</h4>
+                            <p style="color: var(--tertiary); font-size: 0.85rem; margin-bottom: 12px;" id="backfill-lang-text">Loading...</p>
+                            <button class="btn btn-secondary btn-run-backfill" data-type="language" style="width: 100%; font-size: 0.8rem; padding: 6px;">Run</button>
+                        </div>
+                    </div>
+
+                    <!-- Backfill Logs -->
+                    <div class="terminal-body" style="background: #0a0a0a; border-radius: 8px; padding: 12px; border: 1px solid var(--border);">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                            <span style="font-size: 0.75rem; color: var(--tertiary); text-transform: uppercase; letter-spacing: 1px;">Backfill Logs</span>
+                        </div>
+                        <pre id="backfill-logs-output" style="margin: 0; font-family: monospace; font-size: 11px; height: 150px; overflow-y: auto; white-space: pre-wrap; word-break: break-all; color: #a1a1aa;">Waiting for engine...</pre>
                     </div>
                 </div>
 

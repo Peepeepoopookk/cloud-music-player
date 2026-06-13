@@ -54,27 +54,8 @@ from scraper.state_manager import (
     is_duplicate,
     get_effective_pool
 )
+from scraper.utils import extract_duration
 
-def extract_duration(file_path):
-    """
-    Extracts accurate duration using ffprobe.
-    Returns (duration_string, duration_seconds) e.g., ("03:35", 215).
-    """
-    try:
-        cmd = [
-            'ffprobe', '-v', 'quiet', '-print_format', 'json', '-show_streams', file_path
-        ]
-        result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=30)
-        if result.returncode == 0:
-            data = json.loads(result.stdout)
-            duration_float = float(data['streams'][0]['duration'])
-            duration_seconds = int(round(duration_float))
-            minutes = duration_seconds // 60
-            seconds = duration_seconds % 60
-            return f"{minutes:02d}:{seconds:02d}", duration_seconds
-    except Exception as e:
-        logger.warning(f"Could not read audio duration using ffprobe: {e}")
-    return "--:--", None
 
 def backfill_album_art():
     """
@@ -230,29 +211,50 @@ def backfill_languages():
             return
             
         updated_count = 0
+        import requests
+        
         for track in tracks:
             lang = track.get("language", "unknown").lower()
-            if lang == "unknown" or lang == "":
+            if lang == "unknown" or lang == "" or lang is None:
                 new_lang = "unknown"
                 source = track.get("source", "").lower()
                 
+                # Priority 1: Check source field
                 if "jiosaavn" in source:
                     if "malayalam" in source: new_lang = "malayalam"
                     elif "tamil" in source: new_lang = "tamil"
                     elif "hindi" in source: new_lang = "hindi"
                     elif "indian" in source or "india" in source: new_lang = "indian"
-                elif "spotify" in source or "global" in source or "regional" in source or "genre" in source:
-                    new_lang = "english"
-                    
-                if new_lang == "unknown":
+                    elif "english" in source: new_lang = "english"
+                
+                # Priority 2: Secondary detection for Playlist/Spotify imported songs
+                if new_lang == "unknown" and ("playlist" in source or "spotify" in source):
+                    title = track.get("title", "")
+                    artist = track.get("artist", "")
+                    search_term = f"{artist} {title}"
                     try:
-                        detected_lang, _ = detect_track_language(track.get("title"), track.get("artist"))
-                        if detected_lang:
-                            new_lang = detected_lang
+                        # Query IN storefront first
+                        url = "https://itunes.apple.com/search"
+                        params_in = {"term": search_term, "media": "music", "limit": 1, "country": "IN"}
+                        r_in = requests.get(url, params=params_in, timeout=5)
+                        if r_in.status_code == 200 and r_in.json().get("results"):
+                            new_lang = "indian"
+                        else:
+                            # Query US storefront
+                            params_us = {"term": search_term, "media": "music", "limit": 1, "country": "US"}
+                            r_us = requests.get(url, params=params_us, timeout=5)
+                            if r_us.status_code == 200 and r_us.json().get("results"):
+                                new_lang = "english"
+                            else:
+                                # Query GB storefront
+                                params_gb = {"term": search_term, "media": "music", "limit": 1, "country": "GB"}
+                                r_gb = requests.get(url, params=params_gb, timeout=5)
+                                if r_gb.status_code == 200 and r_gb.json().get("results"):
+                                    new_lang = "english"
                     except Exception as e:
-                        logger.warning(f"Failed language detection: {e}")
+                        logger.warning(f"iTunes storefront detection failed for '{title}': {e}")
                         
-                if new_lang != lang and new_lang != "unknown":
+                if new_lang != "unknown" and new_lang != lang:
                     track["language"] = new_lang
                     updated_count += 1
                     logger.info(f"backfill_languages: Updated '{track.get('title')}' language to {new_lang}")
@@ -277,6 +279,16 @@ def run_scraper():
     processes tracks from cursor position, downloads allowed genres and languages,
     deduplicates tracks, and logs execution.
     """
+    try:
+        # Clear the contents of scraper.log by opening it in write mode
+        open(log_path, "w", encoding="utf-8").close()
+        with open(log_path, "a", encoding="utf-8") as f:
+            f.write("=" * 60 + "\n")
+            f.write(f"NEW SCRAPER SESSION STARTED: {datetime.datetime.utcnow().isoformat()}\n")
+            f.write("=" * 60 + "\n")
+    except Exception as e:
+        print(f"Failed to clear scraper.log: {e}")
+
     logger.info("=" * 60)
     logger.info("Starting pool-based Spotify Charts crawler and uploader job...")
     logger.info("=" * 60)

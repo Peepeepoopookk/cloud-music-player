@@ -4,9 +4,12 @@ document.addEventListener('DOMContentLoaded', () => {
     let searchQuery = '';
     let sortColumn = 'index';
     let sortDirection = 'asc';
-    let isScraperPolling = false;
-    let scraperPollIntervalId = null;
     let trackToDeleteFileId = null;
+
+    // Global Background status tracking variables
+    let backfillRunning = false;
+    let singleAddRunning = false;
+    let scraperRunning = false;
 
     // Navigation handlers
     const navItems = document.querySelectorAll('.nav-item');
@@ -37,6 +40,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 loadConfig();
             } else if (targetId === 'section-downloader') {
                 loadDownloadLogs();
+                loadPlaylistLogs();
+                if (window.backgroundStatus) {
+                    syncDownloaderUI(window.backgroundStatus);
+                }
             }
         });
     });
@@ -353,56 +360,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const scraperSpinner = document.getElementById('scraper-spinner');
     const btnScraperText = document.getElementById('btn-scraper-text');
     
-    async function checkScraperStatus() {
-        try {
-            const response = await fetch('/api/scraper/status');
-            if (!response.ok) return;
-            const data = await response.json();
-            
-            if (data.status === 'running') {
-                if (!isScraperPolling) {
-                    // Start polling UI
-                    isScraperPolling = true;
-                    btnRunScraper.disabled = true;
-                    scraperSpinner.classList.remove('hidden');
-                    btnScraperText.textContent = 'Running...';
-                    
-                    // Poll status every 4 seconds
-                    scraperPollIntervalId = setInterval(async () => {
-                        const res = await fetch('/api/scraper/status');
-                        const statusData = await res.json();
-                        if (statusData.status === 'idle') {
-                            // Scraper finished!
-                            clearInterval(scraperPollIntervalId);
-                            isScraperPolling = false;
-                            
-                            // Restore UI
-                            btnRunScraper.disabled = false;
-                            scraperSpinner.classList.add('hidden');
-                            btnScraperText.textContent = 'Run Scraper';
-                            
-                            showToast('Scraper job completed successfully!', 'success');
-                            // Refresh page data immediately
-                            loadTracks(false);
-                            loadStorage();
-                        }
-                    }, 4000);
-                }
-            } else {
-                // If idle, make sure UI matches
-                if (isScraperPolling) {
-                    clearInterval(scraperPollIntervalId);
-                    isScraperPolling = false;
-                }
-                btnRunScraper.disabled = false;
-                scraperSpinner.classList.add('hidden');
-                btnScraperText.textContent = 'Run Scraper';
-            }
-        } catch (err) {
-            console.error('Failed to query scraper status:', err);
-        }
-    }
-
     if (btnRunScraper) {
         btnRunScraper.addEventListener('click', async () => {
             try {
@@ -418,7 +375,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (response.ok && resData.status === 'success') {
                     showToast('Backend scraper job started in the background.', 'info');
                     // Start status polling immediately
-                    setTimeout(checkScraperStatus, 1000);
+                    setTimeout(pollBackgroundStatus, 500);
                 } else {
                     throw new Error(resData.error || 'Failed to trigger scraper script');
                 }
@@ -929,7 +886,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Show progress in modal
         if (songProgressContainer) {
             songProgressContainer.classList.remove('hidden');
-            songProgressText.textContent = "Downloading track from YouTube & uploading to Google Drive. Please wait, this may take a moment...";
+            songProgressText.textContent = "Requesting single song import...";
         }
         
         // Disable action buttons in modal during processing
@@ -954,15 +911,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 throw new Error(data.error || "Failed to add song.");
             }
 
-            showToast(`"${data.track.title}" added to your library successfully!`, 'success');
-            closeAddSongModal();
+            showToast("Song import started in background.", "info");
+            singleAddRunning = true;
             
-            // Refresh library tracks list and metrics in background
-            loadTracks(false);
-            loadStorage();
+            // Trigger background poller immediately to update UI
+            setTimeout(pollBackgroundStatus, 500);
         } catch (err) {
             showAddSongStatus(`Error: ${err.message}`, "error");
-        } finally {
             hideAddSongProgress();
             if (btnPreviewSong) btnPreviewSong.disabled = false;
             if (addSongModalBtnCancel) addSongModalBtnCancel.disabled = false;
@@ -1071,8 +1026,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 playlistStatusBadge.textContent = "Running";
                 playlistStatusBadge.style.background = "rgba(255,255,255,0.1)";
                 
-                startPlaylistPolling();
                 showToast("Playlist import started in the background", "success");
+                setTimeout(pollBackgroundStatus, 500);
             } catch (err) {
                 showToast(err.message, "error");
             } finally {
@@ -1090,51 +1045,24 @@ document.addEventListener('DOMContentLoaded', () => {
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({playlist_id: currentPlaylistId})
                 });
-                showToast("Cancellation requested", "success");
+                playlistStatusBadge.textContent = "Cancelled";
+                playlistStatusBadge.style.background = "#ff453a";
+                showToast("Import cancelled", "success");
+                setTimeout(pollBackgroundStatus, 500);
             } catch (err) {
                 showToast(err.message, "error");
             }
         });
     }
 
-    function startPlaylistPolling() {
-        if (playlistPollInterval) clearInterval(playlistPollInterval);
-        playlistPollInterval = setInterval(pollPlaylistStatus, 3000);
-    }
-
-    async function pollPlaylistStatus() {
-        if (!currentPlaylistId) return;
-        try {
-            const response = await fetch(`/api/playlist/status?playlist_id=${currentPlaylistId}`);
-            const data = await response.json();
-            
-            if (data.status === "not_found") return; // Might be initializing
-            
-            const processed = data.processed || 0;
-            const total = data.total_tracks || 0;
-            const pct = total > 0 ? (processed / total) * 100 : 0;
-            
-            playlistProgressFill.style.width = `${pct}%`;
-            playlistProgressText.textContent = `Processed: ${processed} / ${total}`;
-            playlistStatDownloaded.textContent = `Downloaded: ${data.downloaded || 0}`;
-            playlistStatSkipped.textContent = `Skipped: ${data.skipped || 0}`;
-            playlistStatFailed.textContent = `Failed: ${data.failed || 0}`;
-            
-            if (data.status === "completed") {
-                clearInterval(playlistPollInterval);
-                playlistStatusBadge.textContent = "Completed";
-                playlistStatusBadge.style.background = "#30d158";
-                showToast("Playlist import completed!", "success");
-                loadTracks(false);
-                loadStorage();
-            } else if (data.status === "cancelled") {
-                clearInterval(playlistPollInterval);
-                playlistStatusBadge.textContent = "Cancelled";
-                playlistStatusBadge.style.background = "#ff453a";
-            }
-        } catch (err) {
-            console.error("Error polling playlist status:", err);
-        }
+    function escapeHtml(text) {
+      if (!text) return "";
+      return text
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
     }
 
     // === Download Logs Logic ===
@@ -1190,9 +1118,345 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // === Playlist Import Logs Logic ===
+    const playlistLogsOutputArea = document.getElementById('playlist-logs-output-area');
+    const togglePlaylistLogsAutoRefresh = document.getElementById('toggle-playlist-logs-auto-refresh');
+    const btnCopyPlaylistLogs = document.getElementById('btn-copy-playlist-logs');
+    const btnRefreshPlaylistLogs = document.getElementById('btn-refresh-playlist-logs');
+    let playlistLogsInterval = null;
+
+    async function loadPlaylistLogs() {
+        if (!playlistLogsOutputArea) return;
+        try {
+            const response = await fetch('/api/playlist/logs');
+            if (!response.ok) throw new Error("Failed to fetch logs");
+            const logs = await response.json();
+            
+            playlistLogsOutputArea.innerHTML = '';
+            logs.forEach(line => {
+                const lineDiv = document.createElement('div');
+                lineDiv.style.marginBottom = '2px';
+                
+                const lowerLine = line.toLowerCase();
+                if (lowerLine.includes('error') || lowerLine.includes('failed')) {
+                    lineDiv.style.color = '#ff453a'; // red
+                } else if (lowerLine.includes('success') || lowerLine.includes('imported') || lowerLine.includes('uploaded')) {
+                    lineDiv.style.color = '#30d158'; // green
+                } else if (lowerLine.includes('skipped') || lowerLine.includes('duplicate')) {
+                    lineDiv.style.color = '#ffbd2e'; // yellow
+                } else {
+                    lineDiv.style.color = '#cccccc'; // grey/white
+                }
+                
+                lineDiv.textContent = line;
+                playlistLogsOutputArea.appendChild(lineDiv);
+            });
+            
+            // Auto scroll to bottom
+            playlistLogsOutputArea.scrollTop = playlistLogsOutputArea.scrollHeight;
+        } catch (err) {
+            console.error("Error loading playlist logs:", err);
+        }
+    }
+
+    if (btnRefreshPlaylistLogs) {
+        btnRefreshPlaylistLogs.addEventListener('click', loadPlaylistLogs);
+    }
+
+    if (togglePlaylistLogsAutoRefresh) {
+        togglePlaylistLogsAutoRefresh.addEventListener('change', () => {
+            if (togglePlaylistLogsAutoRefresh.checked) {
+                loadPlaylistLogs();
+                playlistLogsInterval = setInterval(loadPlaylistLogs, 3000);
+            } else {
+                if (playlistLogsInterval) {
+                    clearInterval(playlistLogsInterval);
+                    playlistLogsInterval = null;
+                }
+            }
+        });
+    }
+
+    if (btnCopyPlaylistLogs) {
+        btnCopyPlaylistLogs.addEventListener('click', () => {
+            if (!playlistLogsOutputArea) return;
+            const text = playlistLogsOutputArea.innerText;
+            navigator.clipboard.writeText(text)
+                .then(() => showToast("Logs copied to clipboard", "success"))
+                .catch(err => showToast("Failed to copy logs: " + err.message, "error"));
+        });
+    }
+
+    // === Backfill Engine Logic ===
+    const backfillArtText = document.getElementById('backfill-art-text');
+    const backfillDurText = document.getElementById('backfill-dur-text');
+    const backfillLangText = document.getElementById('backfill-lang-text');
+    const backfillStatusBadge = document.getElementById('backfill-status-badge');
+    const backfillLogsOutput = document.getElementById('backfill-logs-output');
+    const btnRunAllBackfill = document.getElementById('btn-run-all-backfill');
+    const btnRunBackfillList = document.querySelectorAll('.btn-run-backfill');
+    
+    async function loadBackfillStatus() {
+        if (!backfillArtText) return;
+        try {
+            const response = await fetch('/api/backfill/status');
+            if (response.ok) {
+                const data = await response.json();
+                if (data.album_art) {
+                    backfillArtText.textContent = `${data.album_art.missing} missing out of ${data.album_art.total} total`;
+                    backfillDurText.textContent = `${data.duration.missing} missing out of ${data.duration.total} total`;
+                    backfillLangText.textContent = `${data.language.missing} missing / unknown out of ${data.language.total} total`;
+                }
+            }
+        } catch (err) {
+            console.error("Failed to load backfill status:", err);
+        }
+    }
+
+    async function loadBackfillLogs() {
+        if (!backfillLogsOutput) return;
+        try {
+            const response = await fetch('/api/backfill/logs');
+            if (response.ok) {
+                const logs = await response.json();
+                backfillLogsOutput.innerHTML = '';
+                logs.forEach(line => {
+                    const lineDiv = document.createElement('div');
+                    lineDiv.style.marginBottom = '2px';
+                    lineDiv.textContent = line;
+                    backfillLogsOutput.appendChild(lineDiv);
+                });
+                backfillLogsOutput.scrollTop = backfillLogsOutput.scrollHeight;
+            }
+        } catch (err) {
+            console.error("Error loading backfill logs:", err);
+        }
+    }
+
+    async function runBackfill(type) {
+        if (backfillRunning) return;
+        try {
+            const res = await fetch('/api/backfill/run', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ type: type })
+            });
+            if (res.ok) {
+                showToast(`Backfill (${type}) started!`, "success");
+                backfillRunning = true;
+                if (backfillStatusBadge) {
+                    backfillStatusBadge.textContent = 'Running';
+                    backfillStatusBadge.style.backgroundColor = 'rgba(48, 209, 88, 0.2)';
+                    backfillStatusBadge.style.color = '#30d158';
+                }
+                
+                // Trigger background poller update immediately
+                setTimeout(pollBackgroundStatus, 500);
+            }
+        } catch (err) {
+            showToast("Failed to start backfill", "error");
+        }
+    }
+
+    if (btnRunAllBackfill) {
+        btnRunAllBackfill.addEventListener('click', () => runBackfill('all'));
+    }
+
+    btnRunBackfillList.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            runBackfill(e.target.dataset.type);
+        });
+    });
+
+    // === Unified Global Background Task State Tracking & Polling ===
+    window.backgroundStatus = null;
+
+    function updateNavbarIndicators(status) {
+        const scraperDot = document.getElementById('indicator-scraper');
+        const playlistDot = document.getElementById('indicator-playlist');
+        const backfillDot = document.getElementById('indicator-backfill');
+        const singleDot = document.getElementById('indicator-single');
+
+        if (scraperDot) {
+            const isRunning = status.scraper.status === 'running';
+            scraperDot.className = `task-indicator-dot ${isRunning ? 'active' : 'idle'}`;
+            scraperDot.title = `Scraper: ${isRunning ? 'Running' : 'Idle'}`;
+        }
+
+        if (playlistDot) {
+            const pl = status.playlist_import;
+            const isRunning = pl.status === 'running';
+            playlistDot.className = `task-indicator-dot ${isRunning ? 'active' : 'idle'}`;
+            
+            let text = 'Playlist Import: Idle';
+            if (pl.status === 'running') {
+                const processed = pl.processed || 0;
+                const total = pl.total_tracks || 0;
+                text = `Playlist Import: Running (${processed}/${total} tracks processed)`;
+            } else if (pl.status === 'completed') {
+                text = 'Playlist Import: Completed';
+                playlistDot.className = 'task-indicator-dot active';
+            } else if (pl.status === 'cancelled') {
+                text = 'Playlist Import: Cancelled';
+            }
+            playlistDot.title = text;
+        }
+
+        if (backfillDot) {
+            const isRunning = status.backfill.status === 'running';
+            backfillDot.className = `task-indicator-dot ${isRunning ? 'active' : 'idle'}`;
+            backfillDot.title = `Backfill Engine: ${isRunning ? 'Running (' + status.backfill.type + ')' : 'Idle'}`;
+        }
+
+        if (singleDot) {
+            const isRunning = status.single_add.status === 'running';
+            singleDot.className = `task-indicator-dot ${isRunning ? 'active' : 'idle'}`;
+            singleDot.title = `Single Add: ${isRunning ? 'Adding song...' : 'Idle'}`;
+        }
+    }
+
+    function syncDownloaderUI(status) {
+        // 1. Scraper Card Sync
+        const sc = status.scraper;
+        if (sc.status === 'running') {
+            scraperRunning = true;
+            if (btnRunScraper) btnRunScraper.disabled = true;
+            if (scraperSpinner) scraperSpinner.classList.remove('hidden');
+            if (btnScraperText) btnScraperText.textContent = 'Running...';
+        } else {
+            if (scraperRunning) {
+                scraperRunning = false;
+                showToast('Scraper job completed successfully!', 'success');
+                loadTracks(false);
+                loadStorage();
+            }
+            if (btnRunScraper) btnRunScraper.disabled = false;
+            if (scraperSpinner) scraperSpinner.classList.add('hidden');
+            if (btnScraperText) btnScraperText.textContent = 'Run Scraper';
+        }
+
+        // 2. Playlist Importer Card Sync
+        const pl = status.playlist_import;
+        if (pl.status === 'running' || pl.status === 'completed' || pl.status === 'cancelled') {
+            currentPlaylistId = pl.playlist_id;
+            
+            // Show progress block and hide preview block
+            if (playlistProgressContainer) playlistProgressContainer.classList.remove('hidden');
+            if (playlistPreviewContainer) playlistPreviewContainer.classList.add('hidden');
+            
+            const processed = pl.processed || 0;
+            const total = pl.total_tracks || 0;
+            const pct = total > 0 ? (processed / total) * 100 : 0;
+            
+            if (playlistProgressFill) playlistProgressFill.style.width = `${pct}%`;
+            if (playlistProgressText) playlistProgressText.textContent = `Processed: ${processed} / ${total}`;
+            if (playlistStatDownloaded) playlistStatDownloaded.textContent = `Downloaded: ${pl.downloaded || 0}`;
+            if (playlistStatSkipped) playlistStatSkipped.textContent = `Skipped: ${pl.skipped || 0}`;
+            if (playlistStatFailed) playlistStatFailed.textContent = `Failed: ${pl.failed || 0}`;
+            
+            if (playlistStatusBadge) {
+                playlistStatusBadge.textContent = pl.status.charAt(0).toUpperCase() + pl.status.slice(1);
+                if (pl.status === 'running') {
+                    playlistStatusBadge.style.background = "rgba(255,255,255,0.1)";
+                    if (btnCancelPlaylistImport) btnCancelPlaylistImport.disabled = false;
+                } else if (pl.status === 'completed') {
+                    playlistStatusBadge.style.background = "#30d158";
+                    if (btnCancelPlaylistImport) btnCancelPlaylistImport.disabled = true;
+                } else if (pl.status === 'cancelled') {
+                    playlistStatusBadge.style.background = "#ff453a";
+                    if (btnCancelPlaylistImport) btnCancelPlaylistImport.disabled = true;
+                }
+            }
+        } else {
+            // Idle / Not Found
+            if (playlistProgressContainer && !playlistProgressContainer.classList.contains('hidden') && pl.status === 'idle') {
+                playlistProgressContainer.classList.add('hidden');
+            }
+        }
+
+        // 3. Backfill Engine Sync
+        const bf = status.backfill;
+        if (bf.status === 'running') {
+            backfillRunning = true;
+            if (backfillStatusBadge) {
+                backfillStatusBadge.textContent = 'Running';
+                backfillStatusBadge.style.backgroundColor = 'rgba(48, 209, 88, 0.2)';
+                backfillStatusBadge.style.color = '#30d158';
+            }
+            if (btnRunAllBackfill) btnRunAllBackfill.disabled = true;
+            if (btnRunBackfillList) {
+                btnRunBackfillList.forEach(btn => btn.disabled = true);
+            }
+            // Proactively load backfill logs and status to show progress
+            loadBackfillLogs();
+            loadBackfillStatus();
+        } else {
+            if (backfillRunning) {
+                backfillRunning = false;
+                showToast('Backfill task completed!', 'success');
+                loadBackfillStatus();
+                loadTracks(false);
+                loadStorage();
+            }
+            if (backfillStatusBadge) {
+                backfillStatusBadge.textContent = 'Idle';
+                backfillStatusBadge.style.backgroundColor = 'rgba(255, 255, 255, 0.05)';
+                backfillStatusBadge.style.color = 'var(--tertiary)';
+            }
+            if (btnRunAllBackfill) btnRunAllBackfill.disabled = false;
+            if (btnRunBackfillList) {
+                btnRunBackfillList.forEach(btn => btn.disabled = false);
+            }
+        }
+
+        // 4. Single Add Sync (inside Modal)
+        const sa = status.single_add;
+        if (sa.status === 'running') {
+            // If single add started, set state
+            singleAddRunning = true;
+            if (songProgressContainer) {
+                songProgressContainer.classList.remove('hidden');
+                songProgressText.textContent = `Downloading & importing track "${sa.track_name || 'Spotify link'}" in background...`;
+            }
+            if (btnPreviewSong) btnPreviewSong.disabled = true;
+            if (btnConfirmAddSong) {
+                btnConfirmAddSong.disabled = true;
+                btnConfirmAddSong.classList.add('disabled');
+            }
+            if (addSongModalBtnCancel) addSongModalBtnCancel.disabled = true;
+        } else {
+            if (singleAddRunning) {
+                singleAddRunning = false;
+                showToast('Single track import completed successfully!', 'success');
+                closeAddSongModal();
+                loadTracks(false);
+                loadStorage();
+            }
+        }
+    }
+
+    async function pollBackgroundStatus() {
+        try {
+            const response = await fetch('/api/background/status');
+            if (!response.ok) return;
+            const status = await response.json();
+            window.backgroundStatus = status;
+            
+            updateNavbarIndicators(status);
+            syncDownloaderUI(status);
+        } catch (err) {
+            console.error("Failed to query background tasks status:", err);
+        }
+    }
+
     // Bootstrap app state
     checkConnection();
     loadTracks(true); // First load shows loader
     loadStorage();
-    checkScraperStatus();
+    loadPlaylistLogs();
+    loadBackfillStatus();
+    
+    // Initialize unified global polling
+    pollBackgroundStatus();
+    setInterval(pollBackgroundStatus, 5000);
 });

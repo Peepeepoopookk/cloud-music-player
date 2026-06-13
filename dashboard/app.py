@@ -19,10 +19,12 @@ from scraper.state_manager import load_config, save_config, load_state, save_sta
 from scraper.spotify_charts import get_track_by_spotify_url, fetch_album_art, detect_track_language
 from scraper.downloader import download_track
 from scraper.drive_uploader import upload_track, update_database, normalize_database
-from scraper.main import extract_duration
+from scraper.utils import extract_duration
+from scraper.main import backfill_album_art, backfill_durations, backfill_languages
 from scraper.playlist_importer import get_playlist_preview, start_playlist_import, get_playlist_status, run_playlist_import
 import ctypes
 import threading
+import datetime
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -34,26 +36,16 @@ app = Flask(__name__,
 
 db_file_id_cache = None
 
+# Global background tasks state tracking
+background_tasks = {
+    "scraper": {"status": "idle", "started_at": None},
+    "playlist_import": {"status": "idle", "started_at": None, "playlist_id": None},
+    "backfill": {"status": "idle", "started_at": None, "type": None},
+    "single_add": {"status": "idle", "started_at": None}
+}
+
 def is_scraper_running():
-    pid_file = os.path.join(project_root, 'temp', 'scraper.pid')
-    if not os.path.exists(pid_file):
-        return False
-    try:
-        with open(pid_file, 'r') as f:
-            pid = int(f.read().strip())
-        
-        # Check if pid is running on Windows
-        kernel32 = ctypes.windll.kernel32
-        PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
-        h_process = kernel32.OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, False, pid)
-        if h_process:
-            exit_code = ctypes.c_ulong()
-            kernel32.GetExitCodeProcess(h_process, ctypes.byref(exit_code))
-            kernel32.CloseHandle(h_process)
-            return exit_code.value == 259
-        return False
-    except Exception:
-        return False
+    return background_tasks["scraper"]["status"] == "running"
 
 def get_db_file_id():
     """
@@ -296,31 +288,41 @@ def trigger_scrape():
     """
     POST /api/scrape — triggers the scraper in the background and saves its PID
     """
-    try:
-        scraper_script = os.path.join(project_root, 'scraper', 'main.py')
-        log_path = os.path.join(project_root, 'scraper.log')
-        
-        # Open the log file in append mode
-        log_file = open(log_path, 'a', encoding='utf-8')
-        
-        # Launch scraper/main.py as background process
-        process = subprocess.Popen(
-            [sys.executable, scraper_script],
-            stdout=log_file,
-            stderr=log_file,
-            cwd=project_root
-        )
-        
-        # Save PID to temp file
-        pid_file = os.path.join(project_root, 'temp', 'scraper.pid')
-        os.makedirs(os.path.dirname(pid_file), exist_ok=True)
-        with open(pid_file, 'w') as f:
-            f.write(str(process.pid))
+    if background_tasks["scraper"]["status"] == "running":
+        return jsonify({"status": "success", "message": "Scraper is already running."})
+
+    def run_scraper_task():
+        background_tasks["scraper"]["status"] = "running"
+        background_tasks["scraper"]["started_at"] = datetime.datetime.utcnow().isoformat() + 'Z'
+        try:
+            scraper_script = os.path.join(project_root, 'scraper', 'main.py')
+            log_path = os.path.join(project_root, 'scraper.log')
             
-        return jsonify({"status": "success", "message": "Scraper started in the background."})
-    except Exception as e:
-        logger.error(f"Error in POST /api/scrape: {e}", exc_info=True)
-        return jsonify({"error": str(e)}), 500
+            with open(log_path, 'a', encoding='utf-8') as log_file:
+                process = subprocess.Popen(
+                    [sys.executable, scraper_script],
+                    stdout=log_file,
+                    stderr=log_file,
+                    cwd=project_root
+                )
+                
+                # Save PID to temp file
+                pid_file = os.path.join(project_root, 'temp', 'scraper.pid')
+                os.makedirs(os.path.dirname(pid_file), exist_ok=True)
+                with open(pid_file, 'w') as f:
+                    f.write(str(process.pid))
+                
+                process.wait()
+        except Exception as err:
+            logger.error(f"Error executing scraper thread: {err}", exc_info=True)
+        finally:
+            background_tasks["scraper"]["status"] = "idle"
+
+    thread = threading.Thread(target=run_scraper_task)
+    thread.daemon = True
+    thread.start()
+    
+    return jsonify({"status": "success", "message": "Scraper started in the background."})
 
 @app.route('/api/scraper/status', methods=['GET'])
 def scraper_status():
@@ -333,7 +335,7 @@ def scraper_status():
 @app.route('/api/logs', methods=['GET'])
 def get_logs():
     """
-    GET /api/logs — returns the last 50 lines of scraper.log
+    GET /api/logs — returns the last 50 lines of scraper.log from the current session
     """
     try:
         log_path = os.path.join(project_root, 'scraper.log')
@@ -343,7 +345,21 @@ def get_logs():
         with open(log_path, 'r', encoding='utf-8', errors='ignore') as f:
             lines = f.readlines()
             
-        last_50 = [line.rstrip('\r\n') for line in lines[-50:]]
+        cleaned_lines = [line.rstrip('\r\n') for line in lines]
+        
+        # Find the last session header index
+        header_idx = -1
+        for i, line in enumerate(cleaned_lines):
+            line_upper = line.upper()
+            if "NEW SESSION" in line_upper or "NEW SCRAPER SESSION" in line_upper or "NEW PLAYLIST IMPORT SESSION" in line_upper:
+                header_idx = i
+                
+        if header_idx != -1:
+            current_session_lines = cleaned_lines[header_idx:]
+        else:
+            current_session_lines = cleaned_lines
+            
+        last_50 = current_session_lines[-50:]
         return jsonify({"logs": last_50})
     except Exception as e:
         logger.error(f"Error in GET /api/logs: {e}", exc_info=True)
@@ -486,127 +502,120 @@ def preview_song():
 def add_song():
     """
     POST /api/add-song
-    Receives spotify_url in json body, gets metadata, checks duplicates,
-    downloads audio, uploads to Drive, and updates database.json.
+    Receives spotify_url in json body, and starts a background thread to process it.
     """
-    temp_file_path = None
-    try:
-        body = request.json or {}
-        spotify_url = body.get('spotify_url')
-        if not spotify_url:
-            return jsonify({"error": "Missing 'spotify_url' in request body"}), 400
-            
-        # 1. Fetch metadata
-        metadata = get_track_by_spotify_url(spotify_url)
-        title = metadata["title"]
-        artist = metadata["artist"]
-        spotify_id = metadata["spotify_id"]
-        genre = metadata["genre"]
-        
-        album_art = metadata.get("album_art")
-        if not album_art:
-            album_art = fetch_album_art(title, artist)
-            
-        language = metadata.get("language")
-        if not language or language.lower() == "unknown":
-            language, _ = detect_track_language(title, artist)
-        state = load_state()
-        existing_tracks = []
-        db_file_id = get_db_file_id()
-        if db_file_id:
-            try:
-                existing_data = download_json(db_file_id)
-                if isinstance(existing_data, list):
-                    existing_tracks = existing_data
-                elif isinstance(existing_data, dict) and 'tracks' in existing_data:
-                    existing_tracks = existing_data['tracks']
-            except Exception as e:
-                logger.warning(f"Could not retrieve existing tracks for duplicate check: {e}")
-                
-        # Format track search object for duplicate check
-        track_to_check = {
-            "title": title,
-            "artist": artist,
-            "spotify_id": spotify_id
-        }
-        
-        if is_duplicate(track_to_check, state, existing_tracks):
-            return jsonify({"error": "Song already exists in database"}), 409
-            
-        # 3. Create temp download folder
-        temp_dir = os.environ.get('TEMP_DIR')
-        if not temp_dir:
-            temp_dir = os.path.join(project_root, 'temp')
-        os.makedirs(temp_dir, exist_ok=True)
-        
-        # 4. Download track
-        logger.info(f"Downloading track '{title}' by '{artist}' to {temp_dir}")
-        temp_file_path = download_track(title, artist, temp_dir)
-        
-        # 5. Upload track
-        logger.info(f"Uploading file '{temp_file_path}' to Google Drive...")
-        drive_file_id = upload_track(temp_file_path)
-        
-        # 6. Extract duration using local ffprobe helper
-        duration, duration_seconds = extract_duration(temp_file_path)
-        
-        # Add to metadata dict
-        db_metadata = {
-            "title": title,
-            "artist": artist,
-            "album": "Single",
-            "genre": genre,
-            "duration": duration,
-            "durationSeconds": duration_seconds,
-            "spotify_id": spotify_id,
-            "album_art": album_art,
-            "language": language
-        }
-        
-        # 7. Update database on Drive
-        update_database(drive_file_id, db_metadata)
-        
-        # Update scraper state on Drive
+    body = request.json or {}
+    spotify_url = body.get('spotify_url')
+    if not spotify_url:
+        return jsonify({"error": "Missing 'spotify_url' in request body"}), 400
+
+    if background_tasks["single_add"]["status"] == "running":
+        return jsonify({"error": "A single track import is already in progress"}), 409
+
+    def run_add_song_task():
+        background_tasks["single_add"]["status"] = "running"
+        background_tasks["single_add"]["started_at"] = datetime.datetime.utcnow().isoformat() + 'Z'
+        temp_file_path = None
         try:
-            current_state = load_state()
-            if spotify_id is not None:
-                current_state.setdefault("downloaded_ids", []).append(spotify_id)
-            current_state.setdefault("downloaded_titles", []).append(f"{title} {artist}")
-            save_state(current_state)
-        except Exception as state_err:
-            logger.error(f"Failed to update scraper state: {state_err}", exc_info=True)
-        
-        
-        # Return success with new track data
-        new_track_data = {
-            "id": drive_file_id,
-            "driveFileId": drive_file_id,
-            "title": title,
-            "artist": artist,
-            "album": "Single",
-            "genre": genre,
-            "duration": duration,
-            "durationSeconds": duration_seconds,
-            "spotify_id": spotify_id,
-            "album_art": album_art,
-            "language": language
-        }
-        return jsonify({"status": "success", "track": new_track_data})
-        
-    except ValueError as ve:
-        logger.warning(f"Validation error in POST /api/add-song: {ve}")
-        return jsonify({"error": str(ve)}), 400
-    except Exception as e:
-        logger.error(f"Error in POST /api/add-song: {e}", exc_info=True)
-        return jsonify({"error": str(e)}), 500
-    finally:
-        # Cleanup temp file
-        if temp_file_path and os.path.exists(temp_file_path):
+            # 1. Fetch metadata
+            metadata = get_track_by_spotify_url(spotify_url)
+            title = metadata["title"]
+            artist = metadata["artist"]
+            spotify_id = metadata["spotify_id"]
+            genre = metadata["genre"]
+            
+            background_tasks["single_add"]["track_name"] = f"{title} - {artist}"
+            
+            album_art = metadata.get("album_art")
+            if not album_art:
+                album_art = fetch_album_art(title, artist)
+                
+            language = metadata.get("language")
+            if not language or language.lower() == "unknown":
+                language, _ = detect_track_language(title, artist)
+            state = load_state()
+            existing_tracks = []
+            db_file_id = get_db_file_id()
+            if db_file_id:
+                try:
+                    existing_data = download_json(db_file_id)
+                    if isinstance(existing_data, list):
+                        existing_tracks = existing_data
+                    elif isinstance(existing_data, dict) and 'tracks' in existing_data:
+                        existing_tracks = existing_data['tracks']
+                except Exception as e:
+                    logger.warning(f"Could not retrieve existing tracks for duplicate check: {e}")
+                    
+            # Format track search object for duplicate check
+            track_to_check = {
+                "title": title,
+                "artist": artist,
+                "spotify_id": spotify_id
+            }
+            
+            if is_duplicate(track_to_check, state, existing_tracks):
+                logger.warning(f"Song already exists in database: {title} by {artist}")
+                return
+                
+            # 3. Create temp download folder
+            temp_dir = os.environ.get('TEMP_DIR')
+            if not temp_dir:
+                temp_dir = os.path.join(project_root, 'temp')
+            os.makedirs(temp_dir, exist_ok=True)
+            
+            # 4. Download track
+            logger.info(f"Downloading track '{title}' by '{artist}' to {temp_dir}")
+            temp_file_path = download_track(title, artist, temp_dir)
+            
+            # 5. Upload track
+            logger.info(f"Uploading file '{temp_file_path}' to Google Drive...")
+            drive_file_id = upload_track(temp_file_path)
+            
+            # 6. Extract duration using local ffprobe helper
+            duration, duration_seconds = extract_duration(temp_file_path)
+            
+            # Add to metadata dict
+            db_metadata = {
+                "title": title,
+                "artist": artist,
+                "album": "Single",
+                "genre": genre,
+                "duration": duration,
+                "durationSeconds": duration_seconds,
+                "spotify_id": spotify_id,
+                "album_art": album_art,
+                "language": language
+            }
+            
+            # 7. Update database on Drive
+            update_database(drive_file_id, db_metadata)
+            
+            # Update scraper state on Drive
             try:
-                os.remove(temp_file_path)
-                logger.info(f"Cleaned up temp audio file: {temp_file_path}")
-            except Exception as cleanup_err:
-                logger.warning(f"Could not remove local temp file {temp_file_path}: {cleanup_err}")
+                current_state = load_state()
+                if spotify_id is not None:
+                    current_state.setdefault("downloaded_ids", []).append(spotify_id)
+                current_state.setdefault("downloaded_titles", []).append(f"{title} {artist}")
+                save_state(current_state)
+            except Exception as state_err:
+                logger.error(f"Failed to update scraper state: {state_err}", exc_info=True)
+        except Exception as e:
+            logger.error(f"Error in background add_song: {e}", exc_info=True)
+        finally:
+            # Cleanup temp file
+            if temp_file_path and os.path.exists(temp_file_path):
+                try:
+                    os.remove(temp_file_path)
+                    logger.info(f"Cleaned up temp audio file: {temp_file_path}")
+                except Exception as cleanup_err:
+                    logger.warning(f"Could not remove local temp file {temp_file_path}: {cleanup_err}")
+            background_tasks["single_add"]["status"] = "idle"
+
+    thread = threading.Thread(target=run_add_song_task)
+    thread.daemon = True
+    thread.start()
+
+    return jsonify({"status": "success", "message": "Song download started in background."})
 
 
 @app.route('/stream/<drive_file_id>', methods=['GET'])
@@ -724,10 +733,38 @@ def playlist_start():
         if not url:
             return jsonify({"error": "Missing url"}), 400
         playlist_id = start_playlist_import(url)
-        # Start background thread
-        thread = threading.Thread(target=run_playlist_import, args=(playlist_id,))
+        
+        # Update background tasks dict
+        background_tasks["playlist_import"]["status"] = "running"
+        background_tasks["playlist_import"]["started_at"] = datetime.datetime.utcnow().isoformat() + 'Z'
+        background_tasks["playlist_import"]["playlist_id"] = playlist_id
+        
+        # Start background thread with a wrapper to capture exit status
+        def run_playlist_import_wrapper():
+            try:
+                run_playlist_import(playlist_id)
+            except Exception as e:
+                logger.error(f"Error in background playlist import: {e}", exc_info=True)
+            finally:
+                from scraper.playlist_importer import active_imports
+                state = active_imports.get(playlist_id)
+                if state and state.get("status") == "cancelled":
+                    background_tasks["playlist_import"]["status"] = "cancelled"
+                else:
+                    background_tasks["playlist_import"]["status"] = "completed"
+
+        thread = threading.Thread(target=run_playlist_import_wrapper)
         thread.daemon = True
         thread.start()
+        
+        # Append clear session marker to scraper.log
+        log_path = os.path.join(project_root, 'scraper.log')
+        try:
+            with open(log_path, "a", encoding="utf-8") as f:
+                f.write(f"\n============================================================\nNEW SESSION: PLAYLIST IMPORT STARTED ({playlist_id})\n============================================================\n")
+        except Exception as log_err:
+            logger.warning(f"Could not append session marker to scraper.log: {log_err}")
+            
         return jsonify({"status": "success", "playlist_id": playlist_id})
     except Exception as e:
         logger.error(f"Error in start: {e}")
@@ -753,16 +790,62 @@ def playlist_cancel():
             return jsonify({"error": "Missing playlist_id"}), 400
             
         from dashboard.drive_client import search_file_by_name
+        from scraper.drive_uploader import get_db_file_id
         db_file_id, parent_id = get_db_file_id()
         file_id = search_file_by_name(f"playlist_import_state_{playlist_id}.json", parent_id)
         if file_id:
             state = download_json(file_id)
-            if state.get("status") == "running":
-                state["status"] = "cancelled"
-                upload_json(file_id, state, f"playlist_import_state_{playlist_id}.json", parent_id=parent_id)
+            state["status"] = "cancelled"
+            upload_json(file_id, state, f"playlist_import_state_{playlist_id}.json", parent_id=parent_id)
+            
+            # Update active_imports and background_tasks immediately
+            from scraper.playlist_importer import active_imports
+            if playlist_id in active_imports:
+                active_imports[playlist_id]["status"] = "cancelled"
+            background_tasks["playlist_import"]["status"] = "cancelled"
+            
         return jsonify({"status": "success"})
     except Exception as e:
         logger.error(f"Error in cancel: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/playlist/logs', methods=['GET'])
+def get_playlist_logs():
+    try:
+        log_path = os.path.join(project_root, 'scraper.log')
+        if not os.path.exists(log_path):
+            return jsonify([])
+            
+        with open(log_path, 'r', encoding='utf-8', errors='ignore') as f:
+            lines = f.readlines()
+            
+        cleaned_lines = [line.rstrip('\r\n') for line in lines]
+        
+        # Find the last session header index
+        header_idx = -1
+        for i, line in enumerate(cleaned_lines):
+            line_upper = line.upper()
+            if "NEW SESSION" in line_upper or "NEW SCRAPER SESSION" in line_upper or "NEW PLAYLIST IMPORT SESSION" in line_upper:
+                header_idx = i
+                
+        if header_idx != -1:
+            current_session_lines = cleaned_lines[header_idx:]
+        else:
+            current_session_lines = cleaned_lines
+            
+        last_150 = current_session_lines[-150:]
+        
+        keywords = {"playlist", "import", "download", "track", "failed", "error", "skipped"}
+        filtered = [
+            line for line in last_150
+            if any(kw in line.lower() for kw in keywords)
+        ]
+        
+        if not filtered:
+            return jsonify(last_150)
+        return jsonify(filtered)
+    except Exception as e:
+        logger.error(f"Error in GET /api/playlist/logs: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/download-logs', methods=['GET'])
@@ -793,6 +876,126 @@ def download_logs():
     except Exception as e:
         logger.error(f"Error in download_logs: {e}")
         return jsonify([]), 500
+
+# --- Backfill Engine Routes ---
+
+@app.route('/api/backfill/status', methods=['GET'])
+def get_backfill_status():
+    tracks = []
+    try:
+        from scraper.drive_uploader import get_db_file_id
+        db_file_id, _ = get_db_file_id()
+        if db_file_id:
+            db_data = download_json(db_file_id)
+            if db_data:
+                if isinstance(db_data, list):
+                    tracks = db_data
+                elif isinstance(db_data, dict) and 'tracks' in db_data:
+                    tracks = db_data['tracks']
+    except Exception as e:
+        logger.error(f"Error reading database for backfill status: {e}")
+
+    status = {
+        "success": True,
+        "album_art": {"missing": 0, "total": len(tracks)},
+        "duration": {"missing": 0, "total": len(tracks)},
+        "language": {"missing": 0, "total": len(tracks)}
+    }
+    
+    for track in tracks:
+        art = track.get("album_art")
+        if art is None or art == "":
+            status["album_art"]["missing"] += 1
+            
+        if track.get("durationSeconds") is None:
+            status["duration"]["missing"] += 1
+            
+        lang = track.get("language")
+        if lang is None or lang == "Unknown" or lang == "unknown" or lang == "":
+            status["language"]["missing"] += 1
+            
+    return jsonify(status)
+
+@app.route('/api/backfill/run', methods=['POST'])
+def run_backfill():
+    if background_tasks["backfill"]["status"] == "running":
+        return jsonify({"status": "already_running", "type": background_tasks["backfill"]["type"]})
+
+    data = request.json or {}
+    b_type = data.get("type", "all")
+    
+    def run_job():
+        background_tasks["backfill"]["status"] = "running"
+        background_tasks["backfill"]["started_at"] = datetime.datetime.utcnow().isoformat() + 'Z'
+        background_tasks["backfill"]["type"] = b_type
+        try:
+            if b_type == "album_art":
+                backfill_album_art()
+            elif b_type == "duration":
+                backfill_durations()
+            elif b_type == "language":
+                backfill_languages()
+            elif b_type == "all":
+                backfill_album_art()
+                backfill_durations()
+                backfill_languages()
+        except Exception as e:
+            logger.error(f"Backfill job failed: {e}")
+        finally:
+            background_tasks["backfill"]["status"] = "idle"
+            
+    thread = threading.Thread(target=run_job)
+    thread.daemon = True
+    thread.start()
+    
+    return jsonify({"status": "started", "type": b_type})
+
+@app.route('/api/backfill/logs', methods=['GET'])
+def get_backfill_logs():
+    try:
+        log_path = os.path.join(project_root, 'scraper.log')
+        if not os.path.exists(log_path):
+            return jsonify([])
+        with open(log_path, 'r', encoding='utf-8') as f:
+            lines = f.readlines()
+            
+        # Filter for backfill related lines
+        backfill_lines = [line.strip() for line in lines if 'backfill' in line.lower()]
+        
+        # Return last 100
+        return jsonify(backfill_lines[-100:])
+    except Exception as e:
+        logger.error(f"Error reading backfill logs: {e}")
+        return jsonify([])
+
+@app.route('/api/background/status', methods=['GET'])
+def get_background_status():
+    pl_state = background_tasks["playlist_import"]
+    if pl_state["status"] == "running" and pl_state["playlist_id"]:
+        from scraper.playlist_importer import active_imports
+        state = active_imports.get(pl_state["playlist_id"])
+        if state:
+            pl_state["processed"] = state.get("processed", 0)
+            pl_state["total_tracks"] = state.get("total_tracks", 0)
+            pl_state["downloaded"] = state.get("downloaded", 0)
+            pl_state["skipped"] = state.get("skipped", 0)
+            pl_state["failed"] = state.get("failed", 0)
+            if state.get("status") in ("completed", "cancelled"):
+                pl_state["status"] = state.get("status")
+        else:
+            try:
+                st = get_playlist_status(pl_state["playlist_id"])
+                if st and st.get("status") != "not_found":
+                    pl_state["processed"] = st.get("processed", 0)
+                    pl_state["total_tracks"] = st.get("total_tracks", 0)
+                    pl_state["downloaded"] = st.get("downloaded", 0)
+                    pl_state["skipped"] = st.get("skipped", 0)
+                    pl_state["failed"] = st.get("failed", 0)
+                    if st.get("status") in ("completed", "cancelled"):
+                        pl_state["status"] = st.get("status")
+            except Exception as e:
+                logger.warning(f"Failed to fetch playlist status from Drive: {e}")
+    return jsonify(background_tasks)
 
 @app.route('/ping', methods=['GET'])
 def ping():

@@ -274,6 +274,52 @@ def normalize_database():
         logger.error(f"normalize_database failed: {e}", exc_info=True)
         raise
 
+def list_database_backups():
+    """
+    Lists all database_backup_*.json files in the database folder.
+    Returns a list of dictionaries with 'id', 'name', and 'createdTime'.
+    """
+    try:
+        _, parent_folder_id = get_db_file_id()
+        files = list_files(parent_folder_id)
+        backups = []
+        for f in files:
+            if 'backup' in f.get('name', '').lower() and f.get('name', '').endswith('.json'):
+                backups.append(f)
+        
+        # Sort by createdTime descending
+        backups.sort(key=lambda x: x.get('createdTime', ''), reverse=True)
+        return backups
+    except Exception as e:
+        logger.error(f"list_database_backups failed: {e}", exc_info=True)
+        return []
+
+def restore_database_backup(backup_file_id):
+    """
+    Restores a specific backup to replace database.json.
+    """
+    try:
+        db_file_id, parent_folder_id = get_db_file_id()
+        if not db_file_id:
+            logger.error("restore_database_backup: database.json not found on Drive.")
+            return False
+            
+        logger.info(f"restore_database_backup: Downloading backup from ID {backup_file_id}...")
+        backup_data = download_json(backup_file_id)
+        
+        if not backup_data:
+            logger.error("restore_database_backup: Backup data is empty or failed to download.")
+            return False
+            
+        logger.info(f"restore_database_backup: Uploading restored data to database.json (ID {db_file_id})...")
+        upload_json(db_file_id, backup_data, 'database.json', parent_id=parent_folder_id)
+        logger.info("restore_database_backup: Successfully restored database.json from backup.")
+        return True
+    except Exception as e:
+        logger.error(f"restore_database_backup failed: {e}", exc_info=True)
+        return False
+
+
 if __name__ == '__main__':
     # Run a test upload of a small dummy file to the media folder
     import tempfile

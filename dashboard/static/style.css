@@ -1379,3 +1379,35 @@ h1, h2, h3, .gradient-heading {
     margin: 0 0 8px 0;
 }
 
+/* Background Task Indicator Dots in Navbar */
+.background-indicators {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(255, 255, 255, 0.02);
+    padding: 6px 14px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+}
+
+.task-indicator-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: var(--subtle);
+    display: inline-block;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.task-indicator-dot.active {
+    background-color: #30d158; /* Apple green */
+    box-shadow: 0 0 8px rgba(48, 209, 88, 0.6);
+    animation: pulse 1.5s infinite alternate;
+}
+
+.task-indicator-dot.idle {
+    background-color: var(--subtle);
+    box-shadow: none;
+}
+
