@@ -20,7 +20,9 @@ from scraper.spotify_charts import get_track_by_spotify_url, fetch_album_art, de
 from scraper.downloader import download_track
 from scraper.drive_uploader import upload_track, update_database, normalize_database
 from scraper.main import extract_duration
+from scraper.playlist_importer import get_playlist_preview, start_playlist_import, get_playlist_status, run_playlist_import
 import ctypes
+import threading
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -677,6 +679,95 @@ def stream_track(drive_file_id):
         logger.error(f"Error occurred while streaming file {drive_file_id}: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
 
+
+@app.route('/api/playlist/preview', methods=['POST'])
+def playlist_preview():
+    try:
+        url = request.json.get('url')
+        if not url:
+            return jsonify({"error": "Missing url"}), 400
+        preview = get_playlist_preview(url)
+        return jsonify(preview)
+    except Exception as e:
+        logger.error(f"Error in preview: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/playlist/start', methods=['POST'])
+def playlist_start():
+    try:
+        url = request.json.get('url')
+        if not url:
+            return jsonify({"error": "Missing url"}), 400
+        playlist_id = start_playlist_import(url)
+        # Start background thread
+        thread = threading.Thread(target=run_playlist_import, args=(playlist_id,))
+        thread.daemon = True
+        thread.start()
+        return jsonify({"status": "success", "playlist_id": playlist_id})
+    except Exception as e:
+        logger.error(f"Error in start: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/playlist/status', methods=['GET'])
+def playlist_status():
+    try:
+        playlist_id = request.args.get('playlist_id')
+        if not playlist_id:
+            return jsonify({"error": "Missing playlist_id"}), 400
+        status = get_playlist_status(playlist_id)
+        return jsonify(status)
+    except Exception as e:
+        logger.error(f"Error in status: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/playlist/cancel', methods=['POST'])
+def playlist_cancel():
+    try:
+        playlist_id = request.json.get('playlist_id')
+        if not playlist_id:
+            return jsonify({"error": "Missing playlist_id"}), 400
+            
+        from dashboard.drive_client import search_file_by_name
+        db_file_id, parent_id = get_db_file_id()
+        file_id = search_file_by_name(f"playlist_import_state_{playlist_id}.json", parent_id)
+        if file_id:
+            state = download_json(file_id)
+            if state.get("status") == "running":
+                state["status"] = "cancelled"
+                upload_json(file_id, state, f"playlist_import_state_{playlist_id}.json", parent_id=parent_id)
+        return jsonify({"status": "success"})
+    except Exception as e:
+        logger.error(f"Error in cancel: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/download-logs', methods=['GET'])
+def download_logs():
+    try:
+        db_file_id = get_db_file_id()
+        if not db_file_id:
+            return jsonify([])
+        data = download_json(db_file_id)
+        
+        tracks = []
+        if isinstance(data, list):
+            tracks = data
+        elif isinstance(data, dict):
+            if 'tracks' in data and isinstance(data['tracks'], list):
+                tracks = data['tracks']
+            else:
+                tracks = list(data.values())
+                
+        # Sort by timestamp descending
+        def get_ts(t):
+            ts = t.get('timestamp')
+            if not ts: return ""
+            return ts
+            
+        tracks.sort(key=get_ts, reverse=True)
+        return jsonify(tracks)
+    except Exception as e:
+        logger.error(f"Error in download_logs: {e}")
+        return jsonify([]), 500
 
 @app.route('/ping', methods=['GET'])
 def ping():

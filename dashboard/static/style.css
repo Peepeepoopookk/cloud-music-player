@@ -1347,3 +1347,35 @@ h1, h2, h3, .gradient-heading {
     color: var(--tertiary);
 }
 
+/* Downloader Section Styles */
+.downloader-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 24px;
+}
+
+.auto-scraper-card, .single-song-card, .playlist-importer-card, .download-logs-card {
+    display: flex;
+    flex-direction: column;
+}
+
+.playlist-preview-container {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 24px;
+}
+
+.playlist-progress-container {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 24px;
+}
+
+.playlist-preview-header h4 {
+    margin: 0 0 8px 0;
+}
+

@@ -28,15 +28,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
             
-            // Load section-specific data on navigation
+            // Reload specific section data
             if (targetId === 'section-library') {
-                loadTracks(true); // Show loader when manually switching tabs
+                loadTracks(false);
             } else if (targetId === 'section-storage') {
                 loadStorage();
-            } else if (targetId === 'section-logs') {
-                loadLogs();
             } else if (targetId === 'section-settings') {
-                loadSettings();
+                loadConfig();
+            } else if (targetId === 'section-downloader') {
+                loadDownloadLogs();
             }
         });
     });
@@ -979,6 +979,216 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (btnPreviewSong) btnPreviewSong.addEventListener('click', previewSong);
     if (btnConfirmAddSong) btnConfirmAddSong.addEventListener('click', addSong);
+
+    // === Playlist Importer Logic ===
+    const inputPlaylistUrl = document.getElementById('input-playlist-url');
+    const btnPreviewPlaylist = document.getElementById('btn-preview-playlist');
+    const playlistPreviewContainer = document.getElementById('playlist-preview-container');
+    const previewPlaylistName = document.getElementById('preview-playlist-name');
+    const previewPlaylistCount = document.getElementById('preview-playlist-count');
+    const previewPlaylistSize = document.getElementById('preview-playlist-size');
+    const btnCancelPlaylistPreview = document.getElementById('btn-cancel-playlist-preview');
+    const btnStartPlaylistImport = document.getElementById('btn-start-playlist-import');
+    const previewTracksList = document.getElementById('preview-tracks-list');
+    
+    const playlistProgressContainer = document.getElementById('playlist-progress-container');
+    const playlistStatusBadge = document.getElementById('playlist-status-badge');
+    const playlistProgressText = document.getElementById('playlist-progress-text');
+    const playlistStatDownloaded = document.getElementById('playlist-stat-downloaded');
+    const playlistStatSkipped = document.getElementById('playlist-stat-skipped');
+    const playlistStatFailed = document.getElementById('playlist-stat-failed');
+    const btnCancelPlaylistImport = document.getElementById('btn-cancel-playlist-import');
+    const playlistProgressFill = document.getElementById('playlist-progress-fill');
+    
+    let currentPlaylistId = null;
+    let playlistPollInterval = null;
+
+    if (btnPreviewPlaylist) {
+        btnPreviewPlaylist.addEventListener('click', async () => {
+            const url = inputPlaylistUrl.value.trim();
+            if (!url) return showToast("Please enter a playlist URL", "error");
+            
+            btnPreviewPlaylist.disabled = true;
+            btnPreviewPlaylist.textContent = "Loading...";
+            
+            try {
+                const response = await fetch('/api/playlist/preview', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({url})
+                });
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.error || "Failed to preview playlist");
+                
+                previewPlaylistName.textContent = data.playlist_name;
+                previewPlaylistCount.textContent = `${data.total_tracks} Tracks`;
+                previewPlaylistSize.textContent = data.estimated_size_display;
+                
+                previewTracksList.innerHTML = data.preview_tracks.map(t => `<div>• ${escapeHtml(t.title)} - ${escapeHtml(t.artist)}</div>`).join('') + (data.total_tracks > 5 ? `<div>...and ${data.total_tracks - 5} more</div>` : '');
+                
+                playlistPreviewContainer.classList.remove('hidden');
+                playlistProgressContainer.classList.add('hidden');
+            } catch (err) {
+                showToast(err.message, "error");
+            } finally {
+                btnPreviewPlaylist.disabled = false;
+                btnPreviewPlaylist.textContent = "Preview Playlist";
+            }
+        });
+    }
+
+    if (btnCancelPlaylistPreview) {
+        btnCancelPlaylistPreview.addEventListener('click', () => {
+            playlistPreviewContainer.classList.add('hidden');
+            inputPlaylistUrl.value = '';
+        });
+    }
+
+    if (btnStartPlaylistImport) {
+        btnStartPlaylistImport.addEventListener('click', async () => {
+            const url = inputPlaylistUrl.value.trim();
+            btnStartPlaylistImport.disabled = true;
+            
+            try {
+                const response = await fetch('/api/playlist/start', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({url})
+                });
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.error || "Failed to start import");
+                
+                currentPlaylistId = data.playlist_id;
+                playlistPreviewContainer.classList.add('hidden');
+                playlistProgressContainer.classList.remove('hidden');
+                
+                // reset progress
+                playlistProgressFill.style.width = '0%';
+                playlistProgressText.textContent = `Processed: 0 / 0`;
+                playlistStatDownloaded.textContent = `Downloaded: 0`;
+                playlistStatSkipped.textContent = `Skipped: 0`;
+                playlistStatFailed.textContent = `Failed: 0`;
+                playlistStatusBadge.textContent = "Running";
+                playlistStatusBadge.style.background = "rgba(255,255,255,0.1)";
+                
+                startPlaylistPolling();
+                showToast("Playlist import started in the background", "success");
+            } catch (err) {
+                showToast(err.message, "error");
+            } finally {
+                btnStartPlaylistImport.disabled = false;
+            }
+        });
+    }
+
+    if (btnCancelPlaylistImport) {
+        btnCancelPlaylistImport.addEventListener('click', async () => {
+            if (!currentPlaylistId) return;
+            try {
+                await fetch('/api/playlist/cancel', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({playlist_id: currentPlaylistId})
+                });
+                showToast("Cancellation requested", "success");
+            } catch (err) {
+                showToast(err.message, "error");
+            }
+        });
+    }
+
+    function startPlaylistPolling() {
+        if (playlistPollInterval) clearInterval(playlistPollInterval);
+        playlistPollInterval = setInterval(pollPlaylistStatus, 3000);
+    }
+
+    async function pollPlaylistStatus() {
+        if (!currentPlaylistId) return;
+        try {
+            const response = await fetch(`/api/playlist/status?playlist_id=${currentPlaylistId}`);
+            const data = await response.json();
+            
+            if (data.status === "not_found") return; // Might be initializing
+            
+            const processed = data.processed || 0;
+            const total = data.total_tracks || 0;
+            const pct = total > 0 ? (processed / total) * 100 : 0;
+            
+            playlistProgressFill.style.width = `${pct}%`;
+            playlistProgressText.textContent = `Processed: ${processed} / ${total}`;
+            playlistStatDownloaded.textContent = `Downloaded: ${data.downloaded || 0}`;
+            playlistStatSkipped.textContent = `Skipped: ${data.skipped || 0}`;
+            playlistStatFailed.textContent = `Failed: ${data.failed || 0}`;
+            
+            if (data.status === "completed") {
+                clearInterval(playlistPollInterval);
+                playlistStatusBadge.textContent = "Completed";
+                playlistStatusBadge.style.background = "#30d158";
+                showToast("Playlist import completed!", "success");
+                loadTracks(false);
+                loadStorage();
+            } else if (data.status === "cancelled") {
+                clearInterval(playlistPollInterval);
+                playlistStatusBadge.textContent = "Cancelled";
+                playlistStatusBadge.style.background = "#ff453a";
+            }
+        } catch (err) {
+            console.error("Error polling playlist status:", err);
+        }
+    }
+
+    // === Download Logs Logic ===
+    const downloadLogsTableBody = document.getElementById('download-logs-body');
+    const logsSearchInput = document.getElementById('logs-search-input');
+    let allDownloadLogs = [];
+
+    async function loadDownloadLogs() {
+        if (!downloadLogsTableBody) return;
+        downloadLogsTableBody.innerHTML = `<tr><td colspan="6" class="table-placeholder">Loading download logs...</td></tr>`;
+        try {
+            const response = await fetch('/api/download-logs');
+            if (!response.ok) throw new Error("Failed to load logs");
+            allDownloadLogs = await response.json();
+            renderDownloadLogs(allDownloadLogs);
+        } catch (err) {
+            downloadLogsTableBody.innerHTML = `<tr><td colspan="6" class="table-placeholder">Error: ${err.message}</td></tr>`;
+        }
+    }
+
+    function renderDownloadLogs(logs) {
+        if (!downloadLogsTableBody) return;
+        downloadLogsTableBody.innerHTML = '';
+        if (logs.length === 0) {
+            downloadLogsTableBody.innerHTML = `<tr><td colspan="6" class="table-placeholder">No tracks found.</td></tr>`;
+            return;
+        }
+        
+        logs.forEach(track => {
+            const tr = document.createElement('tr');
+            const dateStr = track.timestamp ? new Date(track.timestamp).toLocaleString() : 'N/A';
+            tr.innerHTML = `
+                <td>${escapeHtml(track.title || 'Unknown')}</td>
+                <td>${escapeHtml(track.artist || 'Unknown')}</td>
+                <td><span class="badge badge-language">${escapeHtml(track.language || 'unknown')}</span></td>
+                <td>${escapeHtml(track.duration || '--:--')}</td>
+                <td><span style="color: var(--tertiary); font-size: 0.85rem;">${escapeHtml(track.source || 'Manual')}</span></td>
+                <td style="color: var(--tertiary); font-size: 0.85rem;">${dateStr}</td>
+            `;
+            downloadLogsTableBody.appendChild(tr);
+        });
+    }
+
+    if (logsSearchInput) {
+        logsSearchInput.addEventListener('input', (e) => {
+            const q = e.target.value.toLowerCase();
+            const filtered = allDownloadLogs.filter(t => 
+                (t.title || '').toLowerCase().includes(q) || 
+                (t.artist || '').toLowerCase().includes(q) ||
+                (t.source || '').toLowerCase().includes(q)
+            );
+            renderDownloadLogs(filtered);
+        });
+    }
 
     // Bootstrap app state
     checkConnection();
