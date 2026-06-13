@@ -16,9 +16,10 @@ load_dotenv(dotenv_path=env_path)
 sys.path.append(project_root)
 from dashboard.drive_client import list_files, download_json, upload_json, delete_file, get_storage_quota, get_file_metadata, get_oauth_drive_service, get_valid_access_token, refresh_and_get_access_token
 from scraper.state_manager import load_config, save_config, load_state, save_state, is_duplicate
-from scraper.spotify_charts import get_track_by_spotify_url, fetch_album_art
+from scraper.spotify_charts import get_track_by_spotify_url, fetch_album_art, detect_track_language
 from scraper.downloader import download_track
 from scraper.drive_uploader import upload_track, update_database, normalize_database
+from scraper.main import extract_duration
 import ctypes
 
 # Configure logging
@@ -432,26 +433,7 @@ def normalize_library():
         logger.error(f"Error in POST /api/library/normalize: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
 
-def get_audio_duration_local(file_path):
-    """
-    Retrieves the duration of the audio file in MM:SS format using ffprobe.
-    """
-    try:
-        cmd = [
-            'ffprobe', '-v', 'error', 
-            '-show_entries', 'format=duration', 
-            '-of', 'default=noprint_wrappers=1:nokey=1', 
-            file_path
-        ]
-        result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-        if result.returncode == 0:
-            duration_seconds = float(result.stdout.strip())
-            minutes = int(duration_seconds // 60)
-            seconds = int(duration_seconds % 60)
-            return f"{minutes:02d}:{seconds:02d}"
-    except Exception as e:
-        logger.warning(f"Could not read audio duration using ffprobe: {e}")
-    return "--:--"
+
 
 @app.route('/api/preview-song', methods=['GET'])
 def preview_song():
@@ -493,10 +475,14 @@ def add_song():
         artist = metadata["artist"]
         spotify_id = metadata["spotify_id"]
         genre = metadata["genre"]
-        album_art = metadata.get("album_art") or fetch_album_art(title, artist)
-        language = metadata["language"]
         
-        # 2. Check duplicates
+        album_art = metadata.get("album_art")
+        if not album_art:
+            album_art = fetch_album_art(title, artist)
+            
+        language = metadata.get("language")
+        if not language or language.lower() == "unknown":
+            language, _ = detect_track_language(title, artist)
         state = load_state()
         existing_tracks = []
         db_file_id = get_db_file_id()
@@ -535,7 +521,7 @@ def add_song():
         drive_file_id = upload_track(temp_file_path)
         
         # 6. Extract duration using local ffprobe helper
-        duration = get_audio_duration_local(temp_file_path)
+        duration, duration_seconds = extract_duration(temp_file_path)
         
         # Add to metadata dict
         db_metadata = {
@@ -544,6 +530,7 @@ def add_song():
             "album": "Single",
             "genre": genre,
             "duration": duration,
+            "durationSeconds": duration_seconds,
             "spotify_id": spotify_id,
             "album_art": album_art,
             "language": language
@@ -572,6 +559,7 @@ def add_song():
             "album": "Single",
             "genre": genre,
             "duration": duration,
+            "durationSeconds": duration_seconds,
             "spotify_id": spotify_id,
             "album_art": album_art,
             "language": language

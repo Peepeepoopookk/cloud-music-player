@@ -128,7 +128,7 @@ def backfill_album_art():
 
 def backfill_durations():
     """
-    Checks database for tracks missing duration backfill and logs the count.
+    Checks database for tracks missing duration backfill, and uses iTunes API to backfill them.
     """
     logger.info("Starting duration backfill check task...")
     db_file_id, parent_folder_id = get_db_file_id()
@@ -148,15 +148,48 @@ def backfill_durations():
         else:
             return
             
-        needs_backfill = 0
+        updated_count = 0
+        import requests
         for track in tracks:
             if track.get("durationSeconds") is None or track.get("duration") == "--:--":
-                needs_backfill += 1
+                title = track.get("title")
+                artist = track.get("artist")
+                logger.info(f"backfill_durations: Backfilling duration for '{title}' by '{artist}'...")
                 
-        if needs_backfill > 0:
-            logger.info(f"backfill_durations: {needs_backfill} tracks still need duration backfill, but local files are unavailable. Skipping.")
+                try:
+                    search_term = f"{artist} {title}"
+                    itunes_url = "https://itunes.apple.com/search"
+                    params = {"term": search_term, "media": "music", "limit": 5}
+                    r = requests.get(itunes_url, params=params, timeout=5)
+                    if r.status_code == 200:
+                        data = r.json()
+                        results = data.get("results", [])
+                        if results:
+                            best_match = results[0]
+                            track_time_millis = best_match.get("trackTimeMillis")
+                            if track_time_millis:
+                                duration_seconds = int(track_time_millis) // 1000
+                                minutes = duration_seconds // 60
+                                seconds = duration_seconds % 60
+                                track["duration"] = f"{minutes:02d}:{seconds:02d}"
+                                track["durationSeconds"] = duration_seconds
+                                updated_count += 1
+                                logger.info(f"backfill_durations: Updated duration to {track['duration']}")
+                                continue
+                except Exception as e:
+                    logger.warning(f"backfill_durations: Failed iTunes search for '{title}': {e}")
+                    
+                track["duration"] = "--:--"
+                
+        if updated_count > 0:
+            logger.info(f"backfill_durations: Uploading updated database with {updated_count} duration backfills...")
+            if isinstance(db_data, dict) and 'tracks' in db_data:
+                db_data['tracks'] = tracks
+                upload_json(db_file_id, db_data, 'database.json', parent_id=parent_folder_id)
+            else:
+                upload_json(db_file_id, tracks, 'database.json', parent_id=parent_folder_id)
         else:
-            logger.info("backfill_durations: All tracks have valid durations.")
+            logger.info("backfill_durations: All tracks have valid durations or no updates made.")
             
     except Exception as e:
         logger.error(f"backfill_durations: Error during backfilling check: {e}", exc_info=True)
@@ -200,11 +233,25 @@ def backfill_languages():
         for track in tracks:
             lang = track.get("language", "unknown").lower()
             if lang == "unknown" or lang == "":
-                new_lang = determine_language_from_source(track.get("source"), lang)
-                if new_lang == "unknown" and (not track.get("source") or track.get("source").lower() == "unknown"):
-                    detected_lang, _ = detect_track_language(track.get("title"), track.get("artist"))
-                    new_lang = detected_lang
+                new_lang = "unknown"
+                source = track.get("source", "").lower()
+                
+                if "jiosaavn" in source:
+                    if "malayalam" in source: new_lang = "malayalam"
+                    elif "tamil" in source: new_lang = "tamil"
+                    elif "hindi" in source: new_lang = "hindi"
+                    elif "indian" in source or "india" in source: new_lang = "indian"
+                elif "spotify" in source or "global" in source or "regional" in source or "genre" in source:
+                    new_lang = "english"
                     
+                if new_lang == "unknown":
+                    try:
+                        detected_lang, _ = detect_track_language(track.get("title"), track.get("artist"))
+                        if detected_lang:
+                            new_lang = detected_lang
+                    except Exception as e:
+                        logger.warning(f"Failed language detection: {e}")
+                        
                 if new_lang != lang and new_lang != "unknown":
                     track["language"] = new_lang
                     updated_count += 1
