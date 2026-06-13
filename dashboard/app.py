@@ -435,6 +435,31 @@ def normalize_library():
         logger.error(f"Error in POST /api/library/normalize: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
 
+@app.route('/api/library/backup', methods=['POST'])
+def backup_library():
+    """
+    POST /api/library/backup — Creates a backup of database.json in the Drive database folder.
+    """
+    try:
+        import datetime
+        from scraper.drive_uploader import get_db_file_id
+        db_file_id, parent_folder_id = get_db_file_id()
+        if not db_file_id:
+            return jsonify({"error": "database.json not found"}), 404
+            
+        db_data = download_json(db_file_id)
+        now = datetime.datetime.now()
+        backup_filename = f"database_backup_{now.strftime('%Y-%m-%d_%H-%M-%S')}.json"
+        upload_json(None, db_data, backup_filename, parent_id=parent_folder_id)
+        
+        return jsonify({
+            "status": "success",
+            "message": f"Backup created successfully: {backup_filename}"
+        })
+    except Exception as e:
+        logger.error(f"Error in POST /api/library/backup: {e}", exc_info=True)
+        return jsonify({"error": str(e)}), 500
+
 
 
 @app.route('/api/preview-song', methods=['GET'])

@@ -11250,3 +11250,1240 @@ Deleting original file E:\Athul\cloud-music-player\temp\DJ Khaled, Future, Lil
 2026-06-10 14:11:00,018 - root - INFO -  - Ca$ino by Baby Keem
 2026-06-10 14:11:00,018 - root - INFO -  - GOMF (feat. GloRilla) by Latto, GloRilla
 2026-06-10 14:11:00,018 - root - INFO - ============================================================
+2026-06-13 21:33:00,832 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8080
+ * Running on http://192.168.100.85:8080
+2026-06-13 21:33:00,833 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
+2026-06-13 21:33:00,836 - werkzeug - INFO -  * Restarting with stat
+2026-06-13 21:33:01,574 - werkzeug - WARNING -  * Debugger is active!
+2026-06-13 21:33:01,579 - werkzeug - INFO -  * Debugger PIN: 867-116-290
+2026-06-13 21:33:26,843 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:8080
+ * Running on http://192.168.100.85:8080
+2026-06-13 21:33:26,843 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
+2026-06-13 21:33:26,845 - werkzeug - INFO -  * Restarting with stat
+2026-06-13 21:33:27,661 - werkzeug - WARNING -  * Debugger is active!
+2026-06-13 21:33:27,665 - werkzeug - INFO -  * Debugger PIN: 867-116-290
+2026-06-13 21:33:34,210 - werkzeug - INFO - 127.0.0.1 - - [13/Jun/2026 21:33:34] "GET / HTTP/1.1" 200 -
+2026-06-13 21:33:34,494 - werkzeug - INFO - 127.0.0.1 - - [13/Jun/2026 21:33:34] "GET /static/script.js HTTP/1.1" 200 -
+2026-06-13 21:33:34,499 - werkzeug - INFO - 127.0.0.1 - - [13/Jun/2026 21:33:34] "GET /static/style.css HTTP/1.1" 200 -
+2026-06-13 21:33:34,855 - werkzeug - INFO - 127.0.0.1 - - [13/Jun/2026 21:33:34] "GET /api/scraper/status HTTP/1.1" 200 -
+2026-06-13 21:33:34,858 - dashboard.drive_client - INFO - OAuth token is expired, refreshing automatically...
+2026-06-13 21:33:34,859 - dashboard.drive_client - INFO - OAuth token is expired, refreshing automatically...
+2026-06-13 21:33:34,943 - werkzeug - INFO - 127.0.0.1 - - [13/Jun/2026 21:33:34] "[33mGET /favicon.ico HTTP/1.1[0m" 404 -
+2026-06-13 21:33:35,169 - dashboard.drive_client - INFO - OAuth token refreshed and saved successfully.
+2026-06-13 21:33:35,181 - dashboard.drive_client - INFO - OAuth token refreshed and saved successfully.
+2026-06-13 21:33:35,186 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:33:35,187 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:33:35,193 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:33:35,199 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:33:35,200 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:33:35,200 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:33:36,633 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i.
+2026-06-13 21:33:36,636 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i.
+2026-06-13 21:33:36,640 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:33:36,640 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:33:36,645 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:33:36,648 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:33:36,648 - dashboard.drive_client - INFO - Listing files with query: trashed = false and '1JGo8S2-WagATODLDmPHcmvlWMC59nZOL' in parents
+2026-06-13 21:33:36,648 - dashboard.drive_client - INFO - Retrieving metadata for file ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:33:37,084 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:33:37,087 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:33:37,087 - dashboard.drive_client - INFO - Listing files with query: trashed = false and '1JGo8S2-WagATODLDmPHcmvlWMC59nZOL' in parents
+2026-06-13 21:33:37,290 - dashboard.drive_client - INFO - Successfully retrieved 59 files.
+2026-06-13 21:33:37,293 - werkzeug - INFO - 127.0.0.1 - - [13/Jun/2026 21:33:37] "GET /api/tracks HTTP/1.1" 200 -
+2026-06-13 21:33:37,304 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:33:37,315 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:33:37,316 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:33:37,611 - dashboard.drive_client - INFO - Successfully retrieved 59 files.
+2026-06-13 21:33:37,617 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:33:37,619 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:33:37,620 - dashboard.drive_client - INFO - Retrieving storage quota from Google Drive about.get...
+2026-06-13 21:33:38,038 - werkzeug - INFO - 127.0.0.1 - - [13/Jun/2026 21:33:38] "GET /api/storage HTTP/1.1" 200 -
+2026-06-13 21:33:38,410 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i.
+2026-06-13 21:33:38,417 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:33:38,421 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:33:38,421 - dashboard.drive_client - INFO - Listing files with query: trashed = false and '1JGo8S2-WagATODLDmPHcmvlWMC59nZOL' in parents
+2026-06-13 21:33:38,944 - dashboard.drive_client - INFO - Successfully retrieved 59 files.
+2026-06-13 21:33:38,947 - werkzeug - INFO - 127.0.0.1 - - [13/Jun/2026 21:33:38] "GET /api/tracks HTTP/1.1" 200 -
+2026-06-13 21:34:03,213 - werkzeug - INFO - 127.0.0.1 - - [13/Jun/2026 21:34:03] "GET / HTTP/1.1" 200 -
+2026-06-13 21:34:03,303 - werkzeug - INFO - 127.0.0.1 - - [13/Jun/2026 21:34:03] "GET /static/style.css HTTP/1.1" 200 -
+2026-06-13 21:34:03,311 - werkzeug - INFO - 127.0.0.1 - - [13/Jun/2026 21:34:03] "GET /static/script.js HTTP/1.1" 200 -
+2026-06-13 21:34:03,586 - werkzeug - INFO - 127.0.0.1 - - [13/Jun/2026 21:34:03] "GET /api/scraper/status HTTP/1.1" 200 -
+2026-06-13 21:34:03,589 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:34:03,589 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:34:03,595 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:34:03,598 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:34:03,599 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:34:03,599 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:34:03,674 - werkzeug - INFO - 127.0.0.1 - - [13/Jun/2026 21:34:03] "[33mGET /favicon.ico HTTP/1.1[0m" 404 -
+2026-06-13 21:34:04,694 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i.
+2026-06-13 21:34:04,698 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:34:04,701 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:34:04,701 - dashboard.drive_client - INFO - Listing files with query: trashed = false and '1JGo8S2-WagATODLDmPHcmvlWMC59nZOL' in parents
+2026-06-13 21:34:04,914 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i.
+2026-06-13 21:34:04,917 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:34:04,921 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:34:04,922 - dashboard.drive_client - INFO - Retrieving metadata for file ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:34:05,050 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:34:05,057 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:34:05,057 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:34:05,065 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:34:05,068 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:34:05,069 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:34:05,203 - dashboard.drive_client - INFO - Successfully retrieved 59 files.
+2026-06-13 21:34:05,207 - werkzeug - INFO - 127.0.0.1 - - [13/Jun/2026 21:34:05] "GET /api/tracks HTTP/1.1" 200 -
+2026-06-13 21:34:05,214 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:34:05,223 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:34:05,223 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:34:05,330 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:34:05,333 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:34:05,333 - dashboard.drive_client - INFO - Listing files with query: trashed = false and '1JGo8S2-WagATODLDmPHcmvlWMC59nZOL' in parents
+2026-06-13 21:34:05,843 - dashboard.drive_client - INFO - Successfully retrieved 59 files.
+2026-06-13 21:34:05,846 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:34:05,849 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:34:05,849 - dashboard.drive_client - INFO - Retrieving storage quota from Google Drive about.get...
+2026-06-13 21:34:06,108 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i.
+2026-06-13 21:34:06,113 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:34:06,115 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:34:06,115 - dashboard.drive_client - INFO - Listing files with query: trashed = false and '1JGo8S2-WagATODLDmPHcmvlWMC59nZOL' in parents
+2026-06-13 21:34:06,196 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i.
+2026-06-13 21:34:06,201 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:34:06,208 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:34:06,209 - dashboard.drive_client - INFO - Retrieving metadata for file ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:34:06,264 - werkzeug - INFO - 127.0.0.1 - - [13/Jun/2026 21:34:06] "GET /api/storage HTTP/1.1" 200 -
+2026-06-13 21:34:06,320 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i.
+2026-06-13 21:34:06,323 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:34:06,326 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:34:06,326 - dashboard.drive_client - INFO - Listing files with query: trashed = false and '1JGo8S2-WagATODLDmPHcmvlWMC59nZOL' in parents
+2026-06-13 21:34:06,642 - dashboard.drive_client - INFO - Successfully retrieved 59 files.
+2026-06-13 21:34:06,645 - werkzeug - INFO - 127.0.0.1 - - [13/Jun/2026 21:34:06] "GET /api/tracks HTTP/1.1" 200 -
+2026-06-13 21:34:06,649 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:34:06,656 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:34:06,658 - dashboard.drive_client - INFO - Listing files with query: trashed = false and '1JGo8S2-WagATODLDmPHcmvlWMC59nZOL' in parents
+2026-06-13 21:34:06,804 - dashboard.drive_client - INFO - Successfully retrieved 59 files.
+2026-06-13 21:34:06,806 - werkzeug - INFO - 127.0.0.1 - - [13/Jun/2026 21:34:06] "GET /api/tracks HTTP/1.1" 200 -
+2026-06-13 21:34:07,112 - dashboard.drive_client - INFO - Successfully retrieved 59 files.
+2026-06-13 21:34:07,119 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:34:07,126 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:34:07,126 - dashboard.drive_client - INFO - Retrieving storage quota from Google Drive about.get...
+2026-06-13 21:34:07,613 - werkzeug - INFO - 127.0.0.1 - - [13/Jun/2026 21:34:07] "GET /api/storage HTTP/1.1" 200 -
+2026-06-13 21:34:34,052 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:34:34,054 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:34:34,055 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:34:34,062 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:34:34,071 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:34:34,072 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:34:35,057 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:34:35,062 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:34:35,062 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:34:35,070 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:34:35,073 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:34:35,073 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:34:35,101 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i.
+2026-06-13 21:34:35,104 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:34:35,107 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:34:35,108 - dashboard.drive_client - INFO - Retrieving metadata for file ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:34:35,174 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i.
+2026-06-13 21:34:35,178 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:34:35,186 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:34:35,187 - dashboard.drive_client - INFO - Listing files with query: trashed = false and '1JGo8S2-WagATODLDmPHcmvlWMC59nZOL' in parents
+2026-06-13 21:34:35,528 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:34:35,531 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:34:35,532 - dashboard.drive_client - INFO - Listing files with query: trashed = false and '1JGo8S2-WagATODLDmPHcmvlWMC59nZOL' in parents
+2026-06-13 21:34:35,745 - dashboard.drive_client - INFO - Successfully retrieved 59 files.
+2026-06-13 21:34:35,747 - werkzeug - INFO - 127.0.0.1 - - [13/Jun/2026 21:34:35] "GET /api/tracks HTTP/1.1" 200 -
+2026-06-13 21:34:36,040 - dashboard.drive_client - INFO - Successfully retrieved 59 files.
+2026-06-13 21:34:36,045 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:34:36,049 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:34:36,049 - dashboard.drive_client - INFO - Retrieving storage quota from Google Drive about.get...
+2026-06-13 21:34:36,113 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i.
+2026-06-13 21:34:36,117 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:34:36,119 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:34:36,119 - dashboard.drive_client - INFO - Listing files with query: trashed = false and '1JGo8S2-WagATODLDmPHcmvlWMC59nZOL' in parents
+2026-06-13 21:34:36,161 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i.
+2026-06-13 21:34:36,167 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:34:36,172 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:34:36,173 - dashboard.drive_client - INFO - Retrieving metadata for file ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:34:36,491 - werkzeug - INFO - 127.0.0.1 - - [13/Jun/2026 21:34:36] "GET /api/storage HTTP/1.1" 200 -
+2026-06-13 21:34:36,579 - dashboard.drive_client - INFO - Successfully retrieved 59 files.
+2026-06-13 21:34:36,581 - werkzeug - INFO - 127.0.0.1 - - [13/Jun/2026 21:34:36] "GET /api/tracks HTTP/1.1" 200 -
+2026-06-13 21:34:36,583 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:34:36,597 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:34:36,598 - dashboard.drive_client - INFO - Listing files with query: trashed = false and '1JGo8S2-WagATODLDmPHcmvlWMC59nZOL' in parents
+2026-06-13 21:34:37,124 - dashboard.drive_client - INFO - Successfully retrieved 59 files.
+2026-06-13 21:34:37,128 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:34:37,131 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:34:37,131 - dashboard.drive_client - INFO - Retrieving storage quota from Google Drive about.get...
+2026-06-13 21:34:37,531 - werkzeug - INFO - 127.0.0.1 - - [13/Jun/2026 21:34:37] "GET /api/storage HTTP/1.1" 200 -
+2026-06-13 21:35:04,045 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:35:04,050 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:35:04,051 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:35:04,060 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:35:04,064 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:35:04,064 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:35:05,052 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:35:05,055 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:35:05,056 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:35:05,070 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:35:05,076 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:35:05,076 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:35:05,375 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i.
+2026-06-13 21:35:05,381 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:35:05,384 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:35:05,385 - dashboard.drive_client - INFO - Retrieving metadata for file ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:35:05,461 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i.
+2026-06-13 21:35:05,469 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:35:05,473 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:35:05,474 - dashboard.drive_client - INFO - Listing files with query: trashed = false and '1JGo8S2-WagATODLDmPHcmvlWMC59nZOL' in parents
+2026-06-13 21:35:05,835 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:35:05,837 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:35:05,838 - dashboard.drive_client - INFO - Listing files with query: trashed = false and '1JGo8S2-WagATODLDmPHcmvlWMC59nZOL' in parents
+2026-06-13 21:35:05,954 - dashboard.drive_client - INFO - Successfully retrieved 59 files.
+2026-06-13 21:35:05,957 - werkzeug - INFO - 127.0.0.1 - - [13/Jun/2026 21:35:05] "GET /api/tracks HTTP/1.1" 200 -
+2026-06-13 21:35:06,094 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i.
+2026-06-13 21:35:06,095 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i.
+2026-06-13 21:35:06,099 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:35:06,108 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:35:06,108 - dashboard.drive_client - INFO - Listing files with query: trashed = false and '1JGo8S2-WagATODLDmPHcmvlWMC59nZOL' in parents
+2026-06-13 21:35:06,115 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:35:06,118 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:35:06,119 - dashboard.drive_client - INFO - Retrieving metadata for file ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:35:06,304 - dashboard.drive_client - INFO - Successfully retrieved 59 files.
+2026-06-13 21:35:06,308 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:35:06,310 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:35:06,311 - dashboard.drive_client - INFO - Retrieving storage quota from Google Drive about.get...
+2026-06-13 21:35:06,556 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:35:06,560 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:35:06,560 - dashboard.drive_client - INFO - Listing files with query: trashed = false and '1JGo8S2-WagATODLDmPHcmvlWMC59nZOL' in parents
+2026-06-13 21:35:06,614 - dashboard.drive_client - INFO - Successfully retrieved 59 files.
+2026-06-13 21:35:06,616 - werkzeug - INFO - 127.0.0.1 - - [13/Jun/2026 21:35:06] "GET /api/tracks HTTP/1.1" 200 -
+2026-06-13 21:35:06,715 - werkzeug - INFO - 127.0.0.1 - - [13/Jun/2026 21:35:06] "GET /api/storage HTTP/1.1" 200 -
+2026-06-13 21:35:07,030 - dashboard.drive_client - INFO - Successfully retrieved 59 files.
+2026-06-13 21:35:07,034 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:35:07,037 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:35:07,037 - dashboard.drive_client - INFO - Retrieving storage quota from Google Drive about.get...
+2026-06-13 21:35:07,458 - werkzeug - INFO - 127.0.0.1 - - [13/Jun/2026 21:35:07] "GET /api/storage HTTP/1.1" 200 -
+2026-06-13 21:35:34,048 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:35:34,054 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:35:34,062 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:35:34,062 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:35:34,072 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:35:34,072 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:35:35,046 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:35:35,050 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:35:35,050 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:35:35,057 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:35:35,060 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:35:35,060 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:35:35,171 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i.
+2026-06-13 21:35:35,174 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:35:35,178 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:35:35,179 - dashboard.drive_client - INFO - Retrieving metadata for file ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:35:35,385 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i.
+2026-06-13 21:35:35,389 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:35:35,392 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:35:35,392 - dashboard.drive_client - INFO - Listing files with query: trashed = false and '1JGo8S2-WagATODLDmPHcmvlWMC59nZOL' in parents
+2026-06-13 21:35:35,617 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:35:35,620 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:35:35,620 - dashboard.drive_client - INFO - Listing files with query: trashed = false and '1JGo8S2-WagATODLDmPHcmvlWMC59nZOL' in parents
+2026-06-13 21:35:35,867 - dashboard.drive_client - INFO - Successfully retrieved 59 files.
+2026-06-13 21:35:35,869 - werkzeug - INFO - 127.0.0.1 - - [13/Jun/2026 21:35:35] "GET /api/tracks HTTP/1.1" 200 -
+2026-06-13 21:35:36,095 - dashboard.drive_client - INFO - Successfully retrieved 59 files.
+2026-06-13 21:35:36,099 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:35:36,104 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:35:36,104 - dashboard.drive_client - INFO - Retrieving storage quota from Google Drive about.get...
+2026-06-13 21:35:36,130 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i.
+2026-06-13 21:35:36,136 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i.
+2026-06-13 21:35:36,138 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:35:36,138 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:35:36,141 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:35:36,144 - dashboard.drive_client - INFO - Retrieving metadata for file ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:35:36,157 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:35:36,157 - dashboard.drive_client - INFO - Listing files with query: trashed = false and '1JGo8S2-WagATODLDmPHcmvlWMC59nZOL' in parents
+2026-06-13 21:35:36,526 - werkzeug - INFO - 127.0.0.1 - - [13/Jun/2026 21:35:36] "GET /api/storage HTTP/1.1" 200 -
+2026-06-13 21:35:36,570 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:35:36,574 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:35:36,574 - dashboard.drive_client - INFO - Listing files with query: trashed = false and '1JGo8S2-WagATODLDmPHcmvlWMC59nZOL' in parents
+2026-06-13 21:35:36,663 - dashboard.drive_client - INFO - Successfully retrieved 59 files.
+2026-06-13 21:35:36,666 - werkzeug - INFO - 127.0.0.1 - - [13/Jun/2026 21:35:36] "GET /api/tracks HTTP/1.1" 200 -
+2026-06-13 21:35:37,055 - dashboard.drive_client - INFO - Successfully retrieved 59 files.
+2026-06-13 21:35:37,059 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:35:37,063 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:35:37,063 - dashboard.drive_client - INFO - Retrieving storage quota from Google Drive about.get...
+2026-06-13 21:35:37,518 - werkzeug - INFO - 127.0.0.1 - - [13/Jun/2026 21:35:37] "GET /api/storage HTTP/1.1" 200 -
+2026-06-13 21:36:04,065 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:36:04,066 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:36:04,070 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:36:04,073 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:36:04,073 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:36:04,073 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:36:05,053 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:36:05,056 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:36:05,057 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:36:05,064 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:36:05,066 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:36:05,067 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:36:05,114 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i.
+2026-06-13 21:36:05,118 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:36:05,121 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:36:05,121 - dashboard.drive_client - INFO - Listing files with query: trashed = false and '1JGo8S2-WagATODLDmPHcmvlWMC59nZOL' in parents
+2026-06-13 21:36:05,226 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i.
+2026-06-13 21:36:05,230 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:36:05,233 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:36:05,233 - dashboard.drive_client - INFO - Retrieving metadata for file ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:36:05,602 - dashboard.drive_client - INFO - Successfully retrieved 59 files.
+2026-06-13 21:36:05,606 - werkzeug - INFO - 127.0.0.1 - - [13/Jun/2026 21:36:05] "GET /api/tracks HTTP/1.1" 200 -
+2026-06-13 21:36:05,676 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:36:05,683 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:36:05,684 - dashboard.drive_client - INFO - Listing files with query: trashed = false and '1JGo8S2-WagATODLDmPHcmvlWMC59nZOL' in parents
+2026-06-13 21:36:05,861 - werkzeug - INFO -  * Detected change in 'E:\\Athul\\cloud-music-player\\dashboard\\app.py', reloading
+2026-06-13 21:36:06,091 - werkzeug - INFO -  * Restarting with stat
+2026-06-13 21:36:34,045 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:36:34,045 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:36:34,049 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:36:34,051 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:36:34,051 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:36:34,052 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:36:35,049 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:36:35,049 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:36:35,053 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:36:35,055 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:36:35,056 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:36:35,056 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:36:35,106 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i.
+2026-06-13 21:36:35,111 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:36:35,115 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:36:35,117 - dashboard.drive_client - INFO - Listing files with query: trashed = false and '1JGo8S2-WagATODLDmPHcmvlWMC59nZOL' in parents
+2026-06-13 21:36:35,125 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i.
+2026-06-13 21:36:35,130 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:36:35,133 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:36:35,135 - dashboard.drive_client - INFO - Retrieving metadata for file ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:36:35,539 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:36:35,543 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:36:35,543 - dashboard.drive_client - INFO - Listing files with query: trashed = false and '1JGo8S2-WagATODLDmPHcmvlWMC59nZOL' in parents
+2026-06-13 21:36:35,605 - dashboard.drive_client - INFO - Successfully retrieved 59 files.
+2026-06-13 21:36:35,606 - werkzeug - INFO - 127.0.0.1 - - [13/Jun/2026 21:36:35] "GET /api/tracks HTTP/1.1" 200 -
+2026-06-13 21:36:36,053 - dashboard.drive_client - INFO - Successfully retrieved 59 files.
+2026-06-13 21:36:36,056 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:36:36,065 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:36:36,067 - dashboard.drive_client - INFO - Retrieving storage quota from Google Drive about.get...
+2026-06-13 21:36:36,232 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i.
+2026-06-13 21:36:36,236 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:36:36,238 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:36:36,238 - dashboard.drive_client - INFO - Retrieving metadata for file ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:36:36,249 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i.
+2026-06-13 21:36:36,252 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:36:36,255 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:36:36,256 - dashboard.drive_client - INFO - Listing files with query: trashed = false and '1JGo8S2-WagATODLDmPHcmvlWMC59nZOL' in parents
+2026-06-13 21:36:36,495 - werkzeug - INFO - 127.0.0.1 - - [13/Jun/2026 21:36:36] "GET /api/storage HTTP/1.1" 200 -
+2026-06-13 21:36:36,673 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:36:36,676 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:36:36,677 - dashboard.drive_client - INFO - Listing files with query: trashed = false and '1JGo8S2-WagATODLDmPHcmvlWMC59nZOL' in parents
+2026-06-13 21:36:36,733 - dashboard.drive_client - INFO - Successfully retrieved 59 files.
+2026-06-13 21:36:36,734 - werkzeug - INFO - 127.0.0.1 - - [13/Jun/2026 21:36:36] "GET /api/tracks HTTP/1.1" 200 -
+2026-06-13 21:36:37,164 - dashboard.drive_client - INFO - Successfully retrieved 59 files.
+2026-06-13 21:36:37,168 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:36:37,171 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:36:37,171 - dashboard.drive_client - INFO - Retrieving storage quota from Google Drive about.get...
+2026-06-13 21:36:37,608 - werkzeug - INFO - 127.0.0.1 - - [13/Jun/2026 21:36:37] "GET /api/storage HTTP/1.1" 200 -
+2026-06-13 21:37:04,046 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:37:04,053 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:37:04,070 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:37:04,070 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:37:04,071 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:37:04,073 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:37:05,050 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:37:05,054 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:37:05,055 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:37:05,063 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:37:05,066 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:37:05,067 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:37:05,091 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i.
+2026-06-13 21:37:05,094 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:37:05,101 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:37:05,101 - dashboard.drive_client - INFO - Listing files with query: trashed = false and '1JGo8S2-WagATODLDmPHcmvlWMC59nZOL' in parents
+2026-06-13 21:37:05,298 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i.
+2026-06-13 21:37:05,301 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:37:05,305 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:37:05,305 - dashboard.drive_client - INFO - Retrieving metadata for file ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:37:05,626 - dashboard.drive_client - INFO - Successfully retrieved 59 files.
+2026-06-13 21:37:05,628 - werkzeug - INFO - 127.0.0.1 - - [13/Jun/2026 21:37:05] "GET /api/tracks HTTP/1.1" 200 -
+2026-06-13 21:37:05,723 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:37:05,727 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:37:05,727 - dashboard.drive_client - INFO - Listing files with query: trashed = false and '1JGo8S2-WagATODLDmPHcmvlWMC59nZOL' in parents
+2026-06-13 21:37:06,083 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i.
+2026-06-13 21:37:06,086 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:37:06,090 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:37:06,091 - dashboard.drive_client - INFO - Listing files with query: trashed = false and '1JGo8S2-WagATODLDmPHcmvlWMC59nZOL' in parents
+2026-06-13 21:37:06,099 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i.
+2026-06-13 21:37:06,102 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:37:06,104 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:37:06,105 - dashboard.drive_client - INFO - Retrieving metadata for file ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:37:06,199 - dashboard.drive_client - INFO - Successfully retrieved 59 files.
+2026-06-13 21:37:06,205 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:37:06,208 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:37:06,209 - dashboard.drive_client - INFO - Retrieving storage quota from Google Drive about.get...
+2026-06-13 21:37:06,525 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:37:06,529 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:37:06,529 - dashboard.drive_client - INFO - Listing files with query: trashed = false and '1JGo8S2-WagATODLDmPHcmvlWMC59nZOL' in parents
+2026-06-13 21:37:06,605 - dashboard.drive_client - INFO - Successfully retrieved 59 files.
+2026-06-13 21:37:06,608 - werkzeug - INFO - 127.0.0.1 - - [13/Jun/2026 21:37:06] "GET /api/tracks HTTP/1.1" 200 -
+2026-06-13 21:37:06,635 - werkzeug - INFO - 127.0.0.1 - - [13/Jun/2026 21:37:06] "GET /api/storage HTTP/1.1" 200 -
+2026-06-13 21:37:07,009 - dashboard.drive_client - INFO - Successfully retrieved 59 files.
+2026-06-13 21:37:07,013 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:37:07,015 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:37:07,016 - dashboard.drive_client - INFO - Retrieving storage quota from Google Drive about.get...
+2026-06-13 21:37:07,431 - werkzeug - INFO - 127.0.0.1 - - [13/Jun/2026 21:37:07] "GET /api/storage HTTP/1.1" 200 -
+2026-06-13 21:37:50,056 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:37:50,061 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:37:50,062 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:37:50,071 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:37:50,071 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:37:50,072 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:37:50,079 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:37:50,080 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:37:50,081 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:37:50,081 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:37:50,093 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:37:50,100 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:37:51,104 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i.
+2026-06-13 21:37:51,108 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:37:51,110 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:37:51,111 - dashboard.drive_client - INFO - Retrieving metadata for file ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:37:51,120 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i.
+2026-06-13 21:37:51,124 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:37:51,128 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:37:51,128 - dashboard.drive_client - INFO - Listing files with query: trashed = false and '1JGo8S2-WagATODLDmPHcmvlWMC59nZOL' in parents
+2026-06-13 21:37:51,140 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i.
+2026-06-13 21:37:51,144 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:37:51,147 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:37:51,148 - dashboard.drive_client - INFO - Listing files with query: trashed = false and '1JGo8S2-WagATODLDmPHcmvlWMC59nZOL' in parents
+2026-06-13 21:37:51,326 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i.
+2026-06-13 21:37:51,329 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:37:51,339 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:37:51,339 - dashboard.drive_client - INFO - Retrieving metadata for file ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:37:51,553 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:37:51,555 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:37:51,556 - dashboard.drive_client - INFO - Listing files with query: trashed = false and '1JGo8S2-WagATODLDmPHcmvlWMC59nZOL' in parents
+2026-06-13 21:37:51,609 - dashboard.drive_client - INFO - Successfully retrieved 59 files.
+2026-06-13 21:37:51,610 - werkzeug - INFO - 127.0.0.1 - - [13/Jun/2026 21:37:51] "GET /api/tracks HTTP/1.1" 200 -
+2026-06-13 21:37:51,616 - dashboard.drive_client - INFO - Successfully retrieved 59 files.
+2026-06-13 21:37:51,619 - werkzeug - INFO - 127.0.0.1 - - [13/Jun/2026 21:37:51] "GET /api/tracks HTTP/1.1" 200 -
+2026-06-13 21:37:51,778 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:37:51,780 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:37:51,781 - dashboard.drive_client - INFO - Listing files with query: trashed = false and '1JGo8S2-WagATODLDmPHcmvlWMC59nZOL' in parents
+2026-06-13 21:37:52,079 - dashboard.drive_client - INFO - Successfully retrieved 59 files.
+2026-06-13 21:37:52,082 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:37:52,085 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:37:52,085 - dashboard.drive_client - INFO - Retrieving storage quota from Google Drive about.get...
+2026-06-13 21:37:52,557 - werkzeug - INFO - 127.0.0.1 - - [13/Jun/2026 21:37:52] "GET /api/storage HTTP/1.1" 200 -
+2026-06-13 21:37:52,626 - dashboard.drive_client - INFO - Successfully retrieved 59 files.
+2026-06-13 21:37:52,630 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:37:52,634 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:37:52,634 - dashboard.drive_client - INFO - Retrieving storage quota from Google Drive about.get...
+2026-06-13 21:37:53,064 - werkzeug - INFO - 127.0.0.1 - - [13/Jun/2026 21:37:53] "GET /api/storage HTTP/1.1" 200 -
+2026-06-13 21:38:50,043 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:38:50,043 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:38:50,043 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:38:50,043 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:38:50,047 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:38:50,051 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:38:50,055 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:38:50,055 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:38:50,056 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:38:50,056 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:38:50,132 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:38:50,133 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:38:51,138 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i.
+2026-06-13 21:38:51,141 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:38:51,144 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:38:51,145 - dashboard.drive_client - INFO - Retrieving metadata for file ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:38:51,212 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i.
+2026-06-13 21:38:51,217 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:38:51,220 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:38:51,221 - dashboard.drive_client - INFO - Listing files with query: trashed = false and '1JGo8S2-WagATODLDmPHcmvlWMC59nZOL' in parents
+2026-06-13 21:38:51,336 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i.
+2026-06-13 21:38:51,339 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:38:51,342 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:38:51,342 - dashboard.drive_client - INFO - Listing files with query: trashed = false and '1JGo8S2-WagATODLDmPHcmvlWMC59nZOL' in parents
+2026-06-13 21:38:51,370 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i.
+2026-06-13 21:38:51,374 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:38:51,380 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:38:51,381 - dashboard.drive_client - INFO - Retrieving metadata for file ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:38:51,593 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:38:51,598 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:38:51,598 - dashboard.drive_client - INFO - Listing files with query: trashed = false and '1JGo8S2-WagATODLDmPHcmvlWMC59nZOL' in parents
+2026-06-13 21:38:51,721 - dashboard.drive_client - INFO - Successfully retrieved 59 files.
+2026-06-13 21:38:51,723 - werkzeug - INFO - 127.0.0.1 - - [13/Jun/2026 21:38:51] "GET /api/tracks HTTP/1.1" 200 -
+2026-06-13 21:38:51,808 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:38:51,812 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:38:51,812 - dashboard.drive_client - INFO - Listing files with query: trashed = false and '1JGo8S2-WagATODLDmPHcmvlWMC59nZOL' in parents
+2026-06-13 21:38:51,824 - dashboard.drive_client - INFO - Successfully retrieved 59 files.
+2026-06-13 21:38:51,825 - werkzeug - INFO - 127.0.0.1 - - [13/Jun/2026 21:38:51] "GET /api/tracks HTTP/1.1" 200 -
+2026-06-13 21:38:52,077 - dashboard.drive_client - INFO - Successfully retrieved 59 files.
+2026-06-13 21:38:52,081 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:38:52,085 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:38:52,085 - dashboard.drive_client - INFO - Retrieving storage quota from Google Drive about.get...
+2026-06-13 21:38:52,285 - dashboard.drive_client - INFO - Successfully retrieved 59 files.
+2026-06-13 21:38:52,288 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:38:52,292 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:38:52,292 - dashboard.drive_client - INFO - Retrieving storage quota from Google Drive about.get...
+2026-06-13 21:38:52,609 - werkzeug - INFO - 127.0.0.1 - - [13/Jun/2026 21:38:52] "GET /api/storage HTTP/1.1" 200 -
+2026-06-13 21:38:52,715 - werkzeug - INFO - 127.0.0.1 - - [13/Jun/2026 21:38:52] "GET /api/storage HTTP/1.1" 200 -
+2026-06-13 21:39:50,044 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:39:50,045 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:39:50,045 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:39:50,045 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:39:50,049 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:39:50,057 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:39:50,057 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:39:50,059 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:39:50,059 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:39:50,066 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:39:50,075 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:39:50,089 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:39:51,059 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i.
+2026-06-13 21:39:51,060 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i.
+2026-06-13 21:39:51,063 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:39:51,067 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:39:51,068 - dashboard.drive_client - INFO - Retrieving metadata for file ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:39:51,076 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:39:51,079 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:39:51,079 - dashboard.drive_client - INFO - Listing files with query: trashed = false and '1JGo8S2-WagATODLDmPHcmvlWMC59nZOL' in parents
+2026-06-13 21:39:51,119 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i.
+2026-06-13 21:39:51,121 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:39:51,124 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:39:51,125 - dashboard.drive_client - INFO - Listing files with query: trashed = false and '1JGo8S2-WagATODLDmPHcmvlWMC59nZOL' in parents
+2026-06-13 21:39:51,133 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i.
+2026-06-13 21:39:51,138 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:39:51,151 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:39:51,151 - dashboard.drive_client - INFO - Retrieving metadata for file ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:39:51,517 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:39:51,520 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:39:51,521 - dashboard.drive_client - INFO - Listing files with query: trashed = false and '1JGo8S2-WagATODLDmPHcmvlWMC59nZOL' in parents
+2026-06-13 21:39:51,613 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:39:51,616 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:39:51,617 - dashboard.drive_client - INFO - Successfully retrieved 59 files.
+2026-06-13 21:39:51,617 - dashboard.drive_client - INFO - Listing files with query: trashed = false and '1JGo8S2-WagATODLDmPHcmvlWMC59nZOL' in parents
+2026-06-13 21:39:51,620 - werkzeug - INFO - 127.0.0.1 - - [13/Jun/2026 21:39:51] "GET /api/tracks HTTP/1.1" 200 -
+2026-06-13 21:39:51,628 - dashboard.drive_client - INFO - Successfully retrieved 59 files.
+2026-06-13 21:39:51,631 - werkzeug - INFO - 127.0.0.1 - - [13/Jun/2026 21:39:51] "GET /api/tracks HTTP/1.1" 200 -
+2026-06-13 21:39:51,994 - dashboard.drive_client - INFO - Successfully retrieved 59 files.
+2026-06-13 21:39:51,997 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:39:52,000 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:39:52,000 - dashboard.drive_client - INFO - Retrieving storage quota from Google Drive about.get...
+2026-06-13 21:39:52,176 - dashboard.drive_client - INFO - Successfully retrieved 59 files.
+2026-06-13 21:39:52,180 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:39:52,183 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:39:52,184 - dashboard.drive_client - INFO - Retrieving storage quota from Google Drive about.get...
+2026-06-13 21:39:52,438 - werkzeug - INFO - 127.0.0.1 - - [13/Jun/2026 21:39:52] "GET /api/storage HTTP/1.1" 200 -
+2026-06-13 21:39:52,608 - werkzeug - INFO - 127.0.0.1 - - [13/Jun/2026 21:39:52] "GET /api/storage HTTP/1.1" 200 -
+2026-06-13 21:40:50,045 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:40:50,045 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:40:50,045 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:40:50,045 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:40:50,051 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:40:50,053 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:40:50,059 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:40:50,060 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:40:50,060 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:40:50,060 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:40:50,088 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:40:50,089 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:40:51,126 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i.
+2026-06-13 21:40:51,129 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:40:51,132 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:40:51,133 - dashboard.drive_client - INFO - Retrieving metadata for file ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:40:51,161 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i.
+2026-06-13 21:40:51,164 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:40:51,167 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:40:51,169 - dashboard.drive_client - INFO - Listing files with query: trashed = false and '1JGo8S2-WagATODLDmPHcmvlWMC59nZOL' in parents
+2026-06-13 21:40:51,178 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i.
+2026-06-13 21:40:51,182 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:40:51,184 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:40:51,184 - dashboard.drive_client - INFO - Listing files with query: trashed = false and '1JGo8S2-WagATODLDmPHcmvlWMC59nZOL' in parents
+2026-06-13 21:40:51,195 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i.
+2026-06-13 21:40:51,199 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:40:51,210 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:40:51,210 - dashboard.drive_client - INFO - Retrieving metadata for file ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:40:51,563 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:40:51,566 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:40:51,567 - dashboard.drive_client - INFO - Listing files with query: trashed = false and '1JGo8S2-WagATODLDmPHcmvlWMC59nZOL' in parents
+2026-06-13 21:40:51,624 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:40:51,627 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:40:51,627 - dashboard.drive_client - INFO - Listing files with query: trashed = false and '1JGo8S2-WagATODLDmPHcmvlWMC59nZOL' in parents
+2026-06-13 21:40:51,675 - dashboard.drive_client - INFO - Successfully retrieved 59 files.
+2026-06-13 21:40:51,676 - werkzeug - INFO - 127.0.0.1 - - [13/Jun/2026 21:40:51] "GET /api/tracks HTTP/1.1" 200 -
+2026-06-13 21:40:51,698 - dashboard.drive_client - INFO - Successfully retrieved 59 files.
+2026-06-13 21:40:51,700 - werkzeug - INFO - 127.0.0.1 - - [13/Jun/2026 21:40:51] "GET /api/tracks HTTP/1.1" 200 -
+2026-06-13 21:40:52,059 - dashboard.drive_client - INFO - Successfully retrieved 59 files.
+2026-06-13 21:40:52,063 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:40:52,066 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:40:52,067 - dashboard.drive_client - INFO - Retrieving storage quota from Google Drive about.get...
+2026-06-13 21:40:52,104 - dashboard.drive_client - INFO - Successfully retrieved 59 files.
+2026-06-13 21:40:52,107 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:40:52,110 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:40:52,110 - dashboard.drive_client - INFO - Retrieving storage quota from Google Drive about.get...
+2026-06-13 21:40:52,531 - werkzeug - INFO - 127.0.0.1 - - [13/Jun/2026 21:40:52] "GET /api/storage HTTP/1.1" 200 -
+2026-06-13 21:40:52,589 - werkzeug - INFO - 127.0.0.1 - - [13/Jun/2026 21:40:52] "GET /api/storage HTTP/1.1" 200 -
+2026-06-13 21:41:50,047 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:41:50,054 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:41:50,054 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:41:50,054 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:41:50,061 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:41:50,062 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:41:50,066 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:41:50,066 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:41:50,069 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:41:50,069 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:41:50,069 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:41:50,077 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:41:51,118 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i.
+2026-06-13 21:41:51,124 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:41:51,126 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:41:51,127 - dashboard.drive_client - INFO - Listing files with query: trashed = false and '1JGo8S2-WagATODLDmPHcmvlWMC59nZOL' in parents
+2026-06-13 21:41:51,140 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i.
+2026-06-13 21:41:51,143 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:41:51,145 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:41:51,146 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i.
+2026-06-13 21:41:51,147 - dashboard.drive_client - INFO - Listing files with query: trashed = false and '1JGo8S2-WagATODLDmPHcmvlWMC59nZOL' in parents
+2026-06-13 21:41:51,155 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:41:51,158 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:41:51,158 - dashboard.drive_client - INFO - Retrieving metadata for file ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:41:51,228 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i.
+2026-06-13 21:41:51,232 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:41:51,235 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:41:51,235 - dashboard.drive_client - INFO - Retrieving metadata for file ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:41:51,611 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:41:51,616 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:41:51,617 - dashboard.drive_client - INFO - Listing files with query: trashed = false and '1JGo8S2-WagATODLDmPHcmvlWMC59nZOL' in parents
+2026-06-13 21:41:51,623 - dashboard.drive_client - INFO - Successfully retrieved 59 files.
+2026-06-13 21:41:51,624 - werkzeug - INFO - 127.0.0.1 - - [13/Jun/2026 21:41:51] "GET /api/tracks HTTP/1.1" 200 -
+2026-06-13 21:41:51,639 - dashboard.drive_client - INFO - Successfully retrieved 59 files.
+2026-06-13 21:41:51,640 - werkzeug - INFO - 127.0.0.1 - - [13/Jun/2026 21:41:51] "GET /api/tracks HTTP/1.1" 200 -
+2026-06-13 21:41:51,701 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:41:51,709 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:41:51,710 - dashboard.drive_client - INFO - Listing files with query: trashed = false and '1JGo8S2-WagATODLDmPHcmvlWMC59nZOL' in parents
+2026-06-13 21:41:52,118 - dashboard.drive_client - INFO - Successfully retrieved 59 files.
+2026-06-13 21:41:52,121 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:41:52,124 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:41:52,124 - dashboard.drive_client - INFO - Retrieving storage quota from Google Drive about.get...
+2026-06-13 21:41:52,209 - dashboard.drive_client - INFO - Successfully retrieved 59 files.
+2026-06-13 21:41:52,213 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:41:52,217 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:41:52,218 - dashboard.drive_client - INFO - Retrieving storage quota from Google Drive about.get...
+2026-06-13 21:41:52,539 - werkzeug - INFO - 127.0.0.1 - - [13/Jun/2026 21:41:52] "GET /api/storage HTTP/1.1" 200 -
+2026-06-13 21:41:52,661 - werkzeug - INFO - 127.0.0.1 - - [13/Jun/2026 21:41:52] "GET /api/storage HTTP/1.1" 200 -
+2026-06-13 21:42:50,047 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:42:50,047 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:42:50,047 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:42:50,047 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:42:50,051 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:42:50,053 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:42:50,053 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:42:50,055 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:42:50,058 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:42:50,058 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:42:50,063 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:42:50,064 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:42:51,212 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i.
+2026-06-13 21:42:51,213 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i.
+2026-06-13 21:42:51,214 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i.
+2026-06-13 21:42:51,217 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i.
+2026-06-13 21:42:51,222 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:42:51,226 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:42:51,226 - dashboard.drive_client - INFO - Retrieving metadata for file ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:42:51,242 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:42:51,245 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:42:51,246 - dashboard.drive_client - INFO - Listing files with query: trashed = false and '1JGo8S2-WagATODLDmPHcmvlWMC59nZOL' in parents
+2026-06-13 21:42:51,253 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:42:51,253 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:42:51,256 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:42:51,259 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:42:51,259 - dashboard.drive_client - INFO - Retrieving metadata for file ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:42:51,261 - dashboard.drive_client - INFO - Listing files with query: trashed = false and '1JGo8S2-WagATODLDmPHcmvlWMC59nZOL' in parents
+2026-06-13 21:42:51,643 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:42:51,646 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:42:51,647 - dashboard.drive_client - INFO - Listing files with query: trashed = false and '1JGo8S2-WagATODLDmPHcmvlWMC59nZOL' in parents
+2026-06-13 21:42:51,720 - dashboard.drive_client - INFO - Successfully retrieved 59 files.
+2026-06-13 21:42:51,721 - werkzeug - INFO - 127.0.0.1 - - [13/Jun/2026 21:42:51] "GET /api/tracks HTTP/1.1" 200 -
+2026-06-13 21:42:51,727 - dashboard.drive_client - INFO - Successfully retrieved 59 files.
+2026-06-13 21:42:51,729 - werkzeug - INFO - 127.0.0.1 - - [13/Jun/2026 21:42:51] "GET /api/tracks HTTP/1.1" 200 -
+2026-06-13 21:42:51,748 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:42:51,757 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:42:51,758 - dashboard.drive_client - INFO - Listing files with query: trashed = false and '1JGo8S2-WagATODLDmPHcmvlWMC59nZOL' in parents
+2026-06-13 21:42:52,177 - dashboard.drive_client - INFO - Successfully retrieved 59 files.
+2026-06-13 21:42:52,179 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:42:52,183 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:42:52,183 - dashboard.drive_client - INFO - Retrieving storage quota from Google Drive about.get...
+2026-06-13 21:42:52,264 - dashboard.drive_client - INFO - Successfully retrieved 59 files.
+2026-06-13 21:42:52,268 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:42:52,270 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:42:52,272 - dashboard.drive_client - INFO - Retrieving storage quota from Google Drive about.get...
+2026-06-13 21:42:52,621 - werkzeug - INFO - 127.0.0.1 - - [13/Jun/2026 21:42:52] "GET /api/storage HTTP/1.1" 200 -
+2026-06-13 21:42:52,684 - werkzeug - INFO - 127.0.0.1 - - [13/Jun/2026 21:42:52] "GET /api/storage HTTP/1.1" 200 -
+2026-06-13 21:43:50,048 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:43:50,048 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:43:50,048 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:43:50,048 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:43:50,051 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:43:50,055 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:43:50,055 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:43:50,057 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:43:50,060 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:43:50,066 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:43:50,075 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:43:50,107 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:43:51,152 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i.
+2026-06-13 21:43:51,155 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:43:51,160 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:43:51,160 - dashboard.drive_client - INFO - Listing files with query: trashed = false and '1JGo8S2-WagATODLDmPHcmvlWMC59nZOL' in parents
+2026-06-13 21:43:51,215 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i.
+2026-06-13 21:43:51,219 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:43:51,222 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:43:51,222 - dashboard.drive_client - INFO - Listing files with query: trashed = false and '1JGo8S2-WagATODLDmPHcmvlWMC59nZOL' in parents
+2026-06-13 21:43:51,238 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i.
+2026-06-13 21:43:51,241 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:43:51,245 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:43:51,246 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i.
+2026-06-13 21:43:51,246 - dashboard.drive_client - INFO - Retrieving metadata for file ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:43:51,256 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:43:51,258 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:43:51,259 - dashboard.drive_client - INFO - Retrieving metadata for file ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:43:51,673 - dashboard.drive_client - INFO - Successfully retrieved 59 files.
+2026-06-13 21:43:51,674 - werkzeug - INFO - 127.0.0.1 - - [13/Jun/2026 21:43:51] "GET /api/tracks HTTP/1.1" 200 -
+2026-06-13 21:43:51,676 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:43:51,680 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:43:51,682 - dashboard.drive_client - INFO - Successfully retrieved 59 files.
+2026-06-13 21:43:51,685 - werkzeug - INFO - 127.0.0.1 - - [13/Jun/2026 21:43:51] "GET /api/tracks HTTP/1.1" 200 -
+2026-06-13 21:43:51,683 - dashboard.drive_client - INFO - Listing files with query: trashed = false and '1JGo8S2-WagATODLDmPHcmvlWMC59nZOL' in parents
+2026-06-13 21:43:51,696 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:43:51,700 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:43:51,700 - dashboard.drive_client - INFO - Listing files with query: trashed = false and '1JGo8S2-WagATODLDmPHcmvlWMC59nZOL' in parents
+2026-06-13 21:43:52,199 - dashboard.drive_client - INFO - Successfully retrieved 59 files.
+2026-06-13 21:43:52,202 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:43:52,205 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:43:52,206 - dashboard.drive_client - INFO - Retrieving storage quota from Google Drive about.get...
+2026-06-13 21:43:52,239 - dashboard.drive_client - INFO - Successfully retrieved 59 files.
+2026-06-13 21:43:52,241 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:43:52,243 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:43:52,244 - dashboard.drive_client - INFO - Retrieving storage quota from Google Drive about.get...
+2026-06-13 21:43:52,665 - werkzeug - INFO - 127.0.0.1 - - [13/Jun/2026 21:43:52] "GET /api/storage HTTP/1.1" 200 -
+2026-06-13 21:43:52,675 - werkzeug - INFO - 127.0.0.1 - - [13/Jun/2026 21:43:52] "GET /api/storage HTTP/1.1" 200 -
+2026-06-13 21:44:50,058 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:44:50,058 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:44:50,062 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:44:50,062 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:44:50,066 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:44:50,071 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:44:51,119 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i.
+2026-06-13 21:44:51,122 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:44:51,125 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:44:51,125 - dashboard.drive_client - INFO - Retrieving metadata for file ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:44:51,362 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i.
+2026-06-13 21:44:51,365 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:44:51,368 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:44:51,369 - dashboard.drive_client - INFO - Listing files with query: trashed = false and '1JGo8S2-WagATODLDmPHcmvlWMC59nZOL' in parents
+2026-06-13 21:44:51,538 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:44:51,542 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:44:51,542 - dashboard.drive_client - INFO - Listing files with query: trashed = false and '1JGo8S2-WagATODLDmPHcmvlWMC59nZOL' in parents
+2026-06-13 21:44:51,919 - dashboard.drive_client - INFO - Successfully retrieved 59 files.
+2026-06-13 21:44:51,920 - werkzeug - INFO - 127.0.0.1 - - [13/Jun/2026 21:44:51] "GET /api/tracks HTTP/1.1" 200 -
+2026-06-13 21:44:52,035 - dashboard.drive_client - INFO - Successfully retrieved 59 files.
+2026-06-13 21:44:52,038 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:44:52,041 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:44:52,042 - dashboard.drive_client - INFO - Retrieving storage quota from Google Drive about.get...
+2026-06-13 21:44:52,487 - werkzeug - INFO - 127.0.0.1 - - [13/Jun/2026 21:44:52] "GET /api/storage HTTP/1.1" 200 -
+2026-06-13 21:45:50,048 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:45:50,054 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:45:50,064 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:45:50,066 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:45:50,066 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:45:50,066 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:45:51,107 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i.
+2026-06-13 21:45:51,111 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:45:51,114 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:45:51,114 - dashboard.drive_client - INFO - Listing files with query: trashed = false and '1JGo8S2-WagATODLDmPHcmvlWMC59nZOL' in parents
+2026-06-13 21:45:51,121 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i.
+2026-06-13 21:45:51,124 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:45:51,127 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:45:51,128 - dashboard.drive_client - INFO - Retrieving metadata for file ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:45:51,534 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:45:51,538 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:45:51,539 - dashboard.drive_client - INFO - Listing files with query: trashed = false and '1JGo8S2-WagATODLDmPHcmvlWMC59nZOL' in parents
+2026-06-13 21:45:51,612 - dashboard.drive_client - INFO - Successfully retrieved 59 files.
+2026-06-13 21:45:51,613 - werkzeug - INFO - 127.0.0.1 - - [13/Jun/2026 21:45:51] "GET /api/tracks HTTP/1.1" 200 -
+2026-06-13 21:45:52,058 - dashboard.drive_client - INFO - Successfully retrieved 59 files.
+2026-06-13 21:45:52,061 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:45:52,064 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:45:52,065 - dashboard.drive_client - INFO - Retrieving storage quota from Google Drive about.get...
+2026-06-13 21:45:52,556 - werkzeug - INFO - 127.0.0.1 - - [13/Jun/2026 21:45:52] "GET /api/storage HTTP/1.1" 200 -
+2026-06-13 21:46:50,050 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:46:50,054 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:46:50,056 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:46:50,063 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:46:50,066 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:46:50,066 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:46:51,099 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i.
+2026-06-13 21:46:51,101 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:46:51,103 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:46:51,104 - dashboard.drive_client - INFO - Listing files with query: trashed = false and '1JGo8S2-WagATODLDmPHcmvlWMC59nZOL' in parents
+2026-06-13 21:46:51,127 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i.
+2026-06-13 21:46:51,132 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:46:51,141 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:46:51,142 - dashboard.drive_client - INFO - Retrieving metadata for file ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:46:51,561 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:46:51,564 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:46:51,565 - dashboard.drive_client - INFO - Listing files with query: trashed = false and '1JGo8S2-WagATODLDmPHcmvlWMC59nZOL' in parents
+2026-06-13 21:46:51,572 - dashboard.drive_client - INFO - Successfully retrieved 59 files.
+2026-06-13 21:46:51,574 - werkzeug - INFO - 127.0.0.1 - - [13/Jun/2026 21:46:51] "GET /api/tracks HTTP/1.1" 200 -
+2026-06-13 21:46:52,069 - dashboard.drive_client - INFO - Successfully retrieved 59 files.
+2026-06-13 21:46:52,073 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:46:52,076 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:46:52,076 - dashboard.drive_client - INFO - Retrieving storage quota from Google Drive about.get...
+2026-06-13 21:46:52,489 - werkzeug - INFO - 127.0.0.1 - - [13/Jun/2026 21:46:52] "GET /api/storage HTTP/1.1" 200 -
+2026-06-13 21:47:50,052 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:47:50,055 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:47:50,055 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:47:50,066 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:47:50,069 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:47:50,070 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:47:51,063 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i.
+2026-06-13 21:47:51,077 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:47:51,081 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:47:51,081 - dashboard.drive_client - INFO - Retrieving metadata for file ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:47:51,145 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i.
+2026-06-13 21:47:51,149 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:47:51,152 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:47:51,152 - dashboard.drive_client - INFO - Listing files with query: trashed = false and '1JGo8S2-WagATODLDmPHcmvlWMC59nZOL' in parents
+2026-06-13 21:47:51,497 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:47:51,501 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:47:51,502 - dashboard.drive_client - INFO - Listing files with query: trashed = false and '1JGo8S2-WagATODLDmPHcmvlWMC59nZOL' in parents
+2026-06-13 21:47:51,623 - dashboard.drive_client - INFO - Successfully retrieved 59 files.
+2026-06-13 21:47:51,625 - werkzeug - INFO - 127.0.0.1 - - [13/Jun/2026 21:47:51] "GET /api/tracks HTTP/1.1" 200 -
+2026-06-13 21:47:51,992 - dashboard.drive_client - INFO - Successfully retrieved 59 files.
+2026-06-13 21:47:51,996 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:47:51,999 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:47:52,000 - dashboard.drive_client - INFO - Retrieving storage quota from Google Drive about.get...
+2026-06-13 21:47:52,416 - werkzeug - INFO - 127.0.0.1 - - [13/Jun/2026 21:47:52] "GET /api/storage HTTP/1.1" 200 -
+2026-06-13 21:48:50,051 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:48:50,057 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:48:50,065 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:48:50,066 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:48:50,068 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:48:50,075 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:48:51,195 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i.
+2026-06-13 21:48:51,198 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:48:51,201 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:48:51,201 - dashboard.drive_client - INFO - Listing files with query: trashed = false and '1JGo8S2-WagATODLDmPHcmvlWMC59nZOL' in parents
+2026-06-13 21:48:51,210 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i.
+2026-06-13 21:48:51,213 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:48:51,216 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:48:51,216 - dashboard.drive_client - INFO - Retrieving metadata for file ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:48:51,627 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:48:51,630 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:48:51,630 - dashboard.drive_client - INFO - Listing files with query: trashed = false and '1JGo8S2-WagATODLDmPHcmvlWMC59nZOL' in parents
+2026-06-13 21:48:51,790 - dashboard.drive_client - INFO - Successfully retrieved 59 files.
+2026-06-13 21:48:51,792 - werkzeug - INFO - 127.0.0.1 - - [13/Jun/2026 21:48:51] "GET /api/tracks HTTP/1.1" 200 -
+2026-06-13 21:48:52,108 - dashboard.drive_client - INFO - Successfully retrieved 59 files.
+2026-06-13 21:48:52,111 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:48:52,114 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:48:52,114 - dashboard.drive_client - INFO - Retrieving storage quota from Google Drive about.get...
+2026-06-13 21:48:52,571 - werkzeug - INFO - 127.0.0.1 - - [13/Jun/2026 21:48:52] "GET /api/storage HTTP/1.1" 200 -
+2026-06-13 21:49:50,040 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:49:50,043 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:49:50,043 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:49:50,053 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:49:50,055 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:49:50,056 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:49:51,111 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i.
+2026-06-13 21:49:51,115 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:49:51,119 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:49:51,119 - dashboard.drive_client - INFO - Listing files with query: trashed = false and '1JGo8S2-WagATODLDmPHcmvlWMC59nZOL' in parents
+2026-06-13 21:49:51,138 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i.
+2026-06-13 21:49:51,142 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:49:51,151 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:49:51,152 - dashboard.drive_client - INFO - Retrieving metadata for file ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:49:51,575 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:49:51,578 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:49:51,578 - dashboard.drive_client - INFO - Listing files with query: trashed = false and '1JGo8S2-WagATODLDmPHcmvlWMC59nZOL' in parents
+2026-06-13 21:49:51,597 - dashboard.drive_client - INFO - Successfully retrieved 59 files.
+2026-06-13 21:49:51,599 - werkzeug - INFO - 127.0.0.1 - - [13/Jun/2026 21:49:51] "GET /api/tracks HTTP/1.1" 200 -
+2026-06-13 21:49:52,080 - dashboard.drive_client - INFO - Successfully retrieved 59 files.
+2026-06-13 21:49:52,084 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:49:52,087 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:49:52,088 - dashboard.drive_client - INFO - Retrieving storage quota from Google Drive about.get...
+2026-06-13 21:49:52,508 - werkzeug - INFO - 127.0.0.1 - - [13/Jun/2026 21:49:52] "GET /api/storage HTTP/1.1" 200 -
+2026-06-13 21:50:50,047 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:50:50,047 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:50:50,051 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:50:50,054 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:50:50,054 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:50:50,055 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:50:51,059 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i.
+2026-06-13 21:50:51,071 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:50:51,075 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:50:51,077 - dashboard.drive_client - INFO - Retrieving metadata for file ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:50:51,171 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i.
+2026-06-13 21:50:51,174 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:50:51,177 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:50:51,177 - dashboard.drive_client - INFO - Listing files with query: trashed = false and '1JGo8S2-WagATODLDmPHcmvlWMC59nZOL' in parents
+2026-06-13 21:50:51,493 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:50:51,497 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:50:51,497 - dashboard.drive_client - INFO - Listing files with query: trashed = false and '1JGo8S2-WagATODLDmPHcmvlWMC59nZOL' in parents
+2026-06-13 21:50:51,679 - dashboard.drive_client - INFO - Successfully retrieved 59 files.
+2026-06-13 21:50:51,681 - werkzeug - INFO - 127.0.0.1 - - [13/Jun/2026 21:50:51] "GET /api/tracks HTTP/1.1" 200 -
+2026-06-13 21:50:51,961 - dashboard.drive_client - INFO - Successfully retrieved 59 files.
+2026-06-13 21:50:51,964 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:50:51,969 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:50:51,970 - dashboard.drive_client - INFO - Retrieving storage quota from Google Drive about.get...
+2026-06-13 21:50:52,400 - werkzeug - INFO - 127.0.0.1 - - [13/Jun/2026 21:50:52] "GET /api/storage HTTP/1.1" 200 -
+2026-06-13 21:51:25,103 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://192.168.100.85:5000
+2026-06-13 21:51:25,103 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
+C:\Users\hp\AppData\Local\Programs\Python\Python310\lib\site-packages\google\api_core\_python_version_support.py:255: FutureWarning: You are using a Python version (3.10.7) which Google will stop supporting in new releases of google.api_core once it reaches its end of life (2026-10-04). Please upgrade to the latest Python version, or at least Python 3.11, to continue receiving updates for google.api_core past that date.
+  warnings.warn(message, FutureWarning)
+2026-06-13 21:51:40,993 - root - INFO - ============================================================
+2026-06-13 21:51:40,993 - root - INFO - Starting pool-based Spotify Charts crawler and uploader job...
+2026-06-13 21:51:40,993 - root - INFO - ============================================================
+2026-06-13 21:51:41,004 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:51:41,006 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:51:41,006 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:51:41,006 - dashboard.drive_client - INFO - Retrieving metadata for file ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:51:41,006 - dashboard.drive_client - INFO - Retrieving metadata for file ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:51:41,455 - root - INFO - Starting album art backfill task...
+2026-06-13 21:51:41,458 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:51:41,463 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:51:41,463 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:51:41,463 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:51:41,463 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:51:42,516 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i.
+2026-06-13 21:51:42,516 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i.
+2026-06-13 21:51:42,516 - root - INFO - backfill_album_art: Backfilling album art for 'PAGEANT STAGE' by 'Tone Stith'...
+2026-06-13 21:51:43,067 - scraper.spotify_charts - INFO - fetch_album_art: Searching iTunes for 'PAGEANT STAGE' by 'Tone Stith'...
+2026-06-13 21:51:43,067 - scraper.spotify_charts - INFO - fetch_album_art: Searching iTunes for 'PAGEANT STAGE' by 'Tone Stith'...
+2026-06-13 21:51:43,644 - scraper.spotify_charts - INFO - fetch_album_art: No results found for 'PAGEANT STAGE' by 'Tone Stith'.
+2026-06-13 21:51:43,644 - scraper.spotify_charts - INFO - fetch_album_art: No results found for 'PAGEANT STAGE' by 'Tone Stith'.
+2026-06-13 21:51:43,646 - root - INFO - backfill_album_art: Backfilling album art for 'SHERIYA' by 'ARJN, KDS, ronn, Suhas Moideen'...
+2026-06-13 21:51:44,346 - scraper.spotify_charts - INFO - fetch_album_art: Searching iTunes for 'SHERIYA' by 'ARJN, KDS, ronn, Suhas Moideen'...
+2026-06-13 21:51:44,346 - scraper.spotify_charts - INFO - fetch_album_art: Searching iTunes for 'SHERIYA' by 'ARJN, KDS, ronn, Suhas Moideen'...
+2026-06-13 21:51:44,867 - scraper.spotify_charts - INFO - fetch_album_art: No results found for 'SHERIYA' by 'ARJN, KDS, ronn, Suhas Moideen'.
+2026-06-13 21:51:44,867 - scraper.spotify_charts - INFO - fetch_album_art: No results found for 'SHERIYA' by 'ARJN, KDS, ronn, Suhas Moideen'.
+2026-06-13 21:51:44,868 - root - INFO - backfill_album_art: Backfilling album art for 'Chiri Thottu' by 'Justin Prabhakaran, Chinmayi Sripada, Manu Manjith, Nivin Pauly, Preity Mukhundhan'...
+2026-06-13 21:51:45,538 - scraper.spotify_charts - INFO - fetch_album_art: Searching iTunes for 'Chiri Thottu' by 'Justin Prabhakaran, Chinmayi Sripada, Manu Manjith, Nivin Pauly, Preity Mukhundhan'...
+2026-06-13 21:51:45,538 - scraper.spotify_charts - INFO - fetch_album_art: Searching iTunes for 'Chiri Thottu' by 'Justin Prabhakaran, Chinmayi Sripada, Manu Manjith, Nivin Pauly, Preity Mukhundhan'...
+2026-06-13 21:51:46,099 - scraper.spotify_charts - INFO - fetch_album_art: No results found for 'Chiri Thottu' by 'Justin Prabhakaran, Chinmayi Sripada, Manu Manjith, Nivin Pauly, Preity Mukhundhan'.
+2026-06-13 21:51:46,099 - scraper.spotify_charts - INFO - fetch_album_art: No results found for 'Chiri Thottu' by 'Justin Prabhakaran, Chinmayi Sripada, Manu Manjith, Nivin Pauly, Preity Mukhundhan'.
+2026-06-13 21:51:46,101 - root - INFO - backfill_album_art: Backfilling album art for 'Karineeli' by 'Vineesh Kallettumkara, Sethu Chandran'...
+2026-06-13 21:51:46,673 - scraper.spotify_charts - INFO - fetch_album_art: Searching iTunes for 'Karineeli' by 'Vineesh Kallettumkara, Sethu Chandran'...
+2026-06-13 21:51:46,673 - scraper.spotify_charts - INFO - fetch_album_art: Searching iTunes for 'Karineeli' by 'Vineesh Kallettumkara, Sethu Chandran'...
+2026-06-13 21:51:47,227 - scraper.spotify_charts - INFO - fetch_album_art: No results found for 'Karineeli' by 'Vineesh Kallettumkara, Sethu Chandran'.
+2026-06-13 21:51:47,227 - scraper.spotify_charts - INFO - fetch_album_art: No results found for 'Karineeli' by 'Vineesh Kallettumkara, Sethu Chandran'.
+2026-06-13 21:51:47,228 - root - INFO - backfill_album_art: Backfilling album art for 'Vazhikatti (Kizhakku Suryan)' by 'Fejo, Jeffin Jestin, Violin Jacob, Daleema, Roy Kanjirathanam'...
+2026-06-13 21:51:48,414 - scraper.spotify_charts - INFO - fetch_album_art: Searching iTunes for 'Vazhikatti (Kizhakku Suryan)' by 'Fejo, Jeffin Jestin, Violin Jacob, Daleema, Roy Kanjirathanam'...
+2026-06-13 21:51:48,414 - scraper.spotify_charts - INFO - fetch_album_art: Searching iTunes for 'Vazhikatti (Kizhakku Suryan)' by 'Fejo, Jeffin Jestin, Violin Jacob, Daleema, Roy Kanjirathanam'...
+2026-06-13 21:51:49,049 - scraper.spotify_charts - INFO - fetch_album_art: No results found for 'Vazhikatti (Kizhakku Suryan)' by 'Fejo, Jeffin Jestin, Violin Jacob, Daleema, Roy Kanjirathanam'.
+2026-06-13 21:51:49,049 - scraper.spotify_charts - INFO - fetch_album_art: No results found for 'Vazhikatti (Kizhakku Suryan)' by 'Fejo, Jeffin Jestin, Violin Jacob, Daleema, Roy Kanjirathanam'.
+2026-06-13 21:51:49,051 - root - INFO - backfill_album_art: Backfilling album art for 'KALYANI' by 'Suhas Moideen, Vishnu V, ARJN, KDS, FIFTY4, ronn'...
+2026-06-13 21:51:49,659 - scraper.spotify_charts - INFO - fetch_album_art: Searching iTunes for 'KALYANI' by 'Suhas Moideen, Vishnu V, ARJN, KDS, FIFTY4, ronn'...
+2026-06-13 21:51:49,659 - scraper.spotify_charts - INFO - fetch_album_art: Searching iTunes for 'KALYANI' by 'Suhas Moideen, Vishnu V, ARJN, KDS, FIFTY4, ronn'...
+2026-06-13 21:51:50,205 - scraper.spotify_charts - INFO - fetch_album_art: No results found for 'KALYANI' by 'Suhas Moideen, Vishnu V, ARJN, KDS, FIFTY4, ronn'.
+2026-06-13 21:51:50,205 - scraper.spotify_charts - INFO - fetch_album_art: No results found for 'KALYANI' by 'Suhas Moideen, Vishnu V, ARJN, KDS, FIFTY4, ronn'.
+2026-06-13 21:51:50,207 - root - INFO - backfill_album_art: Backfilling album art for 'Jaalakaari' by 'Sai Abhyankkar, Sublahshini, Vinayak Sasikumar, Preethi Asrani, Shane Nigam'...
+2026-06-13 21:51:51,418 - scraper.spotify_charts - INFO - fetch_album_art: Searching iTunes for 'Jaalakaari' by 'Sai Abhyankkar, Sublahshini, Vinayak Sasikumar, Preethi Asrani, Shane Nigam'...
+2026-06-13 21:51:51,418 - scraper.spotify_charts - INFO - fetch_album_art: Searching iTunes for 'Jaalakaari' by 'Sai Abhyankkar, Sublahshini, Vinayak Sasikumar, Preethi Asrani, Shane Nigam'...
+2026-06-13 21:51:51,967 - scraper.spotify_charts - INFO - fetch_album_art: No results found for 'Jaalakaari' by 'Sai Abhyankkar, Sublahshini, Vinayak Sasikumar, Preethi Asrani, Shane Nigam'.
+2026-06-13 21:51:51,967 - scraper.spotify_charts - INFO - fetch_album_art: No results found for 'Jaalakaari' by 'Sai Abhyankkar, Sublahshini, Vinayak Sasikumar, Preethi Asrani, Shane Nigam'.
+2026-06-13 21:51:51,969 - root - INFO - backfill_album_art: Backfilling album art for 'Amsham - അംശം' by 'Aksomaniac, M.H.R, Bhumi, Circle Tone'...
+2026-06-13 21:51:52,543 - scraper.spotify_charts - INFO - fetch_album_art: Searching iTunes for 'Amsham - \u0d05\u0d02\u0d36\u0d02' by 'Aksomaniac, M.H.R, Bhumi, Circle Tone'...
+2026-06-13 21:51:52,543 - scraper.spotify_charts - INFO - fetch_album_art: Searching iTunes for 'Amsham - അംശം' by 'Aksomaniac, M.H.R, Bhumi, Circle Tone'...
+2026-06-13 21:51:53,087 - scraper.spotify_charts - INFO - fetch_album_art: No results found for 'Amsham - \u0d05\u0d02\u0d36\u0d02' by 'Aksomaniac, M.H.R, Bhumi, Circle Tone'.
+2026-06-13 21:51:53,087 - scraper.spotify_charts - INFO - fetch_album_art: No results found for 'Amsham - അംശം' by 'Aksomaniac, M.H.R, Bhumi, Circle Tone'.
+2026-06-13 21:51:53,089 - root - INFO - backfill_album_art: Finished. 0 tracks were backfilled.
+2026-06-13 21:51:53,089 - root - INFO - Starting duration backfill check task...
+2026-06-13 21:51:53,093 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:51:53,095 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:51:53,095 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:51:53,095 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:51:53,095 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:51:54,122 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i.
+2026-06-13 21:51:54,122 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i.
+2026-06-13 21:51:54,122 - root - INFO - backfill_durations: Backfilling duration for 'Billie Jean' by 'Michael Jackson'...
+2026-06-13 21:51:54,786 - root - INFO - backfill_durations: Updated duration to 04:53
+2026-06-13 21:51:54,786 - root - INFO - backfill_durations: Backfilling duration for 'Beauty And A Beat' by 'Justin Bieber, Nicki Minaj'...
+2026-06-13 21:51:55,359 - root - INFO - backfill_durations: Updated duration to 03:47
+2026-06-13 21:51:55,359 - root - INFO - backfill_durations: Backfilling duration for 'SWIM' by 'BTS'...
+2026-06-13 21:51:55,957 - root - INFO - backfill_durations: Updated duration to 02:39
+2026-06-13 21:51:55,957 - root - INFO - backfill_durations: Backfilling duration for 'the cure' by 'Olivia Rodrigo'...
+2026-06-13 21:51:56,537 - root - INFO - backfill_durations: Updated duration to 04:57
+2026-06-13 21:51:56,537 - root - INFO - backfill_durations: Backfilling duration for 'Babydoll' by 'Dominic Fike'...
+2026-06-13 21:51:57,100 - root - INFO - backfill_durations: Updated duration to 01:37
+2026-06-13 21:51:57,100 - root - INFO - backfill_durations: Backfilling duration for 'Janice STFU' by 'Drake'...
+2026-06-13 21:51:57,761 - root - INFO - backfill_durations: Updated duration to 03:57
+2026-06-13 21:51:57,761 - root - INFO - backfill_durations: Backfilling duration for 'Earrings' by 'Malcolm Todd'...
+2026-06-13 21:51:58,395 - root - INFO - backfill_durations: Updated duration to 02:31
+2026-06-13 21:51:58,395 - root - INFO - backfill_durations: Backfilling duration for 'The One That Got Away' by 'Katy Perry'...
+2026-06-13 21:51:58,991 - root - INFO - backfill_durations: Updated duration to 03:47
+2026-06-13 21:51:58,991 - root - INFO - backfill_durations: Backfilling duration for 'back to friends' by 'sombr'...
+2026-06-13 21:51:59,613 - root - INFO - backfill_durations: Updated duration to 03:19
+2026-06-13 21:51:59,613 - root - INFO - backfill_durations: Backfilling duration for 'drop dead' by 'Olivia Rodrigo'...
+2026-06-13 21:52:00,194 - root - INFO - backfill_durations: Updated duration to 03:44
+2026-06-13 21:52:00,195 - root - INFO - backfill_durations: Backfilling duration for 'Chicago' by 'Michael Jackson'...
+2026-06-13 21:52:00,789 - root - INFO - backfill_durations: Updated duration to 04:05
+2026-06-13 21:52:00,789 - root - INFO - backfill_durations: Backfilling duration for 'End of Beginning' by 'Djo'...
+2026-06-13 21:52:01,354 - root - INFO - backfill_durations: Updated duration to 02:39
+2026-06-13 21:52:01,354 - root - INFO - backfill_durations: Backfilling duration for 'Self Aware' by 'Temper City'...
+2026-06-13 21:52:02,320 - root - INFO - backfill_durations: Updated duration to 03:00
+2026-06-13 21:52:02,320 - root - INFO - backfill_durations: Backfilling duration for 'Beat It' by 'Michael Jackson'...
+2026-06-13 21:52:02,960 - root - INFO - backfill_durations: Updated duration to 04:18
+2026-06-13 21:52:02,960 - root - INFO - backfill_durations: Backfilling duration for 'hate that i made you love me' by 'Ariana Grande'...
+2026-06-13 21:52:03,580 - root - INFO - backfill_durations: Updated duration to 03:17
+2026-06-13 21:52:03,580 - root - INFO - backfill_durations: Backfilling duration for 'Una Aventura' by 'Ozuna'...
+2026-06-13 21:52:04,206 - root - INFO - backfill_durations: Updated duration to 03:00
+2026-06-13 21:52:04,206 - root - INFO - backfill_durations: Backfilling duration for 'Q Hubo Amor (Medellín)' by 'Ovy On The Drums, Jere Klein, Blessd'...
+2026-06-13 21:52:04,831 - root - INFO - backfill_durations: Updated duration to 02:52
+2026-06-13 21:52:04,831 - root - INFO - backfill_durations: Backfilling duration for 'PAGEANT STAGE' by 'Tone Stith'...
+2026-06-13 21:52:05,402 - root - INFO - backfill_durations: Backfilling duration for 'Spirit Higher' by 'LP Giobbi, EMJIE'...
+2026-06-13 21:52:06,023 - root - INFO - backfill_durations: Updated duration to 03:36
+2026-06-13 21:52:06,024 - root - INFO - backfill_durations: Backfilling duration for 'hold tight' by 'Oppidan, camoufly'...
+2026-06-13 21:52:06,573 - root - INFO - backfill_durations: Updated duration to 02:28
+2026-06-13 21:52:06,573 - root - INFO - backfill_durations: Backfilling duration for 'Doors' by 'Noah Kahan'...
+2026-06-13 21:52:07,213 - root - INFO - backfill_durations: Updated duration to 03:51
+2026-06-13 21:52:07,213 - root - INFO - backfill_durations: Backfilling duration for 'Be Mine' by 'James Hype'...
+2026-06-13 21:52:07,799 - root - INFO - backfill_durations: Updated duration to 01:53
+2026-06-13 21:52:07,799 - root - INFO - backfill_durations: Backfilling duration for 'FLAMMABLE' by 'Swae Lee'...
+2026-06-13 21:52:08,442 - root - INFO - backfill_durations: Updated duration to 03:17
+2026-06-13 21:52:08,443 - root - INFO - backfill_durations: Backfilling duration for 'Comes and Goes' by 'KETTAMA'...
+2026-06-13 21:52:08,997 - root - INFO - backfill_durations: Updated duration to 07:13
+2026-06-13 21:52:08,997 - root - INFO - backfill_durations: Backfilling duration for 'Motion Party' by 'BossMan Dlow'...
+2026-06-13 21:52:09,552 - root - INFO - backfill_durations: Updated duration to 01:36
+2026-06-13 21:52:09,552 - root - INFO - backfill_durations: Backfilling duration for 'Sweet Nuthins (feat. Leon Thomas)' by 'Kehlani, Leon Thomas'...
+2026-06-13 21:52:10,201 - root - INFO - backfill_durations: Updated duration to 02:42
+2026-06-13 21:52:10,201 - root - INFO - backfill_durations: Backfilling duration for 'Anotha Luva (feat. Lil Wayne)' by 'Kehlani, Lil Wayne'...
+2026-06-13 21:52:10,749 - root - INFO - backfill_durations: Updated duration to 04:01
+2026-06-13 21:52:10,749 - root - INFO - backfill_durations: Backfilling duration for 'Smoke' by 'Skrillex, ISOxo, Cristale, TeeZandos'...
+2026-06-13 21:52:11,402 - root - INFO - backfill_durations: Updated duration to 02:30
+2026-06-13 21:52:11,402 - root - INFO - backfill_durations: Backfilling duration for 'Body' by 'Don Toliver'...
+2026-06-13 21:52:11,981 - root - INFO - backfill_durations: Updated duration to 02:35
+2026-06-13 21:52:11,981 - root - INFO - backfill_durations: Backfilling duration for 'Breathe' by 'Marlon Hoffstadt'...
+2026-06-13 21:52:12,600 - root - INFO - backfill_durations: Updated duration to 02:48
+2026-06-13 21:52:12,600 - root - INFO - backfill_durations: Backfilling duration for 'SHADES OF BLUE' by 'John Summit, Devault, Julia Church'...
+2026-06-13 21:52:13,044 - root - INFO - backfill_durations: Updated duration to 03:23
+2026-06-13 21:52:13,044 - root - INFO - backfill_durations: Backfilling duration for 'Fantasy' by 'Chris Stussy, KUČKA'...
+2026-06-13 21:52:13,574 - root - INFO - backfill_durations: Updated duration to 04:07
+2026-06-13 21:52:13,574 - root - INFO - backfill_durations: Backfilling duration for 'SHERIYA' by 'ARJN, KDS, ronn, Suhas Moideen'...
+2026-06-13 21:52:14,145 - root - INFO - backfill_durations: Backfilling duration for 'Chiri Thottu' by 'Justin Prabhakaran, Chinmayi Sripada, Manu Manjith, Nivin Pauly, Preity Mukhundhan'...
+2026-06-13 21:52:14,675 - root - INFO - backfill_durations: Backfilling duration for 'Beevi Ayisha' by 'Iqbal kannur, Bappu Velliparamaba'...
+2026-06-13 21:52:15,260 - root - INFO - backfill_durations: Updated duration to 04:00
+2026-06-13 21:52:15,260 - root - INFO - backfill_durations: Backfilling duration for 'Angu Vaana Konilu' by 'Vaikom Vijayalakshmi, Dhibu Ninan Thomas, Manu Manjith, Tovino Thomas, Basil Joseph, Krithi Shetty, Surabhi Lakshmi, Aishwarya Rajesh'...
+2026-06-13 21:52:15,859 - root - INFO - backfill_durations: Updated duration to 04:09
+2026-06-13 21:52:15,860 - root - INFO - backfill_durations: Backfilling duration for 'Karineeli' by 'Vineesh Kallettumkara, Sethu Chandran'...
+2026-06-13 21:52:16,352 - root - INFO - backfill_durations: Backfilling duration for 'Belyol' by 'Dabzee, Edappal Bappu, Rishi Roy'...
+2026-06-13 21:52:16,952 - root - INFO - backfill_durations: Updated duration to 02:57
+2026-06-13 21:52:16,952 - root - INFO - backfill_durations: Backfilling duration for 'Kaattuchembakam (From "Pallichattambi")' by 'Jakes Bejoy, Vishal Mishra, Aavani Malhar, Kaithapram, Kayadu, Tovino, Tovino Thomas, Kayadu Lohar'...
+2026-06-13 21:52:17,492 - root - INFO - backfill_durations: Updated duration to 04:36
+2026-06-13 21:52:17,492 - root - INFO - backfill_durations: Backfilling duration for 'Ammaputhappe' by 'Vishnu Vijay, Suhail Koya'...
+2026-06-13 21:52:18,047 - root - INFO - backfill_durations: Updated duration to 04:20
+2026-06-13 21:52:18,048 - root - INFO - backfill_durations: Backfilling duration for 'Makane X Koodappirannor' by 'Parvatish Pradeep, B.K. Harinarayanan'...
+2026-06-13 21:52:18,587 - root - INFO - backfill_durations: Updated duration to 01:21
+2026-06-13 21:52:18,587 - root - INFO - backfill_durations: Backfilling duration for 'ZILL' by 'M.H.R, Shafi Kollam, Joker390P'...
+2026-06-13 21:52:19,125 - root - INFO - backfill_durations: Updated duration to 04:07
+2026-06-13 21:52:19,125 - root - INFO - backfill_durations: Backfilling duration for 'Vazhikatti (Kizhakku Suryan)' by 'Fejo, Jeffin Jestin, Violin Jacob, Daleema, Roy Kanjirathanam'...
+2026-06-13 21:52:19,738 - root - INFO - backfill_durations: Backfilling duration for 'Puthu Mazha' by 'Justin Prabhakaran, Shakthisree Gopalan, Manu Manjith, Nivin Pauly, Riya Shibu'...
+2026-06-13 21:52:20,414 - root - INFO - backfill_durations: Updated duration to 04:22
+2026-06-13 21:52:20,414 - root - INFO - backfill_durations: Backfilling duration for 'KALYANI' by 'Suhas Moideen, Vishnu V, ARJN, KDS, FIFTY4, ronn'...
+2026-06-13 21:52:21,050 - root - INFO - backfill_durations: Backfilling duration for 'Kulasthree' by 'ThirumaLi, Thudwiser'...
+2026-06-13 21:52:21,659 - root - INFO - backfill_durations: Updated duration to 03:19
+2026-06-13 21:52:21,659 - root - INFO - backfill_durations: Backfilling duration for 'Jaalakaari' by 'Sai Abhyankkar, Sublahshini, Vinayak Sasikumar, Preethi Asrani, Shane Nigam'...
+2026-06-13 21:52:22,180 - root - INFO - backfill_durations: Backfilling duration for 'Manchild' by 'Sabrina Carpenter'...
+2026-06-13 21:52:22,812 - root - INFO - backfill_durations: Updated duration to 03:33
+2026-06-13 21:52:22,812 - root - INFO - backfill_durations: Backfilling duration for 'Bunce Road Blues (with Future & Tems)' by 'J. Cole, Future, Tems'...
+2026-06-13 21:52:23,313 - root - INFO - backfill_durations: Updated duration to 05:10
+2026-06-13 21:52:23,313 - root - INFO - backfill_durations: Backfilling duration for 'Chicken Talkin Bastard' by 'BossMan Dlow, YKNIECE'...
+2026-06-13 21:52:23,895 - root - INFO - backfill_durations: Updated duration to 02:49
+2026-06-13 21:52:23,895 - root - INFO - backfill_durations: Backfilling duration for 'Rein Me In (with Olivia Dean)' by 'Sam Fender, Olivia Dean'...
+2026-06-13 21:52:24,414 - root - INFO - backfill_durations: Updated duration to 04:03
+2026-06-13 21:52:24,414 - root - INFO - backfill_durations: Backfilling duration for 'One of Them (with Future & Lil Baby)' by 'DJ Khaled, Future, Lil Baby'...
+2026-06-13 21:52:24,875 - root - INFO - backfill_durations: Backfilling duration for 'Amsham - അംശം' by 'Aksomaniac, M.H.R, Bhumi, Circle Tone'...
+2026-06-13 21:52:25,354 - root - INFO - backfill_durations: Backfilling duration for 'Kadavule Pole' by 'Deepak Dev, Karthik, Bharadwaj'...
+2026-06-13 21:52:25,964 - root - INFO - backfill_durations: Updated duration to 03:24
+2026-06-13 21:52:25,964 - root - INFO - backfill_durations: Backfilling duration for 'SAME SH!T' by 'Isaiah Rashad'...
+2026-06-13 21:52:26,449 - root - INFO - backfill_durations: Backfilling duration for 'Hostage (feat. 21 Savage)' by 'Latto, 21 Savage'...
+2026-06-13 21:52:26,985 - root - INFO - backfill_durations: Updated duration to 03:11
+2026-06-13 21:52:26,985 - root - INFO - backfill_durations: Backfilling duration for 'Ever Since U Left Me (I Went Deaf)' by 'French Montana, Max B'...
+2026-06-13 21:52:27,455 - root - INFO - backfill_durations: Backfilling duration for 'Ca$ino' by 'Baby Keem'...
+2026-06-13 21:52:27,953 - root - INFO - backfill_durations: Backfilling duration for 'GOMF (feat. GloRilla)' by 'Latto, GloRilla'...
+2026-06-13 21:52:28,460 - root - INFO - backfill_durations: Uploading updated database with 46 duration backfills...
+2026-06-13 21:52:28,464 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:52:28,468 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:52:28,468 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:52:28,469 - dashboard.drive_client - INFO - Updating existing JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:52:28,469 - dashboard.drive_client - INFO - Updating existing JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:52:30,879 - dashboard.drive_client - INFO - Successfully updated JSON file: database.json (ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i)
+2026-06-13 21:52:30,879 - dashboard.drive_client - INFO - Successfully updated JSON file: database.json (ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i)
+2026-06-13 21:52:30,882 - root - INFO - Starting language backfill check task...
+2026-06-13 21:52:30,884 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:52:30,887 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:52:30,887 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:52:30,887 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:52:30,887 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:52:32,233 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i.
+2026-06-13 21:52:32,233 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i.
+2026-06-13 21:52:32,233 - scraper.spotify_charts - INFO - detect_track_language: Checking language for 'Billie Jean' by 'Michael Jackson'...
+2026-06-13 21:52:32,233 - scraper.spotify_charts - INFO - detect_track_language: Checking language for 'Billie Jean' by 'Michael Jackson'...
+2026-06-13 21:52:35,999 - scraper.spotify_charts - INFO - detect_track_language: Language fallback to 'unknown' for 'Billie Jean'.
+2026-06-13 21:52:35,999 - scraper.spotify_charts - INFO - detect_track_language: Language fallback to 'unknown' for 'Billie Jean'.
+2026-06-13 21:52:36,001 - scraper.spotify_charts - INFO - detect_track_language: Checking language for 'Beauty And A Beat' by 'Justin Bieber, Nicki Minaj'...
+2026-06-13 21:52:36,001 - scraper.spotify_charts - INFO - detect_track_language: Checking language for 'Beauty And A Beat' by 'Justin Bieber, Nicki Minaj'...
+ 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:52:30,879 - dashboard.drive_client - INFO - Successfully updated JSON file: database.json (ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i)
+2026-06-13 21:52:30,882 - root - INFO - Starting language backfill check task...
+2026-06-13 21:52:30,884 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:52:30,887 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:52:30,887 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:52:32,233 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i.
+2026-06-13 21:52:32,233 - scraper.spotify_charts - INFO - detect_track_language: Checking language for 'Billie Jean' by 'Michael Jackson'...
+2026-06-13 21:52:35,999 - scraper.spotify_charts - INFO - detect_track_language: Language fallback to 'unknown' for 'Billie Jean'.
+2026-06-13 21:52:36,001 - scraper.spotify_charts - INFO - detect_track_language: Checking language for 'Beauty And A Beat' by 'Justin Bieber, Nicki Minaj'...
+2026-06-13 21:52:38,255 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://192.168.100.85:5000
+2026-06-13 21:52:38,256 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
+2026-06-13 21:52:56,134 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:52:56,137 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:52:56,137 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:52:57,587 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i.
+2026-06-13 21:52:57,591 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:52:57,593 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:52:57,594 - dashboard.drive_client - INFO - Creating new JSON file: database_backup_2026-06-13_21-52-57.json
+2026-06-13 21:52:59,779 - dashboard.drive_client - INFO - Successfully created JSON file: database_backup_2026-06-13_21-52-57.json (ID: 1nef781u3kc3P72ctZUWszky2aSXB4u69)
+2026-06-13 21:52:59,780 - werkzeug - INFO - 127.0.0.1 - - [13/Jun/2026 21:52:59] "POST /api/library/backup HTTP/1.1" 200 -
+2026-06-13 21:52:59,838 - scraper.state_manager - INFO - load_config: Request to load scraper configuration.
+2026-06-13 21:52:59,839 - scraper.state_manager - INFO - Searching for file 'scraper_config.json' in folder ID: 1b67cbd6gIpvrJeporBi9qRGVCEo-Sgoe
+2026-06-13 21:52:59,842 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:52:59,844 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:52:59,844 - dashboard.drive_client - INFO - Listing files with query: trashed = false and '1b67cbd6gIpvrJeporBi9qRGVCEo-Sgoe' in parents
+2026-06-13 21:53:00,325 - dashboard.drive_client - INFO - Successfully retrieved 5 files.
+2026-06-13 21:53:00,325 - scraper.state_manager - INFO - File 'scraper_config.json' not found in folder 1b67cbd6gIpvrJeporBi9qRGVCEo-Sgoe
+2026-06-13 21:53:00,326 - scraper.state_manager - INFO - load_config: scraper_config.json not found on Drive. Returning DEFAULT_CONFIG.
+2026-06-13 21:53:00,326 - scraper.state_manager - INFO - load_state: Request to load scraper state.
+2026-06-13 21:53:00,326 - scraper.state_manager - INFO - Searching for file 'scraper_state.json' in folder ID: 1b67cbd6gIpvrJeporBi9qRGVCEo-Sgoe
+2026-06-13 21:53:00,328 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:53:00,330 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:53:00,331 - dashboard.drive_client - INFO - Listing files with query: trashed = false and '1b67cbd6gIpvrJeporBi9qRGVCEo-Sgoe' in parents
+2026-06-13 21:53:00,751 - dashboard.drive_client - INFO - Successfully retrieved 5 files.
+2026-06-13 21:53:00,751 - scraper.state_manager - INFO - Found 'scraper_state.json' with ID: 1q2tfTnsA6nOLAoMJckZowfIwdQnI5PIl
+2026-06-13 21:53:00,752 - scraper.state_manager - INFO - load_state: Downloading scraper_state.json from file ID: 1q2tfTnsA6nOLAoMJckZowfIwdQnI5PIl
+2026-06-13 21:53:00,754 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:53:00,757 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:53:00,757 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1q2tfTnsA6nOLAoMJckZowfIwdQnI5PIl
+2026-06-13 21:53:01,774 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1q2tfTnsA6nOLAoMJckZowfIwdQnI5PIl.
+2026-06-13 21:53:01,774 - scraper.state_manager - INFO - load_state: Successfully loaded state.
+2026-06-13 21:53:01,775 - werkzeug - INFO - 127.0.0.1 - - [13/Jun/2026 21:53:01] "GET /api/config HTTP/1.1" 200 -
+2026-06-13 21:53:01,804 - scraper.state_manager - INFO - save_config: Request to save scraper configuration.
+2026-06-13 21:53:01,805 - scraper.state_manager - INFO - Searching for file 'scraper_config.json' in folder ID: 1b67cbd6gIpvrJeporBi9qRGVCEo-Sgoe
+2026-06-13 21:53:01,808 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:53:01,810 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:53:01,811 - dashboard.drive_client - INFO - Listing files with query: trashed = false and '1b67cbd6gIpvrJeporBi9qRGVCEo-Sgoe' in parents
+2026-06-13 21:53:02,261 - dashboard.drive_client - INFO - Successfully retrieved 5 files.
+2026-06-13 21:53:02,261 - scraper.state_manager - INFO - File 'scraper_config.json' not found in folder 1b67cbd6gIpvrJeporBi9qRGVCEo-Sgoe
+2026-06-13 21:53:02,266 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:53:02,268 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:53:02,269 - dashboard.drive_client - INFO - Creating new JSON file: scraper_config.json
+2026-06-13 21:53:04,524 - dashboard.drive_client - INFO - Successfully created JSON file: scraper_config.json (ID: 1BsSkDb-mQF90W6Hot8ja_czBNkgzIJCA)
+2026-06-13 21:53:04,525 - scraper.state_manager - INFO - save_config: Successfully saved config. File ID: 1BsSkDb-mQF90W6Hot8ja_czBNkgzIJCA
+2026-06-13 21:53:04,525 - scraper.state_manager - INFO - load_state: Request to load scraper state.
+2026-06-13 21:53:04,525 - scraper.state_manager - INFO - Searching for file 'scraper_state.json' in folder ID: 1b67cbd6gIpvrJeporBi9qRGVCEo-Sgoe
+2026-06-13 21:53:04,527 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:53:04,536 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:53:04,536 - dashboard.drive_client - INFO - Listing files with query: trashed = false and '1b67cbd6gIpvrJeporBi9qRGVCEo-Sgoe' in parents
+2026-06-13 21:53:04,979 - dashboard.drive_client - INFO - Successfully retrieved 6 files.
+2026-06-13 21:53:04,979 - scraper.state_manager - INFO - Found 'scraper_state.json' with ID: 1q2tfTnsA6nOLAoMJckZowfIwdQnI5PIl
+2026-06-13 21:53:04,979 - scraper.state_manager - INFO - load_state: Downloading scraper_state.json from file ID: 1q2tfTnsA6nOLAoMJckZowfIwdQnI5PIl
+2026-06-13 21:53:04,982 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:53:04,985 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:53:04,985 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1q2tfTnsA6nOLAoMJckZowfIwdQnI5PIl
+2026-06-13 21:53:05,894 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1q2tfTnsA6nOLAoMJckZowfIwdQnI5PIl.
+2026-06-13 21:53:05,895 - scraper.state_manager - INFO - load_state: Successfully loaded state.
+2026-06-13 21:53:05,895 - scraper.state_manager - INFO - save_state: Request to save scraper state.
+2026-06-13 21:53:05,895 - scraper.state_manager - INFO - Searching for file 'scraper_state.json' in folder ID: 1b67cbd6gIpvrJeporBi9qRGVCEo-Sgoe
+2026-06-13 21:53:05,899 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:53:05,902 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:53:05,902 - dashboard.drive_client - INFO - Listing files with query: trashed = false and '1b67cbd6gIpvrJeporBi9qRGVCEo-Sgoe' in parents
+2026-06-13 21:53:06,378 - dashboard.drive_client - INFO - Successfully retrieved 6 files.
+2026-06-13 21:53:06,379 - scraper.state_manager - INFO - Found 'scraper_state.json' with ID: 1q2tfTnsA6nOLAoMJckZowfIwdQnI5PIl
+2026-06-13 21:53:06,382 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:53:06,385 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:53:06,387 - dashboard.drive_client - INFO - Updating existing JSON file with ID: 1q2tfTnsA6nOLAoMJckZowfIwdQnI5PIl
+2026-06-13 21:53:09,090 - dashboard.drive_client - INFO - Successfully updated JSON file: scraper_state.json (ID: 1q2tfTnsA6nOLAoMJckZowfIwdQnI5PIl)
+2026-06-13 21:53:09,090 - scraper.state_manager - INFO - save_state: Successfully saved state. File ID: 1q2tfTnsA6nOLAoMJckZowfIwdQnI5PIl
+2026-06-13 21:53:09,091 - __main__ - INFO - post_config: Reset pool_date in scraper_state.json to null to force rebuild on next run.
+2026-06-13 21:53:09,091 - werkzeug - INFO - 127.0.0.1 - - [13/Jun/2026 21:53:09] "POST /api/config HTTP/1.1" 200 -
+2026-06-13 21:53:09,100 - scraper.state_manager - INFO - load_state: Request to load scraper state.
+2026-06-13 21:53:09,101 - scraper.state_manager - INFO - Searching for file 'scraper_state.json' in folder ID: 1b67cbd6gIpvrJeporBi9qRGVCEo-Sgoe
+2026-06-13 21:53:09,104 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:53:09,113 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:53:09,113 - dashboard.drive_client - INFO - Listing files with query: trashed = false and '1b67cbd6gIpvrJeporBi9qRGVCEo-Sgoe' in parents
+2026-06-13 21:53:09,554 - dashboard.drive_client - INFO - Successfully retrieved 6 files.
+2026-06-13 21:53:09,555 - scraper.state_manager - INFO - Found 'scraper_state.json' with ID: 1q2tfTnsA6nOLAoMJckZowfIwdQnI5PIl
+2026-06-13 21:53:09,555 - scraper.state_manager - INFO - load_state: Downloading scraper_state.json from file ID: 1q2tfTnsA6nOLAoMJckZowfIwdQnI5PIl
+2026-06-13 21:53:09,558 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:53:09,560 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:53:09,561 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1q2tfTnsA6nOLAoMJckZowfIwdQnI5PIl
+2026-06-13 21:53:10,920 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1q2tfTnsA6nOLAoMJckZowfIwdQnI5PIl.
+2026-06-13 21:53:10,920 - scraper.state_manager - INFO - load_state: Successfully loaded state.
+2026-06-13 21:53:10,920 - scraper.state_manager - INFO - save_state: Request to save scraper state.
+2026-06-13 21:53:10,920 - scraper.state_manager - INFO - Searching for file 'scraper_state.json' in folder ID: 1b67cbd6gIpvrJeporBi9qRGVCEo-Sgoe
+2026-06-13 21:53:10,923 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:53:10,926 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:53:10,926 - dashboard.drive_client - INFO - Listing files with query: trashed = false and '1b67cbd6gIpvrJeporBi9qRGVCEo-Sgoe' in parents
+2026-06-13 21:53:11,380 - dashboard.drive_client - INFO - Successfully retrieved 6 files.
+2026-06-13 21:53:11,380 - scraper.state_manager - INFO - Found 'scraper_state.json' with ID: 1q2tfTnsA6nOLAoMJckZowfIwdQnI5PIl
+2026-06-13 21:53:11,383 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:53:11,385 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:53:11,388 - dashboard.drive_client - INFO - Updating existing JSON file with ID: 1q2tfTnsA6nOLAoMJckZowfIwdQnI5PIl
+2026-06-13 21:53:13,800 - dashboard.drive_client - INFO - Successfully updated JSON file: scraper_state.json (ID: 1q2tfTnsA6nOLAoMJckZowfIwdQnI5PIl)
+2026-06-13 21:53:13,801 - scraper.state_manager - INFO - save_state: Successfully saved state. File ID: 1q2tfTnsA6nOLAoMJckZowfIwdQnI5PIl
+2026-06-13 21:53:13,802 - werkzeug - INFO - 127.0.0.1 - - [13/Jun/2026 21:53:13] "POST /api/pool/refresh HTTP/1.1" 200 -
+2026-06-13 21:53:13,807 - scraper.spotify_charts - INFO - get_track_by_spotify_url: Processing URL: https://open.spotify.com/track/3n3Ppam7vgaVa1iaRUIOKE
+2026-06-13 21:53:13,807 - scraper.spotify_charts - INFO - get_track_by_spotify_url: Extracted Spotify Track ID: 3n3Ppam7vgaVa1iaRUIOKE
+2026-06-13 21:53:14,460 - scraper.spotify_charts - INFO - get_track_by_spotify_url: Scraped standard track page. Title: 'None', Artist: 'None'
+2026-06-13 21:53:14,460 - scraper.spotify_charts - INFO - detect_track_language: Checking language for 'Unknown Title' by 'Unknown Artist'...
+2026-06-13 21:53:15,442 - scraper.spotify_charts - INFO - detect_track_language: Language detected via iTunes storefront (USA): english
+2026-06-13 21:53:16,001 - scraper.spotify_charts - INFO - get_track_by_spotify_url: iTunes API result. Genre: 'Worldwide', Album Art: 'https://is1-ssl.mzstatic.com/image/thumb/Music/88/3c/96/mzi.jecbbdog.jpg/600x600bb.jpg'
+2026-06-13 21:53:16,003 - werkzeug - INFO - 127.0.0.1 - - [13/Jun/2026 21:53:16] "GET /api/preview-song?url=https://open.spotify.com/track/3n3Ppam7vgaVa1iaRUIOKE HTTP/1.1" 200 -
+2026-06-13 21:53:16,009 - scraper.spotify_charts - INFO - scrape_spotify_embed_playlist: Scraping embed playlist: https://open.spotify.com/embed/playlist/37i9dQZF1DXcBWIGoYBM5M
+2026-06-13 21:53:16,346 - scraper.spotify_charts - INFO - scrape_spotify_embed_playlist: Successfully scraped 50 tracks from embed playlist 37i9dQZF1DXcBWIGoYBM5M.
+2026-06-13 21:53:16,691 - werkzeug - INFO - 127.0.0.1 - - [13/Jun/2026 21:53:16] "POST /api/playlist/preview HTTP/1.1" 200 -
+2026-06-13 21:53:16,702 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:53:16,712 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:53:16,712 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:53:17,984 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i.
+2026-06-13 21:53:17,987 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:53:17,989 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:53:17,989 - dashboard.drive_client - INFO - Listing files with query: trashed = false and '1JGo8S2-WagATODLDmPHcmvlWMC59nZOL' in parents
+2026-06-13 21:53:18,518 - dashboard.drive_client - INFO - Successfully retrieved 59 files.
+2026-06-13 21:53:18,519 - werkzeug - INFO - 127.0.0.1 - - [13/Jun/2026 21:53:18] "GET /api/tracks HTTP/1.1" 200 -
+2026-06-13 21:53:19,858 - __main__ - INFO - Successfully established stream for 1ZGSowfdNzdHq7lKv8xJuzzn5zcdE7TKd via drive.usercontent.google.com
+2026-06-13 21:53:19,903 - werkzeug - INFO - 127.0.0.1 - - [13/Jun/2026 21:53:19] "GET /stream/1ZGSowfdNzdHq7lKv8xJuzzn5zcdE7TKd HTTP/1.1" 200 -
+2026-06-13 21:53:54,220 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:53:54,223 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:53:54,223 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-13 21:53:55,391 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i.
+2026-06-13 21:53:55,394 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:53:55,396 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:53:55,396 - dashboard.drive_client - INFO - Listing files with query: trashed = false and '1JGo8S2-WagATODLDmPHcmvlWMC59nZOL' in parents
+2026-06-13 21:53:55,860 - dashboard.drive_client - INFO - Successfully retrieved 59 files.
+2026-06-13 21:53:55,861 - werkzeug - INFO - 127.0.0.1 - - [13/Jun/2026 21:53:55] "GET /api/tracks HTTP/1.1" 200 -
+2026-06-13 21:53:57,185 - __main__ - INFO - Successfully established stream for 1ZGSowfdNzdHq7lKv8xJuzzn5zcdE7TKd via drive.usercontent.google.com
+2026-06-13 21:53:57,237 - werkzeug - INFO - 127.0.0.1 - - [13/Jun/2026 21:53:57] "GET /stream/1ZGSowfdNzdHq7lKv8xJuzzn5zcdE7TKd HTTP/1.1" 200 -
+2026-06-13 21:54:26,348 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-13 21:54:26,359 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-13 21:54:26,359 - dashboard.drive_client - INFO - Searching for file with query: name = 'playlist_import_state_37i9dQZF1DXcBWIGoYBM5M.json' and trashed = false and '1b67cbd6gIpvrJeporBi9qRGVCEo-Sgoe' in parents
+2026-06-13 21:54:26,851 - werkzeug - INFO - 127.0.0.1 - - [13/Jun/2026 21:54:26] "GET /api/playlist/status?playlist_id=37i9dQZF1DXcBWIGoYBM5M HTTP/1.1" 200 -

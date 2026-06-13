@@ -140,6 +140,36 @@ def list_files(folder_id=None):
         logger.error(f"Unexpected error in list_files: {e}", exc_info=True)
         raise
 
+def search_file_by_name(filename, parent_id=None):
+    """
+    Searches for a file by exact name within an optional parent folder.
+    Returns the file ID if found, otherwise None.
+    """
+    try:
+        service = get_oauth_drive_service()
+        query = f"name = '{filename}' and trashed = false"
+        if parent_id:
+            query += f" and '{parent_id}' in parents"
+        
+        logger.info(f"Searching for file with query: {query}")
+        results = service.files().list(
+            q=query,
+            fields="files(id, name)",
+            pageSize=1
+        ).execute()
+        
+        files = results.get('files', [])
+        if files:
+            logger.info(f"Found file '{filename}' with ID: {files[0].get('id')}")
+            return files[0].get('id')
+        return None
+    except HttpError as error:
+        logger.error(f"Google API HttpError in search_file_by_name: {error}", exc_info=True)
+        return None
+    except Exception as e:
+        logger.error(f"Unexpected error in search_file_by_name: {e}", exc_info=True)
+        return None
+
 def download_json(file_id):
     """
     Downloads and parses a JSON file from Drive, returning a Python dict.
