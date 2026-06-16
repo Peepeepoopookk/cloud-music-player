@@ -46,6 +46,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             } else if (targetId === 'section-app-imports') {
                 loadAppImports();
+            } else if (targetId === 'section-artists') {
+                loadArtists();
             }
         });
     });
@@ -1598,4 +1600,146 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialize unified global polling
     pollBackgroundStatus();
     setInterval(pollBackgroundStatus, 5000);
+
+    // ==========================================
+    // ARTISTS TAB LOGIC
+    // ==========================================
+    
+    let allArtists = [];
+    
+    async function loadArtists(query = '') {
+        const grid = document.getElementById('artists-grid');
+        if (!grid) return;
+        
+        grid.innerHTML = '<div style="color: var(--tertiary);">Loading artists...</div>';
+        
+        try {
+            let url = '/api/artists';
+            if (query) {
+                url = '/api/artists/search?q=' + encodeURIComponent(query);
+            }
+            
+            const response = await fetch(url);
+            if (!response.ok) throw new Error('Failed to load artists');
+            
+            const artists = await response.json();
+            allArtists = artists;
+            
+            if (artists.length === 0) {
+                grid.innerHTML = '<div style="color: var(--tertiary);">No artists found.</div>';
+                return;
+            }
+            
+            grid.innerHTML = '';
+            artists.forEach(artist => {
+                const card = document.createElement('div');
+                card.className = 'card artist-card';
+                card.style.cursor = 'pointer';
+                card.style.display = 'flex';
+                card.style.flexDirection = 'column';
+                card.style.alignItems = 'center';
+                card.style.textAlign = 'center';
+                card.style.padding = '20px';
+                card.style.transition = 'transform 0.2s, background 0.2s';
+                card.style.background = 'rgba(255,255,255,0.02)';
+                card.style.border = '1px solid var(--border)';
+                card.style.borderRadius = '12px';
+                
+                card.onmouseover = () => { card.style.background = 'rgba(255,255,255,0.05)'; card.style.transform = 'translateY(-2px)'; };
+                card.onmouseout = () => { card.style.background = 'rgba(255,255,255,0.02)'; card.style.transform = 'translateY(0)'; };
+                
+                card.onclick = () => openArtistTracks(artist.artist_name);
+                
+                let imgHtml = '<div style="width: 80px; height: 80px; border-radius: 50%; background: #222; margin-bottom: 12px; display: flex; align-items: center; justify-content: center; color: var(--tertiary); font-size: 24px;">?</div>';
+                if (artist.cover_image) {
+                    imgHtml = `<img src="${artist.cover_image}" alt="${artist.artist_name}" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; margin-bottom: 12px; border: 2px solid rgba(255,255,255,0.1);">`;
+                }
+                
+                card.innerHTML = `
+                    ${imgHtml}
+                    <h4 style="margin: 0 0 4px 0; color: #fff; font-size: 1rem;">${artist.artist_name}</h4>
+                    <span class="badge" style="background: rgba(255,255,255,0.1); color: var(--tertiary); font-size: 0.8rem; padding: 2px 8px; border-radius: 12px;">${artist.track_count} Track${artist.track_count !== 1 ? 's' : ''}</span>
+                `;
+                
+                grid.appendChild(card);
+            });
+            
+        } catch (err) {
+            grid.innerHTML = `<div style="color: #ff453a;">Error: ${err.message}</div>`;
+            showToast('Error loading artists', 'error');
+        }
+    }
+    
+    // Artist Search Input Event
+    const artistsSearchInput = document.getElementById('artists-search-input');
+    if (artistsSearchInput) {
+        let artistsSearchTimeout = null;
+        artistsSearchInput.addEventListener('input', (e) => {
+            clearTimeout(artistsSearchTimeout);
+            artistsSearchTimeout = setTimeout(() => {
+                loadArtists(e.target.value);
+            }, 300);
+        });
+    }
+    
+    // Artist Tracks Modal
+    const artistTracksModal = document.getElementById('artist-tracks-modal');
+    const artistTracksTitle = document.getElementById('artist-tracks-title');
+    const artistTracksTableBody = document.getElementById('artist-tracks-table-body');
+    const artistTracksCloseBtn = document.getElementById('artist-tracks-modal-close-x');
+    const artistTracksCancelBtn = document.getElementById('modal-btn-artist-close');
+    
+    if (artistTracksCloseBtn) artistTracksCloseBtn.addEventListener('click', closeArtistTracksModal);
+    if (artistTracksCancelBtn) artistTracksCancelBtn.addEventListener('click', closeArtistTracksModal);
+    
+    function closeArtistTracksModal() {
+        artistTracksModal.classList.add('hidden');
+    }
+    
+    async function openArtistTracks(artistName) {
+        artistTracksModal.classList.remove('hidden');
+        artistTracksTitle.textContent = artistName;
+        artistTracksTableBody.innerHTML = '<tr><td colspan="4" class="table-placeholder">Loading tracks...</td></tr>';
+        
+        try {
+            const response = await fetch('/api/artists/' + encodeURIComponent(artistName));
+            if (!response.ok) throw new Error('Failed to load artist tracks');
+            
+            const tracks = await response.json();
+            
+            if (tracks.length === 0) {
+                artistTracksTableBody.innerHTML = '<tr><td colspan="4" class="table-placeholder">No tracks found.</td></tr>';
+                return;
+            }
+            
+            artistTracksTableBody.innerHTML = '';
+            tracks.forEach(track => {
+                const tr = document.createElement('tr');
+                
+                let artHtml = '<div class="track-artwork-placeholder"></div>';
+                if (track.album_art) {
+                    artHtml = `<img src="${track.album_art}" class="track-artwork">`;
+                }
+                
+                tr.innerHTML = `
+                    <td class="artwork-col">${artHtml}</td>
+                    <td>
+                        <div class="track-title">${track.title}</div>
+                        <div class="track-artist">${track.artist}</div>
+                    </td>
+                    <td><div class="track-album">${track.album || 'Unknown'}</div></td>
+                    <td><div class="track-duration">${track.duration || '--:--'}</div></td>
+                `;
+                
+                artistTracksTableBody.appendChild(tr);
+            });
+            
+        } catch (err) {
+            artistTracksTableBody.innerHTML = `<tr><td colspan="4" style="color: #ff453a; text-align: center; padding: 20px;">Error: ${err.message}</td></tr>`;
+            showToast('Error loading artist tracks', 'error');
+        }
+    }
+    
+    window.loadArtists = loadArtists;
+
 });

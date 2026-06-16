@@ -42,6 +42,15 @@
                     </svg>
                     <span>Library</span>
                 </button>
+                <button class="nav-item" id="nav-btn-artists" data-target="section-artists">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="9" cy="7" r="4"></circle>
+                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                    </svg>
+                    <span>Artists</span>
+                </button>
                 <button class="nav-item" id="nav-btn-downloader" data-target="section-downloader">
                     <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" />
@@ -125,6 +134,31 @@
                             </tbody>
                         </table>
                     </div>
+                </div>
+            </section>
+
+            <!-- ARTISTS SECTION -->
+            <section class="content-section" id="section-artists">
+                <div class="section-header">
+                    <div class="section-title-wrap">
+                        <h2>Artists</h2>
+                        <p class="section-desc">Browse your auto-grouped artists and their tracks.</p>
+                    </div>
+                </div>
+
+                <div class="table-toolbar">
+                    <div class="search-box">
+                        <svg class="search-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="11" cy="11" r="8"></circle>
+                            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                        </svg>
+                        <input type="text" id="artists-search-input" placeholder="Search artists...">
+                    </div>
+                </div>
+
+                <div class="artists-grid" id="artists-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 20px; padding-bottom: 20px;">
+                    <!-- Artist cards will be injected here -->
+                    <div style="color: var(--tertiary);">Loading artists...</div>
                 </div>
             </section>
 
@@ -605,6 +639,36 @@
             <div class="modal-footer">
                 <button class="btn btn-secondary" id="modal-btn-cancel">Cancel</button>
                 <button class="btn btn-danger" id="modal-btn-confirm">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Artist Tracks Modal Dialog -->
+    <div class="modal-overlay hidden" id="artist-tracks-modal">
+        <div class="modal-card" style="max-width: 800px; width: 90%;">
+            <div class="modal-header">
+                <h3 id="artist-tracks-title">Artist Tracks</h3>
+                <button class="modal-close" id="artist-tracks-modal-close-x">&times;</button>
+            </div>
+            <div class="modal-body" style="max-height: 60vh; overflow-y: auto;">
+                <table class="tracks-table" id="artist-tracks-table">
+                    <thead>
+                        <tr>
+                            <th class="artwork-col"></th>
+                            <th>Title</th>
+                            <th>Album</th>
+                            <th>Duration</th>
+                        </tr>
+                    </thead>
+                    <tbody id="artist-tracks-table-body">
+                        <tr>
+                            <td colspan="4" class="table-placeholder">Loading tracks...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="modal-btn-artist-close">Close</button>
             </div>
         </div>
     </div>

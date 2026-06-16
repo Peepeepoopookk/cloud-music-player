@@ -731,7 +731,7 @@ def playlist_start():
         url = request.json.get('url')
         if not url:
             return jsonify({"error": "Missing url"}), 400
-        playlist_id = start_playlist_import(url)
+        playlist_id = start_playlist_import(url, imported_via="dashboard")
         
         # Update background tasks dict
         background_tasks["playlist_import"]["status"] = "running"
@@ -779,6 +779,61 @@ def playlist_status():
         return jsonify(status)
     except Exception as e:
         logger.error(f"Error in status: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/playlists', methods=['GET'])
+def get_playlists():
+    try:
+        from scraper.playlist_manager import get_all_playlists
+        playlists = get_all_playlists()
+        return jsonify(playlists)
+    except Exception as e:
+        logger.error(f"Error in GET /api/playlists: {e}", exc_info=True)
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/playlists/<playlist_id>', methods=['GET'])
+def get_single_playlist(playlist_id):
+    try:
+        from scraper.playlist_manager import get_playlist
+        playlist = get_playlist(playlist_id)
+        if not playlist:
+            return jsonify({"error": "Playlist not found"}), 404
+        return jsonify(playlist)
+    except Exception as e:
+        logger.error(f"Error in GET /api/playlists/{playlist_id}: {e}", exc_info=True)
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/artists', methods=['GET'])
+def get_artists():
+    try:
+        from scraper.artist_manager import get_all_artists
+        artists = get_all_artists()
+        return jsonify(artists)
+    except Exception as e:
+        logger.error(f"Error in GET /api/artists: {e}", exc_info=True)
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/artists/search', methods=['GET'])
+def search_artists_route():
+    try:
+        query = request.args.get('q', '')
+        from scraper.artist_manager import search_artists
+        artists = search_artists(query)
+        return jsonify(artists)
+    except Exception as e:
+        logger.error(f"Error in GET /api/artists/search: {e}", exc_info=True)
+        return jsonify({"error": str(e)}), 500
+
+import urllib.parse
+@app.route('/api/artists/<artist_name>', methods=['GET'])
+def get_single_artist(artist_name):
+    try:
+        artist_name = urllib.parse.unquote(artist_name)
+        from scraper.artist_manager import get_artist_tracks
+        tracks = get_artist_tracks(artist_name)
+        return jsonify(tracks)
+    except Exception as e:
+        logger.error(f"Error in GET /api/artists/{artist_name}: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/playlist/cancel', methods=['POST'])
@@ -1119,7 +1174,7 @@ def app_playlist_start():
         return jsonify({"error": "Missing 'playlistUrl' or 'deviceId'"}), 400
         
     try:
-        playlist_id = start_playlist_import(playlist_url, device_id=device_id)
+        playlist_id = start_playlist_import(playlist_url, device_id=device_id, imported_via="app")
         
         def run_app_playlist_import():
             try:
@@ -1169,6 +1224,22 @@ def app_playlist_preview():
         preview = get_playlist_preview(playlist_url)
         return jsonify(preview)
     except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/app/playlists', methods=['GET'])
+def app_get_playlists():
+    device_id = request.args.get('deviceId')
+    if not device_id:
+        return jsonify({"error": "Missing deviceId"}), 400
+    try:
+        from scraper.playlist_manager import get_all_playlists
+        playlists = get_all_playlists()
+        my_playlists = [p for p in playlists if p.get('requestedBy') == device_id]
+        # sort by created_at descending
+        my_playlists.sort(key=lambda x: x.get('created_at', ''), reverse=True)
+        return jsonify(my_playlists)
+    except Exception as e:
+        logger.error(f"Error in GET /api/app/playlists: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/app/my-imports', methods=['GET'])

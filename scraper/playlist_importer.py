@@ -15,6 +15,7 @@ from .downloader import download_track
 from .utils import extract_duration
 from .drive_uploader import upload_track, update_database, get_db_file_id
 from dashboard.drive_client import upload_json, download_json, search_file_by_name
+from .playlist_manager import add_playlist, add_track_to_playlist
 
 logger = logging.getLogger(__name__)
 
@@ -56,10 +57,19 @@ def get_playlist_preview(playlist_url):
         "preview_tracks": preview_tracks
     }
 
-def start_playlist_import(playlist_url, batch_size=15, device_id=None):
+def start_playlist_import(playlist_url, batch_size=15, device_id=None, imported_via="dashboard"):
     preview = get_playlist_preview(playlist_url)
-    playlist_id = preview["playlist_id"]
-    tracks = scrape_spotify_embed_playlist(playlist_id)
+    
+    # Call add_playlist to create a record and get a unified UUID for this import session
+    playlist_id = add_playlist(
+        name=preview["playlist_name"],
+        source_url=playlist_url,
+        cover_image=None,
+        imported_via=imported_via,
+        requestedBy=device_id
+    )
+    
+    tracks = scrape_spotify_embed_playlist(preview["playlist_id"])
     
     state = {
         "playlist_id": playlist_id,
@@ -210,6 +220,8 @@ def run_playlist_import(playlist_id, batch_size=15, source_override=None):
                     
                     update_database(drive_file_id_upload, metadata)
                     existing_tracks.append(metadata)
+                    
+                    add_track_to_playlist(playlist_id, drive_file_id_upload)
                     
                     state["downloaded"] += 1
                 except Exception as e:

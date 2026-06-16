@@ -47162,3 +47162,35 @@ google.auth.exceptions.RefreshError: ('invalid_grant: Token has been expired or 
 2026-06-16 19:31:08,359 - werkzeug - INFO - 127.0.0.1 - - [16/Jun/2026 19:31:08] "GET /api/background/status HTTP/1.1" 200 -
 2026-06-16 19:31:46,356 - werkzeug - INFO - 127.0.0.1 - - [16/Jun/2026 19:31:46] "GET /api/background/status HTTP/1.1" 200 -
 2026-06-16 19:32:33,303 - werkzeug - INFO - 127.0.0.1 - - [16/Jun/2026 19:32:33] "GET /api/background/status HTTP/1.1" 200 -
+2026-06-17 03:27:30,105 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-17 03:27:30,107 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-17 03:27:30,107 - dashboard.drive_client - INFO - Searching for file with query: name = 'playlists.json' and trashed = false and '1b67cbd6gIpvrJeporBi9qRGVCEo-Sgoe' in parents
+2026-06-17 03:27:30,744 - dashboard.drive_client - INFO - Found file 'playlists.json' with ID: 1kJKjBs2WA-QKajsBhvbU23rdY9_LbfMA
+2026-06-17 03:27:30,746 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-17 03:27:30,749 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-17 03:27:30,749 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kJKjBs2WA-QKajsBhvbU23rdY9_LbfMA
+2026-06-17 03:27:31,856 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1kJKjBs2WA-QKajsBhvbU23rdY9_LbfMA.
+2026-06-17 03:32:39,981 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-17 03:32:39,984 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-17 03:32:39,984 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-17 03:32:41,525 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i.
+2026-06-17 03:32:41,528 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-17 03:32:41,530 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-17 03:32:41,530 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-17 03:32:42,482 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i.
+2026-06-17 03:32:42,484 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-17 03:32:42,485 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-17 03:32:42,485 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-17 03:32:43,671 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i.
+2026-06-17 03:32:43,684 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-17 03:32:43,692 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-17 03:32:43,692 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-17 03:32:44,814 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i.
+2026-06-17 03:41:49,374 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-17 03:41:49,375 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-17 03:41:49,375 - dashboard.drive_client - INFO - Searching for file with query: name = 'playlists.json' and trashed = false and '1b67cbd6gIpvrJeporBi9qRGVCEo-Sgoe' in parents
+2026-06-17 03:41:50,041 - dashboard.drive_client - INFO - Found file 'playlists.json' with ID: 1kJKjBs2WA-QKajsBhvbU23rdY9_LbfMA
+2026-06-17 03:41:50,044 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-17 03:41:50,047 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-17 03:41:50,048 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kJKjBs2WA-QKajsBhvbU23rdY9_LbfMA
+2026-06-17 03:41:51,467 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1kJKjBs2WA-QKajsBhvbU23rdY9_LbfMA.
