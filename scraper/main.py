@@ -40,8 +40,8 @@ from dotenv import load_dotenv
 # Load env variables
 load_dotenv(dotenv_path=os.path.join(project_root, '.env'))
 
-# Import functions from other modules
-from scraper.spotify_charts import build_song_pool, fetch_album_art, detect_track_language
+from scraper.spotify_charts import build_song_pool
+from scraper.metadata_enricher import enrich_track_metadata
 from scraper.downloader import download_track
 from scraper.drive_uploader import upload_track, update_database, get_db_file_id
 from dashboard.drive_client import download_json, upload_json
@@ -54,7 +54,12 @@ from scraper.state_manager import (
     is_duplicate,
     get_effective_pool
 )
-from scraper.utils import extract_duration
+
+def determine_language_from_source(source, fallback="unknown"):
+    """Legacy helper for fallback"""
+    if source == "unknown":
+        return fallback
+    return fallback
 
 
 def backfill_album_art():
@@ -214,50 +219,43 @@ def backfill_languages():
         import requests
         
         for track in tracks:
-            lang = track.get("language", "unknown").lower()
-            if lang == "unknown" or lang == "" or lang is None:
+            lang = track.get("language", "unknown")
+            if not lang:
+                lang = "unknown"
+            lang = lang.lower()
+                
+            if lang in ("unknown", "", "none"):
                 new_lang = "unknown"
-                source = track.get("source", "").lower()
+                source = track.get("source", "")
+                source_lower = source.lower()
                 
                 # Priority 1: Check source field
-                if "jiosaavn" in source:
-                    if "malayalam" in source: new_lang = "malayalam"
-                    elif "tamil" in source: new_lang = "tamil"
-                    elif "hindi" in source: new_lang = "hindi"
-                    elif "indian" in source or "india" in source: new_lang = "indian"
-                    elif "english" in source: new_lang = "english"
-                
-                # Priority 2: Secondary detection for Playlist/Spotify imported songs
-                if new_lang == "unknown" and ("playlist" in source or "spotify" in source):
+                if "jiosaavn" in source_lower:
+                    if "malayalam" in source_lower: new_lang = "malayalam"
+                    elif "tamil" in source_lower: new_lang = "tamil"
+                    elif "hindi" in source_lower: new_lang = "hindi"
+                    elif "indian" in source_lower or "top-50" in source_lower: new_lang = "indian"
+                elif "global charts" in source_lower or "regional chart" in source_lower or "genre chart" in source_lower:
+                    new_lang = "english"
+                elif "playlist_import" in source_lower or "spotify_link" in source_lower or "playlist" in source_lower or "spotify" in source_lower:
                     title = track.get("title", "")
                     artist = track.get("artist", "")
-                    search_term = f"{artist} {title}"
-                    try:
-                        # Query IN storefront first
-                        url = "https://itunes.apple.com/search"
-                        params_in = {"term": search_term, "media": "music", "limit": 1, "country": "IN"}
-                        r_in = requests.get(url, params=params_in, timeout=5)
-                        if r_in.status_code == 200 and r_in.json().get("results"):
+                    
+                    lang_det, method = detect_track_language(title, artist)
+                    if method == "itunes":
+                        if lang_det == "hindi": # IND storefront maps to hindi in detect_track_language
                             new_lang = "indian"
+                        elif lang_det == "english":
+                            new_lang = "english"
                         else:
-                            # Query US storefront
-                            params_us = {"term": search_term, "media": "music", "limit": 1, "country": "US"}
-                            r_us = requests.get(url, params=params_us, timeout=5)
-                            if r_us.status_code == 200 and r_us.json().get("results"):
-                                new_lang = "english"
-                            else:
-                                # Query GB storefront
-                                params_gb = {"term": search_term, "media": "music", "limit": 1, "country": "GB"}
-                                r_gb = requests.get(url, params=params_gb, timeout=5)
-                                if r_gb.status_code == 200 and r_gb.json().get("results"):
-                                    new_lang = "english"
-                    except Exception as e:
-                        logger.warning(f"iTunes storefront detection failed for '{title}': {e}")
+                            new_lang = "unknown"
+                    else:
+                        new_lang = "unknown"
                         
                 if new_lang != "unknown" and new_lang != lang:
                     track["language"] = new_lang
                     updated_count += 1
-                    logger.info(f"backfill_languages: Updated '{track.get('title')}' language to {new_lang}")
+                    logger.info(f"Set '{track.get('title')}' language to '{new_lang}' because source='{source}'")
                     
         if updated_count > 0:
             logger.info(f"backfill_languages: Uploading updated database with {updated_count} language backfills...")
@@ -423,32 +421,31 @@ def run_scraper():
         
         local_file_path = None
         try:
-            # Fetch album art before downloading
-            album_art = fetch_album_art(title, artist)
-            
             # Step A: Download audio via yt-dlp
             logger.info(f"Downloading audio stream for: '{title}'...")
             local_file_path = download_track(title, artist, temp_dir)
             
-            # Step B: Upload file to Google Drive
+            # Step B: Enrich Metadata (Replaces separate album_art, duration, and language calls)
+            logger.info(f"Enriching metadata for '{title}' by '{artist}'...")
+            enriched = enrich_track_metadata(title, artist, local_file_path=local_file_path, source=source)
+            
+            # Step C: Upload file to Google Drive
             logger.info(f"Uploading file '{local_file_path}' to Google Drive...")
             drive_file_id = upload_track(local_file_path)
-            
-            # Step C: Extract duration and update index database on Drive
-            duration, duration_seconds = extract_duration(local_file_path)
-            logger.info(f"Extracted audio duration: {duration} ({duration_seconds}s)")
             
             metadata = {
                 "title": title,
                 "artist": artist,
-                "album": "Single",
-                "genre": genre,
-                "duration": duration,
-                "durationSeconds": duration_seconds,
+                "album": enriched.get("album", "Single"),
+                "genre": enriched.get("genre", genre),
+                "duration": enriched.get("duration", "--:--"),
+                "durationSeconds": enriched.get("durationSeconds"),
                 "spotify_id": spotify_id,
-                "album_art": album_art,
-                "language": language,
-                "source": source
+                "album_art": enriched.get("album_art"),
+                "language": enriched.get("language", "unknown"),
+                "source": source,
+                "lyrics": enriched.get("lyrics"),
+                "syncedLyrics": enriched.get("syncedLyrics")
             }
             
             logger.info("Updating central database.json index on Google Drive...")
@@ -460,13 +457,15 @@ def run_scraper():
                 "driveFileId": drive_file_id,
                 "title": title,
                 "artist": artist,
-                "album": "Single",
-                "genre": genre,
-                "duration": duration,
-                "durationSeconds": duration_seconds,
-                "album_art": album_art,
-                "language": language,
+                "album": enriched.get("album", "Single"),
+                "genre": enriched.get("genre", genre),
+                "duration": enriched.get("duration", "--:--"),
+                "durationSeconds": enriched.get("durationSeconds"),
+                "album_art": enriched.get("album_art"),
+                "language": enriched.get("language", "unknown"),
                 "source": source,
+                "lyrics": enriched.get("lyrics"),
+                "syncedLyrics": enriched.get("syncedLyrics"),
                 "timestamp": datetime.datetime.utcnow().isoformat() + 'Z',
                 "spotify_id": spotify_id
             })
@@ -524,6 +523,120 @@ def run_scraper():
         for s in failed_songs:
             logger.info(f" - {s}")
     logger.info("=" * 60)
+
+def run_full_enrichment_pass():
+    """
+    Backfill engine for full metadata enrichment.
+    Iterates through the existing database, enriches missing fields, and updates.
+    """
+    logger.info("Starting run_full_enrichment_pass...")
+    db_file_id, parent_id = get_db_file_id()
+    if not db_file_id:
+        logger.error("No database.json file ID resolved.")
+        return {"status": "error", "message": "Database not found."}
+
+    try:
+        db_data = download_json(db_file_id)
+        if not db_data:
+            return {"status": "error", "message": "Database is empty."}
+
+        tracks = db_data if isinstance(db_data, list) else db_data.get('tracks', [])
+        
+        # Create Backup
+        now = datetime.datetime.now()
+        backup_filename = f"database_backup_enrich_{now.strftime('%Y-%m-%d_%H-%M-%S')}.json"
+        upload_json(None, db_data, backup_filename, parent_id=parent_id)
+        logger.info(f"Created backup: {backup_filename}")
+
+        updated = False
+        initial_counts = {
+            "album_art_missing": 0, "duration_missing": 0, "language_missing": 0,
+            "genre_missing": 0, "album_missing": 0, "lyrics_missing": 0
+        }
+        final_counts = {
+            "album_art_missing": 0, "duration_missing": 0, "language_missing": 0,
+            "genre_missing": 0, "album_missing": 0, "lyrics_missing": 0
+        }
+
+        for i, t in enumerate(tracks):
+            title = t.get("title", "Unknown Title")
+            artist = t.get("artist", "Unknown Artist")
+            source = t.get("source", "unknown")
+            
+            # Identify missing fields
+            needs_enrichment = False
+            
+            # Initial tally
+            if not t.get("album_art"): initial_counts["album_art_missing"] += 1
+            if not t.get("duration") or t.get("duration") == "--:--": initial_counts["duration_missing"] += 1
+            if not t.get("language") or t.get("language") == "unknown": initial_counts["language_missing"] += 1
+            if not t.get("genre") or t.get("genre") == "Unknown": initial_counts["genre_missing"] += 1
+            if not t.get("album") or t.get("album") == "Unknown Album": initial_counts["album_missing"] += 1
+            if not t.get("lyrics"): initial_counts["lyrics_missing"] += 1
+            
+            if not t.get("album_art") or \
+               not t.get("duration") or t.get("duration") == "--:--" or \
+               not t.get("language") or t.get("language") == "unknown" or \
+               not t.get("genre") or t.get("genre") == "Unknown" or \
+               not t.get("album") or t.get("album") == "Unknown Album" or \
+               not t.get("lyrics"):
+                needs_enrichment = True
+                
+            if needs_enrichment:
+                logger.info(f"Enriching [{i+1}/{len(tracks)}]: '{title}' by '{artist}'...")
+                enriched = enrich_track_metadata(title, artist, local_file_path=None, source=source)
+                
+                if not t.get("album_art") and enriched.get("album_art"):
+                    t["album_art"] = enriched["album_art"]
+                    t["albumArt"] = enriched["album_art"]
+                    updated = True
+                if (not t.get("duration") or t.get("duration") == "--:--") and enriched.get("duration") != "--:--":
+                    t["duration"] = enriched["duration"]
+                    t["durationSeconds"] = enriched["durationSeconds"]
+                    updated = True
+                if (not t.get("language") or t.get("language") == "unknown") and enriched.get("language") != "unknown":
+                    t["language"] = enriched["language"]
+                    updated = True
+                if (not t.get("genre") or t.get("genre") == "Unknown") and enriched.get("genre") != "Unknown":
+                    t["genre"] = enriched["genre"]
+                    updated = True
+                if (not t.get("album") or t.get("album") == "Unknown Album") and enriched.get("album") != "Unknown Album":
+                    t["album"] = enriched["album"]
+                    updated = True
+                if not t.get("lyrics") and enriched.get("lyrics"):
+                    t["lyrics"] = enriched["lyrics"]
+                    t["syncedLyrics"] = enriched["syncedLyrics"]
+                    updated = True
+
+            # Final tally
+            if not t.get("album_art"): final_counts["album_art_missing"] += 1
+            if not t.get("duration") or t.get("duration") == "--:--": final_counts["duration_missing"] += 1
+            if not t.get("language") or t.get("language") == "unknown": final_counts["language_missing"] += 1
+            if not t.get("genre") or t.get("genre") == "Unknown": final_counts["genre_missing"] += 1
+            if not t.get("album") or t.get("album") == "Unknown Album": final_counts["album_missing"] += 1
+            if not t.get("lyrics"): final_counts["lyrics_missing"] += 1
+
+        if updated:
+            if isinstance(db_data, dict):
+                db_data['tracks'] = tracks
+            upload_json(db_file_id, db_data, 'database.json', parent_id=parent_id)
+            logger.info("run_full_enrichment_pass: Database updated successfully.")
+        else:
+            logger.info("run_full_enrichment_pass: No new metadata found. Database unchanged.")
+
+        result = {
+            "status": "success",
+            "total_tracks": len(tracks),
+            "updated": updated,
+            "initial_counts": initial_counts,
+            "final_counts": final_counts
+        }
+        logger.info(f"run_full_enrichment_pass complete: {result}")
+        return result
+
+    except Exception as e:
+        logger.error(f"Error in run_full_enrichment_pass: {e}", exc_info=True)
+        return {"status": "error", "message": str(e)}
 
 if __name__ == "__main__":
     run_scraper()

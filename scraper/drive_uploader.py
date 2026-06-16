@@ -156,6 +156,8 @@ def update_database(drive_file_id, metadata):
             "spotify_id": metadata.get('spotify_id'),
             "album_art": resolved_art,
             "albumArt": resolved_art,
+            "source": metadata.get('source', 'unknown'),
+            "requestedBy": metadata.get('requestedBy'),
             "timestamp": timestamp
         }
         
@@ -240,6 +242,10 @@ def normalize_database():
                 track['source'] = "unknown"
                 changed = True
                 
+            if 'requestedBy' not in track:
+                track['requestedBy'] = None
+                changed = True
+                
             if 'addedAt' not in track:
                 track['addedAt'] = track.get('timestamp') or current_time
                 changed = True
@@ -250,6 +256,14 @@ def normalize_database():
                 
             if 'spotify_id' not in track:
                 track['spotify_id'] = None
+                changed = True
+                
+            if 'lyrics' not in track:
+                track['lyrics'] = None
+                changed = True
+                
+            if 'syncedLyrics' not in track:
+                track['syncedLyrics'] = None
                 changed = True
                 
             if changed:

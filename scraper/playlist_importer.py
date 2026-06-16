@@ -9,7 +9,8 @@ import requests
 # Add project root to sys.path to resolve imports when run directly or as a module
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from .spotify_charts import scrape_spotify_embed_playlist, HEADERS, fetch_album_art, detect_track_language
+from .spotify_charts import scrape_spotify_embed_playlist, HEADERS
+from .metadata_enricher import enrich_track_metadata
 from .downloader import download_track
 from .utils import extract_duration
 from .drive_uploader import upload_track, update_database, get_db_file_id
@@ -55,7 +56,7 @@ def get_playlist_preview(playlist_url):
         "preview_tracks": preview_tracks
     }
 
-def start_playlist_import(playlist_url, batch_size=15):
+def start_playlist_import(playlist_url, batch_size=15, device_id=None):
     preview = get_playlist_preview(playlist_url)
     playlist_id = preview["playlist_id"]
     tracks = scrape_spotify_embed_playlist(playlist_id)
@@ -70,6 +71,7 @@ def start_playlist_import(playlist_url, batch_size=15):
         "skipped": 0,
         "failed": 0,
         "status": "running",
+        "device_id": device_id,
         "tracks": tracks
     }
     
@@ -93,7 +95,7 @@ def get_playlist_status(playlist_id):
         return {"status": "not_found"}
     return download_json(file_id)
 
-def run_playlist_import(playlist_id, batch_size=15):
+def run_playlist_import(playlist_id, batch_size=15, source_override=None):
     from datetime import datetime
     logger.info(f"Starting background playlist import for {playlist_id}")
     db_file_id, parent_id = get_db_file_id()
@@ -166,7 +168,8 @@ def run_playlist_import(playlist_id, batch_size=15):
             title = t.get("title")
             artist = t.get("artist")
             spotify_id = t.get("spotify_id")
-            source = f"Playlist Import ({state.get('playlist_name')})"
+            source = source_override if source_override else f"Playlist Import ({state.get('playlist_name')})"
+            device_id = state.get("device_id")
             
             logger.info(f"Processing playlist track: {title} by {artist}")
             
@@ -184,24 +187,25 @@ def run_playlist_import(playlist_id, batch_size=15):
             else:
                 local_file_path = None
                 try:
-                    lang, _ = detect_track_language(title, artist)
-                    album_art = fetch_album_art(title, artist)
-                    
                     local_file_path = download_track(title, artist, temp_dir)
                     drive_file_id_upload = upload_track(local_file_path)
-                    duration, duration_seconds = extract_duration(local_file_path)
+                    
+                    enriched = enrich_track_metadata(title, artist, local_file_path=local_file_path, source=source)
                     
                     metadata = {
                         "title": title,
                         "artist": artist,
-                        "album": "Single",
-                        "genre": "Unknown",
-                        "duration": duration,
-                        "durationSeconds": duration_seconds,
+                        "album": enriched.get("album", "Single"),
+                        "genre": enriched.get("genre", "Unknown"),
+                        "duration": enriched.get("duration", "--:--"),
+                        "durationSeconds": enriched.get("durationSeconds"),
                         "spotify_id": spotify_id,
-                        "album_art": album_art,
-                        "language": lang,
-                        "source": source
+                        "album_art": enriched.get("album_art"),
+                        "language": enriched.get("language", "unknown"),
+                        "source": source,
+                        "requestedBy": device_id,
+                        "lyrics": enriched.get("lyrics"),
+                        "syncedLyrics": enriched.get("syncedLyrics")
                     }
                     
                     update_database(drive_file_id_upload, metadata)

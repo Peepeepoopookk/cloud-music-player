@@ -61,6 +61,13 @@
                     </svg>
                     <span>Logs</span>
                 </button>
+                <button class="nav-item" id="nav-btn-app-imports" data-target="section-app-imports">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="5" y="2" width="14" height="20" rx="2" ry="2"/>
+                        <line x1="12" y1="18" x2="12.01" y2="18"/>
+                    </svg>
+                    <span>App Imports</span>
+                </button>
                 <button class="nav-item" id="nav-btn-settings" data-target="section-settings">
                     <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
                         <circle cx="12" cy="12" r="3"></circle>
@@ -230,6 +237,7 @@
                         </div>
                         <div style="display: flex; gap: 12px; align-items: center;">
                             <span class="badge" id="backfill-status-badge" style="background-color: rgba(255, 255, 255, 0.05); color: var(--tertiary); padding: 4px 10px; border-radius: 12px; font-size: 0.85rem;">Idle</span>
+                            <button class="btn btn-secondary" id="btn-run-full-enrichment" style="padding: 6px 16px; font-size: 0.85rem;">Run Full Enrichment</button>
                             <button class="btn btn-primary" id="btn-run-all-backfill" style="padding: 6px 16px; font-size: 0.85rem;">Run All</button>
                         </div>
                     </div>
@@ -529,6 +537,55 @@
                         <div class="settings-footer" style="margin-top: 32px; display: flex; justify-content: flex-end;">
                             <button class="btn btn-primary" id="btn-save-settings">Save Settings</button>
                         </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- APP IMPORTS SECTION -->
+            <section class="content-section" id="section-app-imports">
+                <div class="section-header">
+                    <div class="section-title-wrap">
+                        <h2>App Imports</h2>
+                        <p class="section-desc">View and manage songs imported via the mobile app. Total: <span id="app-imports-total">0</span></p>
+                    </div>
+                </div>
+
+                <div class="table-toolbar">
+                    <div class="search-box">
+                        <svg class="search-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="11" cy="11" r="8"></circle>
+                            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                        </svg>
+                        <input type="text" id="app-imports-search-input" placeholder="Search by title, artist, or device ID...">
+                    </div>
+                    <div class="filter-box" style="margin-left: auto;">
+                        <select id="app-imports-device-filter" class="settings-text-input" style="padding: 6px 12px; border-radius: 20px; border: 1px solid var(--border); background-color: var(--bg-base); color: var(--primary);">
+                            <option value="">All Devices</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="card library-card">
+                    <div class="table-container">
+                        <table class="tracks-table" id="app-imports-table">
+                            <thead>
+                                <tr>
+                                    <th class="artwork-col"></th>
+                                    <th>Title</th>
+                                    <th>Artist</th>
+                                    <th>Language</th>
+                                    <th>Duration</th>
+                                    <th>Source</th>
+                                    <th>Requested By</th>
+                                    <th>Date Added</th>
+                                </tr>
+                            </thead>
+                            <tbody id="app-imports-table-body">
+                                <tr>
+                                    <td colspan="8" class="table-placeholder">Loading app imports...</td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </section>

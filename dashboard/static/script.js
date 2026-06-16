@@ -44,6 +44,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (window.backgroundStatus) {
                     syncDownloaderUI(window.backgroundStatus);
                 }
+            } else if (targetId === 'section-app-imports') {
+                loadAppImports();
             }
         });
     });
@@ -1194,6 +1196,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const backfillStatusBadge = document.getElementById('backfill-status-badge');
     const backfillLogsOutput = document.getElementById('backfill-logs-output');
     const btnRunAllBackfill = document.getElementById('btn-run-all-backfill');
+    const btnRunFullEnrichment = document.getElementById('btn-run-full-enrichment');
     const btnRunBackfillList = document.querySelectorAll('.btn-run-backfill');
     
     async function loadBackfillStatus() {
@@ -1260,6 +1263,31 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (btnRunAllBackfill) {
         btnRunAllBackfill.addEventListener('click', () => runBackfill('all'));
+    }
+    
+    if (btnRunFullEnrichment) {
+        btnRunFullEnrichment.addEventListener('click', async () => {
+            if (backfillRunning) return;
+            try {
+                const res = await fetch('/api/backfill/full-enrichment', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({})
+                });
+                if (res.ok) {
+                    showToast(`Full Enrichment started!`, "success");
+                    backfillRunning = true;
+                    if (backfillStatusBadge) {
+                        backfillStatusBadge.textContent = 'Running';
+                        backfillStatusBadge.style.backgroundColor = 'rgba(48, 209, 88, 0.2)';
+                        backfillStatusBadge.style.color = '#30d158';
+                    }
+                    setTimeout(pollBackgroundStatus, 500);
+                }
+            } catch (err) {
+                showToast("Failed to start full enrichment", "error");
+            }
+        });
     }
 
     btnRunBackfillList.forEach(btn => {
@@ -1447,6 +1475,117 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (err) {
             console.error("Failed to query background tasks status:", err);
         }
+    }
+
+    // === App Imports Logic ===
+    const appImportsTableBody = document.getElementById('app-imports-table-body');
+    const appImportsSearchInput = document.getElementById('app-imports-search-input');
+    const appImportsDeviceFilter = document.getElementById('app-imports-device-filter');
+    const appImportsTotal = document.getElementById('app-imports-total');
+    let allAppImports = [];
+
+    async function loadAppImports() {
+        if (!appImportsTableBody) return;
+        appImportsTableBody.innerHTML = `<tr><td colspan="8" class="table-placeholder">Loading app imports...</td></tr>`;
+        try {
+            const response = await fetch('/api/app-imports');
+            if (!response.ok) throw new Error("Failed to load app imports");
+            allAppImports = await response.json();
+            
+            // Populate unique device IDs
+            const deviceIds = new Set();
+            allAppImports.forEach(t => {
+                if (t.requestedBy) deviceIds.add(t.requestedBy);
+            });
+            
+            const currentFilter = appImportsDeviceFilter.value;
+            appImportsDeviceFilter.innerHTML = '<option value="">All Devices</option>';
+            Array.from(deviceIds).sort().forEach(dev => {
+                const opt = document.createElement('option');
+                opt.value = dev;
+                opt.textContent = dev.substring(0, 12) + (dev.length > 12 ? '...' : '');
+                appImportsDeviceFilter.appendChild(opt);
+            });
+            appImportsDeviceFilter.value = currentFilter;
+
+            renderAppImports();
+        } catch (err) {
+            appImportsTableBody.innerHTML = `<tr><td colspan="8" class="table-placeholder text-danger">Error: ${escapeHTML(err.message)}</td></tr>`;
+        }
+    }
+
+    function renderAppImports() {
+        if (!appImportsTableBody) return;
+        
+        const q = (appImportsSearchInput ? appImportsSearchInput.value : '').toLowerCase().trim();
+        const deviceFilter = appImportsDeviceFilter ? appImportsDeviceFilter.value : '';
+        
+        let filtered = allAppImports.filter(t => {
+            const matchesSearch = (t.title || '').toLowerCase().includes(q) || 
+                                  (t.artist || '').toLowerCase().includes(q) ||
+                                  (t.requestedBy || '').toLowerCase().includes(q);
+            const matchesDevice = !deviceFilter || t.requestedBy === deviceFilter;
+            return matchesSearch && matchesDevice;
+        });
+        
+        if (appImportsTotal) appImportsTotal.textContent = filtered.length;
+        
+        appImportsTableBody.innerHTML = '';
+        if (filtered.length === 0) {
+            appImportsTableBody.innerHTML = `<tr><td colspan="8" class="table-placeholder">No app imports found.</td></tr>`;
+            return;
+        }
+        
+        filtered.forEach(track => {
+            const tr = document.createElement('tr');
+            
+            const title = track.title || 'Unknown Title';
+            const artist = track.artist || 'Unknown Artist';
+            const duration = track.duration || '--:--';
+            const lang = track.language || 'unknown';
+            const source = track.source || 'unknown';
+            let reqBy = track.requestedBy || 'unknown';
+            if (reqBy.length > 12) reqBy = reqBy.substring(0, 12) + '...';
+            
+            let dateAdded = 'Unknown';
+            const timeVal = track.addedAt || track.timestamp;
+            if (timeVal) {
+                const dateObj = new Date(timeVal);
+                if (!isNaN(dateObj.getTime())) {
+                    dateAdded = dateObj.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+                }
+            }
+
+            const albumArtUrl = track.album_art || track.albumArt;
+            let artHtml = '';
+            if (albumArtUrl) {
+                artHtml = `<img class="track-artwork" src="${escapeHTML(albumArtUrl)}" alt="${escapeHTML(title)}" loading="lazy">`;
+            } else {
+                artHtml = `<div class="track-art-placeholder">🎵</div>`;
+            }
+
+            tr.innerHTML = `
+                <td class="artwork-col">${artHtml}</td>
+                <td class="title-cell-wrap">
+                    <span class="track-title-bold">${escapeHTML(title)}</span>
+                </td>
+                <td>${escapeHTML(artist)}</td>
+                <td><span class="badge badge-language">${escapeHTML(lang)}</span></td>
+                <td>${escapeHTML(duration)}</td>
+                <td><span style="color: var(--tertiary); font-size: 0.85rem;">${escapeHTML(source)}</span></td>
+                <td title="${escapeHTML(track.requestedBy || '')}">${escapeHTML(reqBy)}</td>
+                <td style="color: var(--tertiary); font-size: 0.85rem;">${escapeHTML(dateAdded)}</td>
+            `;
+            appImportsTableBody.appendChild(tr);
+        });
+    }
+
+    if (appImportsSearchInput) {
+        appImportsSearchInput.addEventListener('input', renderAppImports);
+    }
+    
+    if (appImportsDeviceFilter) {
+        appImportsDeviceFilter.addEventListener('change', renderAppImports);
     }
 
     // Bootstrap app state
