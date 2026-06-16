@@ -1040,11 +1040,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 const data = await response.json();
                 if (!response.ok) throw new Error(data.error || "Failed to preview playlist");
                 
+                const previewPlaylistWarning = document.getElementById('playlist-preview-warning');
+                if (data.truncated) {
+                    if (previewPlaylistWarning) {
+                        previewPlaylistWarning.textContent = data.truncation_warning;
+                        previewPlaylistWarning.style.display = 'block';
+                    }
+                    previewPlaylistCount.textContent = `${data.tracks_available_for_import} Tracks (Out of ${data.total_tracks} total)`;
+                } else {
+                    if (previewPlaylistWarning) previewPlaylistWarning.style.display = 'none';
+                    previewPlaylistCount.textContent = `${data.total_tracks} Tracks`;
+                }
                 previewPlaylistName.textContent = data.playlist_name;
-                previewPlaylistCount.textContent = `${data.total_tracks} Tracks`;
                 previewPlaylistSize.textContent = data.estimated_size_display;
                 
-                previewTracksList.innerHTML = data.preview_tracks.map(t => `<div>• ${escapeHtml(t.title)} - ${escapeHtml(t.artist)}</div>`).join('') + (data.total_tracks > 5 ? `<div>...and ${data.total_tracks - 5} more</div>` : '');
+                previewTracksList.innerHTML = data.preview_tracks.map(t => `<div>• ${escapeHtml(t.title)} - ${escapeHtml(t.artist)}</div>`).join('') + (data.tracks_available_for_import > 5 ? `<div>...and ${data.tracks_available_for_import - 5} more</div>` : '');
                 
                 playlistPreviewContainer.classList.remove('hidden');
                 playlistProgressContainer.classList.add('hidden');

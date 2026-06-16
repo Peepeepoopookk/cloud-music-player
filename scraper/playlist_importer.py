@@ -31,6 +31,22 @@ def get_playlist_preview(playlist_url):
     tracks = scrape_spotify_embed_playlist(playlist_id)
     
     playlist_name = "Spotify Playlist"
+    true_total_tracks = None
+    
+    # Try fetching the main playlist page to get the true total tracks count
+    try:
+        r = requests.get(playlist_url, headers={'User-Agent': 'Mozilla/5.0'}, timeout=5)
+        if r.status_code == 200:
+            desc_match = re.findall(r'<meta property="og:description" content="([^"]+)"', r.text)
+            if desc_match:
+                # E.g. "Playlist · Willis Orr · 10000 items · 5.7K saves"
+                # E.g. "Playlist · Spotify · 50 songs · 3.3K likes"
+                count_match = re.search(r'(\d+(?:,\d+)?)\s+(?:songs?|tracks?|items?)', desc_match[0])
+                if count_match:
+                    true_total_tracks = int(count_match.group(1).replace(',', ''))
+    except Exception as e:
+        logger.warning(f"Error extracting true total tracks: {e}")
+
     embed_url = f"https://open.spotify.com/embed/playlist/{playlist_id}"
     try:
         r = requests.get(embed_url, headers=HEADERS, timeout=5)
@@ -43,15 +59,27 @@ def get_playlist_preview(playlist_url):
     except Exception as e:
         logger.warning(f"Error extracting playlist name: {e}")
         
-    total_tracks = len(tracks)
+    tracks_available_for_import = len(tracks)
+    
+    if true_total_tracks is None:
+        true_total_tracks = tracks_available_for_import
+
+    truncated = true_total_tracks > tracks_available_for_import
+    truncation_warning = None
+    if truncated:
+        truncation_warning = f"This playlist has {true_total_tracks} songs but only the first {tracks_available_for_import} can be imported due to Spotify access limitations."
+        
     preview_tracks = tracks[:5]
-    estimated_mb = total_tracks * 5
+    estimated_mb = tracks_available_for_import * 5
     estimated_display = f"~{estimated_mb} MB"
     
     return {
         "playlist_id": playlist_id,
         "playlist_name": playlist_name,
-        "total_tracks": total_tracks,
+        "total_tracks": true_total_tracks,
+        "tracks_available_for_import": tracks_available_for_import,
+        "truncated": truncated,
+        "truncation_warning": truncation_warning,
         "estimated_size_mb": estimated_mb,
         "estimated_size_display": estimated_display,
         "preview_tracks": preview_tracks
@@ -76,6 +104,7 @@ def start_playlist_import(playlist_url, batch_size=15, device_id=None, imported_
         "playlist_url": playlist_url,
         "playlist_name": preview["playlist_name"],
         "total_tracks": preview["total_tracks"],
+        "tracks_available_for_import": preview["tracks_available_for_import"],
         "processed": 0,
         "downloaded": 0,
         "skipped": 0,
