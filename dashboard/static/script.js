@@ -752,6 +752,67 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    const btnAuditLibrary = document.getElementById('btn-audit-library');
+    if (btnAuditLibrary) {
+        btnAuditLibrary.addEventListener('click', async () => {
+            btnAuditLibrary.disabled = true;
+            btnAuditLibrary.textContent = 'Auditing...';
+            showToast('Auditing database fields...', 'info');
+            try {
+                const response = await fetch('/api/library/audit');
+                const resData = await response.json();
+                if (response.ok && resData.status === 'success') {
+                    showToast('Audit complete.', 'success');
+                    const d = resData.data;
+                    const m = d.missing_counts;
+                    let msg = `Library Audit Results\n\n`;
+                    msg += `Total Tracks: ${d.total_tracks}\n`;
+                    msg += `Complete Tracks: ${d.complete_tracks}\n`;
+                    msg += `Incomplete Tracks: ${d.tracks_with_any_missing_field}\n\n`;
+                    msg += `Missing Field Counts:\n`;
+                    msg += `- Album Art: ${m.album_art}\n`;
+                    msg += `- Duration: ${m.duration}\n`;
+                    msg += `- Duration Seconds: ${m.durationSeconds}\n`;
+                    msg += `- Language: ${m.language}\n`;
+                    msg += `- Genre: ${m.genre}\n`;
+                    msg += `- Album: ${m.album}\n`;
+                    msg += `- Lyrics: ${m.lyrics}\n`;
+                    msg += `- Synced Lyrics: ${m.syncedLyrics}\n`;
+                    msg += `- Source: ${m.source}\n`;
+                    msg += `- Spotify ID (Info only): ${m.spotify_id}\n`;
+                    alert(msg);
+                } else {
+                    throw new Error(resData.error || 'Failed to audit database');
+                }
+            } catch (err) {
+                showToast(`Audit failed: ${err.message}`, 'error');
+            } finally {
+                btnAuditLibrary.disabled = false;
+                btnAuditLibrary.textContent = 'Audit Library';
+            }
+        });
+    }
+
+    const btnRunCompleteBackfill = document.getElementById('btn-run-complete-backfill');
+    if (btnRunCompleteBackfill) {
+        btnRunCompleteBackfill.addEventListener('click', async () => {
+            btnRunCompleteBackfill.disabled = true;
+            try {
+                const response = await fetch('/api/backfill/complete', { method: 'POST' });
+                const resData = await response.json();
+                if (response.ok && resData.status === 'success') {
+                    showToast('Complete Backfill Engine started in background.', 'success');
+                    setTimeout(pollBackgroundStatus, 500);
+                } else {
+                    throw new Error(resData.error || 'Failed to start backfill engine');
+                }
+            } catch (err) {
+                showToast(`Error: ${err.message}`, 'error');
+                btnRunCompleteBackfill.disabled = false;
+            }
+        });
+    }
+
     // ADD SONG: Modal Handlers
     const addSongModal = document.getElementById('add-song-modal');
     const btnOpenAddSongModal = document.getElementById('btn-open-add-song-modal');

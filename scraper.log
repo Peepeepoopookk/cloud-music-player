@@ -47194,3 +47194,548 @@ google.auth.exceptions.RefreshError: ('invalid_grant: Token has been expired or 
 2026-06-17 03:41:50,047 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
 2026-06-17 03:41:50,048 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kJKjBs2WA-QKajsBhvbU23rdY9_LbfMA
 2026-06-17 03:41:51,467 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1kJKjBs2WA-QKajsBhvbU23rdY9_LbfMA.
+2026-06-17 03:48:41,277 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://192.168.100.99:5000
+2026-06-17 03:48:41,278 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
+2026-06-17 03:48:50,603 - werkzeug - INFO - 127.0.0.1 - - [17/Jun/2026 03:48:50] "GET / HTTP/1.1" 200 -
+2026-06-17 03:48:50,979 - werkzeug - INFO - 127.0.0.1 - - [17/Jun/2026 03:48:50] "[36mGET /static/style.css HTTP/1.1[0m" 304 -
+2026-06-17 03:48:50,987 - werkzeug - INFO - 127.0.0.1 - - [17/Jun/2026 03:48:50] "GET /static/script.js HTTP/1.1" 200 -
+2026-06-17 03:48:51,062 - werkzeug - INFO - 127.0.0.1 - - [17/Jun/2026 03:48:51] "GET /api/background/status HTTP/1.1" 200 -
+2026-06-17 03:48:51,079 - werkzeug - INFO - 127.0.0.1 - - [17/Jun/2026 03:48:51] "[33mGET /favicon.ico HTTP/1.1[0m" 404 -
+2026-06-17 03:48:51,104 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-17 03:48:51,113 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-17 03:48:51,116 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-17 03:48:51,147 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-17 03:48:51,156 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-17 03:48:51,159 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-17 03:48:51,193 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-17 03:48:51,204 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-17 03:48:51,207 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-17 03:48:51,414 - werkzeug - INFO - 127.0.0.1 - - [17/Jun/2026 03:48:51] "GET /api/playlist/logs HTTP/1.1" 200 -
+2026-06-17 03:48:52,723 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i.
+2026-06-17 03:48:52,745 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i.
+2026-06-17 03:48:52,752 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-17 03:48:52,780 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-17 03:48:52,784 - dashboard.drive_client - INFO - Retrieving metadata for file ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-17 03:48:52,786 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-17 03:48:52,817 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-17 03:48:52,821 - dashboard.drive_client - INFO - Listing files with query: trashed = false and '1JGo8S2-WagATODLDmPHcmvlWMC59nZOL' in parents
+2026-06-17 03:48:52,866 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i.
+2026-06-17 03:48:52,871 - werkzeug - INFO - 127.0.0.1 - - [17/Jun/2026 03:48:52] "GET /api/backfill/status HTTP/1.1" 200 -
+2026-06-17 03:48:53,280 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-17 03:48:53,290 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-17 03:48:53,292 - dashboard.drive_client - INFO - Listing files with query: trashed = false and '1JGo8S2-WagATODLDmPHcmvlWMC59nZOL' in parents
+2026-06-17 03:48:53,470 - dashboard.drive_client - INFO - Successfully retrieved 100 files.
+2026-06-17 03:48:53,487 - werkzeug - INFO - 127.0.0.1 - - [17/Jun/2026 03:48:53] "GET /api/tracks HTTP/1.1" 200 -
+2026-06-17 03:48:53,501 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-17 03:48:53,508 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-17 03:48:53,509 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-17 03:48:53,975 - dashboard.drive_client - INFO - Successfully retrieved 100 files.
+2026-06-17 03:48:53,995 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-17 03:48:54,005 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-17 03:48:54,009 - dashboard.drive_client - INFO - Retrieving storage quota from Google Drive about.get...
+2026-06-17 03:48:54,480 - werkzeug - INFO - 127.0.0.1 - - [17/Jun/2026 03:48:54] "GET /api/storage HTTP/1.1" 200 -
+2026-06-17 03:48:54,763 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i.
+2026-06-17 03:48:54,772 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-17 03:48:54,787 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-17 03:48:54,789 - dashboard.drive_client - INFO - Listing files with query: trashed = false and '1JGo8S2-WagATODLDmPHcmvlWMC59nZOL' in parents
+2026-06-17 03:48:55,434 - dashboard.drive_client - INFO - Successfully retrieved 100 files.
+2026-06-17 03:48:55,457 - werkzeug - INFO - 127.0.0.1 - - [17/Jun/2026 03:48:55] "GET /api/tracks HTTP/1.1" 200 -
+2026-06-17 03:48:56,056 - werkzeug - INFO - 127.0.0.1 - - [17/Jun/2026 03:48:56] "GET /api/background/status HTTP/1.1" 200 -
+2026-06-17 03:49:01,317 - werkzeug - INFO - 127.0.0.1 - - [17/Jun/2026 03:49:01] "GET /api/background/status HTTP/1.1" 200 -
+2026-06-17 03:49:06,317 - werkzeug - INFO - 127.0.0.1 - - [17/Jun/2026 03:49:06] "GET /api/background/status HTTP/1.1" 200 -
+2026-06-17 03:49:11,308 - werkzeug - INFO - 127.0.0.1 - - [17/Jun/2026 03:49:11] "GET /api/background/status HTTP/1.1" 200 -
+2026-06-17 03:49:16,302 - werkzeug - INFO - 127.0.0.1 - - [17/Jun/2026 03:49:16] "GET /api/background/status HTTP/1.1" 200 -
+2026-06-17 03:49:21,315 - werkzeug - INFO - 127.0.0.1 - - [17/Jun/2026 03:49:21] "GET /api/background/status HTTP/1.1" 200 -
+2026-06-17 03:49:26,300 - werkzeug - INFO - 127.0.0.1 - - [17/Jun/2026 03:49:26] "GET /api/background/status HTTP/1.1" 200 -
+2026-06-17 03:49:31,054 - werkzeug - INFO - 127.0.0.1 - - [17/Jun/2026 03:49:31] "GET /api/background/status HTTP/1.1" 200 -
+2026-06-17 03:49:31,328 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-17 03:49:31,336 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-17 03:49:31,339 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-17 03:49:31,634 - werkzeug - INFO - 127.0.0.1 - - [17/Jun/2026 03:49:31] "GET /api/playlist/logs HTTP/1.1" 200 -
+2026-06-17 03:49:32,539 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-17 03:49:32,546 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-17 03:49:32,547 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-17 03:49:32,700 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i.
+2026-06-17 03:49:32,719 - werkzeug - INFO - 127.0.0.1 - - [17/Jun/2026 03:49:32] "GET /api/download-logs HTTP/1.1" 200 -
+2026-06-17 03:49:33,666 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i.
+2026-06-17 03:49:33,682 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-17 03:49:33,690 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-17 03:49:33,692 - dashboard.drive_client - INFO - Retrieving metadata for file ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-17 03:49:34,197 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-17 03:49:34,205 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-17 03:49:34,207 - dashboard.drive_client - INFO - Listing files with query: trashed = false and '1JGo8S2-WagATODLDmPHcmvlWMC59nZOL' in parents
+2026-06-17 03:49:34,829 - dashboard.drive_client - INFO - Successfully retrieved 100 files.
+2026-06-17 03:49:34,836 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-17 03:49:34,846 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-17 03:49:34,850 - dashboard.drive_client - INFO - Retrieving storage quota from Google Drive about.get...
+2026-06-17 03:49:35,349 - werkzeug - INFO - 127.0.0.1 - - [17/Jun/2026 03:49:35] "GET /api/storage HTTP/1.1" 200 -
+2026-06-17 03:49:35,640 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-17 03:49:35,650 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-17 03:49:35,651 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-17 03:49:36,068 - werkzeug - INFO - 127.0.0.1 - - [17/Jun/2026 03:49:36] "GET /api/background/status HTTP/1.1" 200 -
+2026-06-17 03:49:36,693 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i.
+2026-06-17 03:49:36,701 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-17 03:49:36,712 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-17 03:49:36,714 - dashboard.drive_client - INFO - Listing files with query: trashed = false and '1JGo8S2-WagATODLDmPHcmvlWMC59nZOL' in parents
+2026-06-17 03:49:37,330 - dashboard.drive_client - INFO - Successfully retrieved 100 files.
+2026-06-17 03:49:37,356 - werkzeug - INFO - 127.0.0.1 - - [17/Jun/2026 03:49:37] "GET /api/tracks HTTP/1.1" 200 -
+2026-06-17 03:49:41,052 - werkzeug - INFO - 127.0.0.1 - - [17/Jun/2026 03:49:41] "GET /api/background/status HTTP/1.1" 200 -
+2026-06-17 03:49:45,607 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-17 03:49:45,614 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-17 03:49:45,616 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-17 03:49:46,064 - werkzeug - INFO - 127.0.0.1 - - [17/Jun/2026 03:49:46] "GET /api/background/status HTTP/1.1" 200 -
+2026-06-17 03:49:46,807 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i.
+2026-06-17 03:49:46,816 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-17 03:49:46,823 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-17 03:49:46,824 - dashboard.drive_client - INFO - Retrieving metadata for file ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-17 03:49:46,887 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-17 03:49:46,895 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-17 03:49:46,897 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-17 03:49:47,410 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-17 03:49:47,422 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-17 03:49:47,423 - dashboard.drive_client - INFO - Listing files with query: trashed = false and '1JGo8S2-WagATODLDmPHcmvlWMC59nZOL' in parents
+2026-06-17 03:49:47,925 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i.
+2026-06-17 03:49:47,929 - werkzeug - INFO - 127.0.0.1 - - [17/Jun/2026 03:49:47] "GET /api/app-imports HTTP/1.1" 200 -
+2026-06-17 03:49:48,418 - dashboard.drive_client - INFO - Successfully retrieved 100 files.
+2026-06-17 03:49:48,432 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-17 03:49:48,440 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-17 03:49:48,443 - dashboard.drive_client - INFO - Retrieving storage quota from Google Drive about.get...
+2026-06-17 03:49:48,951 - werkzeug - INFO - 127.0.0.1 - - [17/Jun/2026 03:49:48] "GET /api/storage HTTP/1.1" 200 -
+2026-06-17 03:49:51,052 - werkzeug - INFO - 127.0.0.1 - - [17/Jun/2026 03:49:51] "GET /api/background/status HTTP/1.1" 200 -
+2026-06-17 03:49:56,049 - werkzeug - INFO - 127.0.0.1 - - [17/Jun/2026 03:49:56] "GET /api/background/status HTTP/1.1" 200 -
+2026-06-17 03:50:01,315 - werkzeug - INFO - 127.0.0.1 - - [17/Jun/2026 03:50:01] "GET /api/background/status HTTP/1.1" 200 -
+2026-06-17 03:50:06,328 - werkzeug - INFO - 127.0.0.1 - - [17/Jun/2026 03:50:06] "GET /api/background/status HTTP/1.1" 200 -
+2026-06-17 03:50:11,311 - werkzeug - INFO - 127.0.0.1 - - [17/Jun/2026 03:50:11] "GET /api/background/status HTTP/1.1" 200 -
+2026-06-17 03:50:16,057 - werkzeug - INFO - 127.0.0.1 - - [17/Jun/2026 03:50:16] "GET /api/background/status HTTP/1.1" 200 -
+2026-06-17 03:50:21,062 - werkzeug - INFO - 127.0.0.1 - - [17/Jun/2026 03:50:21] "GET /api/background/status HTTP/1.1" 200 -
+2026-06-17 03:50:26,313 - werkzeug - INFO - 127.0.0.1 - - [17/Jun/2026 03:50:26] "GET /api/background/status HTTP/1.1" 200 -
+2026-06-17 03:50:31,303 - werkzeug - INFO - 127.0.0.1 - - [17/Jun/2026 03:50:31] "GET /api/background/status HTTP/1.1" 200 -
+2026-06-17 03:50:36,307 - werkzeug - INFO - 127.0.0.1 - - [17/Jun/2026 03:50:36] "GET /api/background/status HTTP/1.1" 200 -
+2026-06-17 03:50:41,307 - werkzeug - INFO - 127.0.0.1 - - [17/Jun/2026 03:50:41] "GET /api/background/status HTTP/1.1" 200 -
+2026-06-17 03:50:46,309 - werkzeug - INFO - 127.0.0.1 - - [17/Jun/2026 03:50:46] "GET /api/background/status HTTP/1.1" 200 -
+2026-06-17 03:50:51,301 - werkzeug - INFO - 127.0.0.1 - - [17/Jun/2026 03:50:51] "GET /api/background/status HTTP/1.1" 200 -
+2026-06-17 03:50:56,322 - werkzeug - INFO - 127.0.0.1 - - [17/Jun/2026 03:50:56] "GET /api/background/status HTTP/1.1" 200 -
+2026-06-17 03:51:01,308 - werkzeug - INFO - 127.0.0.1 - - [17/Jun/2026 03:51:01] "GET /api/background/status HTTP/1.1" 200 -
+2026-06-17 03:51:06,303 - werkzeug - INFO - 127.0.0.1 - - [17/Jun/2026 03:51:06] "GET /api/background/status HTTP/1.1" 200 -
+2026-06-17 03:51:11,321 - werkzeug - INFO - 127.0.0.1 - - [17/Jun/2026 03:51:11] "GET /api/background/status HTTP/1.1" 200 -
+2026-06-17 03:51:16,305 - werkzeug - INFO - 127.0.0.1 - - [17/Jun/2026 03:51:16] "GET /api/background/status HTTP/1.1" 200 -
+2026-06-17 03:51:21,311 - werkzeug - INFO - 127.0.0.1 - - [17/Jun/2026 03:51:21] "GET /api/background/status HTTP/1.1" 200 -
+2026-06-17 03:51:26,313 - werkzeug - INFO - 127.0.0.1 - - [17/Jun/2026 03:51:26] "GET /api/background/status HTTP/1.1" 200 -
+2026-06-17 03:52:25,298 - werkzeug - INFO - 127.0.0.1 - - [17/Jun/2026 03:52:25] "GET /api/background/status HTTP/1.1" 200 -
+2026-06-17 03:53:25,308 - werkzeug - INFO - 127.0.0.1 - - [17/Jun/2026 03:53:25] "GET /api/background/status HTTP/1.1" 200 -
+2026-06-17 03:54:25,312 - werkzeug - INFO - 127.0.0.1 - - [17/Jun/2026 03:54:25] "GET /api/background/status HTTP/1.1" 200 -
+2026-06-17 03:55:25,308 - werkzeug - INFO - 127.0.0.1 - - [17/Jun/2026 03:55:25] "GET /api/background/status HTTP/1.1" 200 -
+2026-06-17 03:56:25,305 - werkzeug - INFO - 127.0.0.1 - - [17/Jun/2026 03:56:25] "GET /api/background/status HTTP/1.1" 200 -
+2026-06-17 03:57:25,303 - werkzeug - INFO - 127.0.0.1 - - [17/Jun/2026 03:57:25] "GET /api/background/status HTTP/1.1" 200 -
+2026-06-17 03:58:25,312 - werkzeug - INFO - 127.0.0.1 - - [17/Jun/2026 03:58:25] "GET /api/background/status HTTP/1.1" 200 -
+2026-06-17 03:59:09,041 - root - INFO - Starting run_complete_backfill...
+2026-06-17 03:59:09,045 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-17 03:59:09,046 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-17 03:59:09,047 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-17 03:59:10,509 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i.
+2026-06-17 03:59:10,510 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-17 03:59:10,511 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-17 03:59:10,514 - dashboard.drive_client - INFO - Creating new JSON file: database_backup_complete_backfill_2026-06-17_03-59-10.json
+2026-06-17 03:59:12,824 - dashboard.drive_client - INFO - Successfully created JSON file: database_backup_complete_backfill_2026-06-17_03-59-10.json (ID: 11rDsSCrcDeVQJFCwQ6_BHSs9nL3kZD13)
+2026-06-17 03:59:12,825 - root - INFO - Created backup before complete backfill: database_backup_complete_backfill_2026-06-17_03-59-10.json
+2026-06-17 03:59:12,825 - scraper.drive_uploader - INFO - audit_database_fields: Downloading database.json (ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i)...
+2026-06-17 03:59:12,827 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-17 03:59:12,829 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-17 03:59:12,829 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-17 03:59:13,904 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i.
+2026-06-17 03:59:13,904 - scraper.drive_uploader - INFO - audit_database_fields: Audited 132 tracks. 75 tracks have missing fields.
+2026-06-17 03:59:13,904 - root - INFO - Audit before backfill: {'album_art': 13, 'duration': 13, 'durationSeconds': 13, 'language': 10, 'genre': 12, 'album': 5, 'lyrics': 23, 'syncedLyrics': 33, 'source': 59, 'spotify_id': 125}
+2026-06-17 03:59:13,904 - root - INFO - Complete Backfill [1/132]: 'Billie Jean' by 'Michael Jackson'...
+2026-06-17 03:59:13,904 - root - INFO - Source inferred as 'legacy' based on timestamp 2026-06-09T10:07:03.001466Z for 'Billie Jean'
+2026-06-17 03:59:13,904 - root - INFO - Complete Backfill [2/132]: 'Beauty And A Beat' by 'Justin Bieber, Nicki Minaj'...
+2026-06-17 03:59:13,904 - root - INFO - Source inferred as 'legacy' based on timestamp 2026-06-09T10:07:25.757790Z for 'Beauty And A Beat'
+2026-06-17 03:59:13,904 - root - INFO - Complete Backfill [3/132]: 'SWIM' by 'BTS'...
+2026-06-17 03:59:13,905 - root - INFO - Source inferred as 'legacy' based on timestamp 2026-06-09T10:07:57.259516Z for 'SWIM'
+2026-06-17 03:59:13,905 - root - INFO - Complete Backfill [4/132]: 'the cure' by 'Olivia Rodrigo'...
+2026-06-17 03:59:19,382 - root - WARNING - LRCLIB fallback lookup failed for the cure: HTTPSConnectionPool(host='lrclib.net', port=443): Read timed out. (read timeout=5)
+2026-06-17 03:59:19,383 - root - INFO - Source inferred as 'legacy' based on timestamp 2026-06-09T10:08:16.479170Z for 'the cure'
+2026-06-17 03:59:19,383 - root - INFO - Complete Backfill [5/132]: 'Babydoll' by 'Dominic Fike'...
+2026-06-17 03:59:19,383 - root - INFO - Source inferred as 'legacy' based on timestamp 2026-06-09T10:08:32.463271Z for 'Babydoll'
+2026-06-17 03:59:19,383 - root - INFO - Complete Backfill [6/132]: 'Janice STFU' by 'Drake'...
+2026-06-17 03:59:19,383 - root - INFO - Source inferred as 'legacy' based on timestamp 2026-06-09T10:09:07.347966Z for 'Janice STFU'
+2026-06-17 03:59:19,383 - root - INFO - Complete Backfill [7/132]: 'Earrings' by 'Malcolm Todd'...
+2026-06-17 03:59:19,383 - root - INFO - Source inferred as 'legacy' based on timestamp 2026-06-09T10:09:23.261246Z for 'Earrings'
+2026-06-17 03:59:19,383 - root - INFO - Complete Backfill [8/132]: 'The One That Got Away' by 'Katy Perry'...
+2026-06-17 03:59:19,384 - root - INFO - Source inferred as 'legacy' based on timestamp 2026-06-09T10:09:40.961027Z for 'The One That Got Away'
+2026-06-17 03:59:19,384 - root - INFO - Complete Backfill [9/132]: 'back to friends' by 'sombr'...
+2026-06-17 03:59:19,384 - root - INFO - Source inferred as 'legacy' based on timestamp 2026-06-09T10:18:51.852487Z for 'back to friends'
+2026-06-17 03:59:19,384 - root - INFO - Complete Backfill [10/132]: 'drop dead' by 'Olivia Rodrigo'...
+2026-06-17 03:59:19,384 - root - INFO - Source inferred as 'legacy' based on timestamp 2026-06-09T10:19:08.807938Z for 'drop dead'
+2026-06-17 03:59:19,384 - root - INFO - Complete Backfill [11/132]: 'Chicago' by 'Michael Jackson'...
+2026-06-17 03:59:19,384 - root - INFO - Source inferred as 'legacy' based on timestamp 2026-06-09T10:19:26.229671Z for 'Chicago'
+2026-06-17 03:59:19,384 - root - INFO - Complete Backfill [12/132]: 'End of Beginning' by 'Djo'...
+2026-06-17 03:59:19,385 - root - INFO - Source inferred as 'legacy' based on timestamp 2026-06-09T10:19:43.081363Z for 'End of Beginning'
+2026-06-17 03:59:19,385 - root - INFO - Complete Backfill [13/132]: 'Self Aware' by 'Temper City'...
+2026-06-17 03:59:24,844 - root - WARNING - LRCLIB fallback lookup failed for Self Aware: HTTPSConnectionPool(host='lrclib.net', port=443): Read timed out. (read timeout=5)
+2026-06-17 03:59:24,845 - root - INFO - Source inferred as 'legacy' based on timestamp 2026-06-09T10:20:01.036640Z for 'Self Aware'
+2026-06-17 03:59:24,845 - root - INFO - Complete Backfill [14/132]: 'Beat It' by 'Michael Jackson'...
+2026-06-17 03:59:24,845 - root - INFO - Source inferred as 'legacy' based on timestamp 2026-06-09T10:44:22.570132Z for 'Beat It'
+2026-06-17 03:59:24,845 - root - INFO - Complete Backfill [15/132]: 'hate that i made you love me' by 'Ariana Grande'...
+2026-06-17 03:59:24,845 - root - INFO - Source inferred as 'legacy' based on timestamp 2026-06-09T14:04:08.273620Z for 'hate that i made you love me'
+2026-06-17 03:59:24,848 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-17 03:59:24,853 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-17 03:59:24,855 - dashboard.drive_client - INFO - Updating existing JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-17 03:59:25,303 - werkzeug - INFO - 127.0.0.1 - - [17/Jun/2026 03:59:25] "GET /api/background/status HTTP/1.1" 200 -
+2026-06-17 03:59:28,262 - dashboard.drive_client - INFO - Successfully updated JSON file: database.json (ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i)
+2026-06-17 03:59:28,263 - root - INFO - Incremental save completed after processing 15 tracks.
+2026-06-17 03:59:28,263 - root - INFO - Complete Backfill [16/132]: 'Una Aventura' by 'Ozuna'...
+2026-06-17 03:59:28,263 - root - INFO - Source inferred as 'legacy' based on timestamp 2026-06-09T17:38:01.970838Z for 'Una Aventura'
+2026-06-17 03:59:28,263 - root - INFO - Complete Backfill [17/132]: 'Q Hubo Amor (Medellín)' by 'Ovy On The Drums, Jere Klein, Blessd'...
+2026-06-17 03:59:33,708 - root - WARNING - LRCLIB fallback lookup failed for Q Hubo Amor (Medellín): HTTPSConnectionPool(host='lrclib.net', port=443): Read timed out. (read timeout=5)
+2026-06-17 03:59:33,708 - root - INFO - Source inferred as 'legacy' based on timestamp 2026-06-09T17:43:37.402856Z for 'Q Hubo Amor (Medellín)'
+2026-06-17 03:59:33,708 - root - INFO - Complete Backfill [18/132]: 'PAGEANT STAGE' by 'Tone Stith'...
+2026-06-17 03:59:34,786 - root - INFO - Source inferred as 'legacy' based on timestamp 2026-06-09T17:45:45.890650Z for 'PAGEANT STAGE'
+2026-06-17 03:59:34,786 - root - INFO - Complete Backfill [19/132]: 'Spirit Higher' by 'LP Giobbi, EMJIE'...
+2026-06-17 03:59:40,248 - root - WARNING - LRCLIB fallback lookup failed for Spirit Higher: HTTPSConnectionPool(host='lrclib.net', port=443): Read timed out. (read timeout=5)
+2026-06-17 03:59:40,249 - root - INFO - Source inferred as 'legacy' based on timestamp 2026-06-09T17:46:06.629577Z for 'Spirit Higher'
+2026-06-17 03:59:40,249 - root - INFO - Complete Backfill [20/132]: 'hold tight' by 'Oppidan, camoufly'...
+2026-06-17 03:59:40,249 - root - INFO - Source inferred as 'legacy' based on timestamp 2026-06-09T17:46:26.152254Z for 'hold tight'
+2026-06-17 03:59:40,249 - root - INFO - Complete Backfill [21/132]: 'Doors' by 'Noah Kahan'...
+2026-06-17 03:59:40,250 - root - INFO - Source inferred as 'legacy' based on timestamp 2026-06-09T17:46:45.782606Z for 'Doors'
+2026-06-17 03:59:40,250 - root - INFO - Complete Backfill [22/132]: 'Be Mine' by 'James Hype'...
+2026-06-17 03:59:40,250 - root - INFO - Source inferred as 'legacy' based on timestamp 2026-06-09T17:47:06.166734Z for 'Be Mine'
+2026-06-17 03:59:40,250 - root - INFO - Complete Backfill [23/132]: 'FLAMMABLE' by 'Swae Lee'...
+2026-06-17 03:59:40,250 - root - INFO - Source inferred as 'legacy' based on timestamp 2026-06-09T17:54:46.156590Z for 'FLAMMABLE'
+2026-06-17 03:59:40,251 - root - INFO - Complete Backfill [24/132]: 'Comes and Goes' by 'KETTAMA'...
+2026-06-17 03:59:40,251 - root - INFO - Source inferred as 'legacy' based on timestamp 2026-06-09T17:55:07.894105Z for 'Comes and Goes'
+2026-06-17 03:59:40,251 - root - INFO - Complete Backfill [25/132]: 'Motion Party' by 'BossMan Dlow'...
+2026-06-17 03:59:40,251 - root - INFO - Source inferred as 'legacy' based on timestamp 2026-06-09T17:55:26.222654Z for 'Motion Party'
+2026-06-17 03:59:40,251 - root - INFO - Complete Backfill [26/132]: 'Sweet Nuthins (feat. Leon Thomas)' by 'Kehlani, Leon Thomas'...
+2026-06-17 03:59:40,252 - root - INFO - Source inferred as 'legacy' based on timestamp 2026-06-09T17:55:47.108614Z for 'Sweet Nuthins (feat. Leon Thomas)'
+2026-06-17 03:59:40,252 - root - INFO - Complete Backfill [27/132]: 'Anotha Luva (feat. Lil Wayne)' by 'Kehlani, Lil Wayne'...
+2026-06-17 03:59:40,252 - root - INFO - Source inferred as 'legacy' based on timestamp 2026-06-09T17:56:07.724757Z for 'Anotha Luva (feat. Lil Wayne)'
+2026-06-17 03:59:40,252 - root - INFO - Complete Backfill [28/132]: 'Smoke' by 'Skrillex, ISOxo, Cristale, TeeZandos'...
+2026-06-17 03:59:40,253 - root - INFO - Source inferred as 'legacy' based on timestamp 2026-06-09T18:33:26.544521Z for 'Smoke'
+2026-06-17 03:59:40,253 - root - INFO - Complete Backfill [29/132]: 'Body' by 'Don Toliver'...
+2026-06-17 03:59:40,253 - root - INFO - Source inferred as 'legacy' based on timestamp 2026-06-09T18:33:46.748747Z for 'Body'
+2026-06-17 03:59:40,253 - root - INFO - Complete Backfill [30/132]: 'Breathe' by 'Marlon Hoffstadt'...
+2026-06-17 03:59:45,791 - root - WARNING - LRCLIB fallback lookup failed for Breathe: HTTPSConnectionPool(host='lrclib.net', port=443): Read timed out. (read timeout=5)
+2026-06-17 03:59:45,792 - root - INFO - Source inferred as 'legacy' based on timestamp 2026-06-09T18:34:08.190957Z for 'Breathe'
+2026-06-17 03:59:45,794 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-17 03:59:45,798 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-17 03:59:45,801 - dashboard.drive_client - INFO - Updating existing JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-17 03:59:47,119 - werkzeug - INFO - 127.0.0.1 - - [17/Jun/2026 03:59:47] "GET /api/background/status HTTP/1.1" 200 -
+2026-06-17 03:59:49,325 - werkzeug - INFO - 127.0.0.1 - - [17/Jun/2026 03:59:49] "GET / HTTP/1.1" 200 -
+2026-06-17 03:59:49,348 - werkzeug - INFO - 127.0.0.1 - - [17/Jun/2026 03:59:49] "[36mGET /static/style.css HTTP/1.1[0m" 304 -
+2026-06-17 03:59:49,353 - werkzeug - INFO - 127.0.0.1 - - [17/Jun/2026 03:59:49] "GET /static/script.js HTTP/1.1" 200 -
+2026-06-17 03:59:49,423 - werkzeug - INFO - 127.0.0.1 - - [17/Jun/2026 03:59:49] "GET /api/background/status HTTP/1.1" 200 -
+2026-06-17 03:59:49,440 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-17 03:59:49,452 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-17 03:59:49,454 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-17 03:59:49,487 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-17 03:59:49,500 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-17 03:59:49,504 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-17 03:59:49,542 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-17 03:59:49,550 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-17 03:59:49,552 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-17 03:59:49,816 - werkzeug - INFO - 127.0.0.1 - - [17/Jun/2026 03:59:49] "GET /api/playlist/logs HTTP/1.1" 200 -
+2026-06-17 03:59:50,250 - dashboard.drive_client - INFO - Successfully updated JSON file: database.json (ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i)
+2026-06-17 03:59:50,252 - root - INFO - Incremental save completed after processing 30 tracks.
+2026-06-17 03:59:50,253 - root - INFO - Complete Backfill [31/132]: 'SHADES OF BLUE' by 'John Summit, Devault, Julia Church'...
+2026-06-17 03:59:50,253 - root - INFO - Source inferred as 'legacy' based on timestamp 2026-06-09T18:34:27.235717Z for 'SHADES OF BLUE'
+2026-06-17 03:59:50,254 - root - INFO - Complete Backfill [32/132]: 'Fantasy' by 'Chris Stussy, KUČKA'...
+2026-06-17 03:59:50,254 - root - INFO - Source inferred as 'legacy' based on timestamp 2026-06-09T18:34:45.978487Z for 'Fantasy'
+2026-06-17 03:59:50,255 - root - INFO - Complete Backfill [33/132]: 'SHERIYA' by 'ARJN, KDS, ronn, Suhas Moideen'...
+2026-06-17 03:59:51,563 - werkzeug - INFO - 127.0.0.1 - - [17/Jun/2026 03:59:51] "GET / HTTP/1.1" 200 -
+2026-06-17 03:59:51,584 - werkzeug - INFO - 127.0.0.1 - - [17/Jun/2026 03:59:51] "[36mGET /static/style.css HTTP/1.1[0m" 304 -
+2026-06-17 03:59:51,590 - werkzeug - INFO - 127.0.0.1 - - [17/Jun/2026 03:59:51] "[36mGET /static/script.js HTTP/1.1[0m" 304 -
+2026-06-17 03:59:51,630 - werkzeug - INFO - 127.0.0.1 - - [17/Jun/2026 03:59:51] "GET /api/background/status HTTP/1.1" 200 -
+2026-06-17 03:59:51,661 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-17 03:59:51,705 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-17 03:59:51,703 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-17 03:59:51,735 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-17 03:59:51,736 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-17 03:59:51,784 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-17 03:59:51,806 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-17 03:59:51,785 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i.
+2026-06-17 03:59:51,867 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-17 03:59:51,871 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-17 03:59:51,963 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-17 03:59:51,972 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-17 03:59:51,983 - dashboard.drive_client - INFO - Listing files with query: trashed = false and '1JGo8S2-WagATODLDmPHcmvlWMC59nZOL' in parents
+2026-06-17 03:59:52,063 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i.
+2026-06-17 03:59:52,067 - werkzeug - INFO - 127.0.0.1 - - [17/Jun/2026 03:59:52] "GET /api/backfill/status HTTP/1.1" 200 -
+2026-06-17 03:59:52,135 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i.
+2026-06-17 03:59:52,270 - werkzeug - INFO - 127.0.0.1 - - [17/Jun/2026 03:59:52] "GET /api/playlist/logs HTTP/1.1" 200 -
+2026-06-17 03:59:52,278 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-17 03:59:52,285 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-17 03:59:52,292 - dashboard.drive_client - INFO - Retrieving metadata for file ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-17 03:59:52,649 - dashboard.drive_client - INFO - Successfully retrieved 100 files.
+2026-06-17 03:59:52,669 - werkzeug - INFO - 127.0.0.1 - - [17/Jun/2026 03:59:52] "GET /api/tracks HTTP/1.1" 200 -
+2026-06-17 03:59:52,781 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-17 03:59:52,792 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-17 03:59:52,794 - dashboard.drive_client - INFO - Listing files with query: trashed = false and '1JGo8S2-WagATODLDmPHcmvlWMC59nZOL' in parents
+2026-06-17 03:59:53,286 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i.
+2026-06-17 03:59:53,292 - werkzeug - INFO - 127.0.0.1 - - [17/Jun/2026 03:59:53] "GET /api/backfill/status HTTP/1.1" 200 -
+2026-06-17 03:59:53,386 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i.
+2026-06-17 03:59:53,393 - dashboard.drive_client - INFO - Successfully retrieved 100 files.
+2026-06-17 03:59:53,402 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-17 03:59:53,411 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-17 03:59:53,414 - dashboard.drive_client - INFO - Listing files with query: trashed = false and '1JGo8S2-WagATODLDmPHcmvlWMC59nZOL' in parents
+2026-06-17 03:59:53,445 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-17 03:59:53,454 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-17 03:59:53,457 - dashboard.drive_client - INFO - Retrieving storage quota from Google Drive about.get...
+2026-06-17 03:59:53,539 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i.
+2026-06-17 03:59:53,550 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-17 03:59:53,564 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-17 03:59:53,566 - dashboard.drive_client - INFO - Retrieving metadata for file ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-17 03:59:53,944 - werkzeug - INFO - 127.0.0.1 - - [17/Jun/2026 03:59:53] "GET /api/storage HTTP/1.1" 200 -
+2026-06-17 03:59:54,046 - dashboard.drive_client - INFO - Successfully retrieved 100 files.
+2026-06-17 03:59:54,083 - werkzeug - INFO - 127.0.0.1 - - [17/Jun/2026 03:59:54] "GET /api/tracks HTTP/1.1" 200 -
+2026-06-17 03:59:54,096 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-17 03:59:54,108 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-17 03:59:54,110 - dashboard.drive_client - INFO - Listing files with query: trashed = false and '1JGo8S2-WagATODLDmPHcmvlWMC59nZOL' in parents
+2026-06-17 03:59:54,162 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-17 03:59:54,185 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-17 03:59:54,188 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-17 03:59:54,796 - dashboard.drive_client - INFO - Successfully retrieved 100 files.
+2026-06-17 03:59:54,804 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-17 03:59:54,814 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-17 03:59:54,815 - dashboard.drive_client - INFO - Retrieving storage quota from Google Drive about.get...
+2026-06-17 03:59:55,307 - werkzeug - INFO - 127.0.0.1 - - [17/Jun/2026 03:59:55] "GET /api/storage HTTP/1.1" 200 -
+2026-06-17 03:59:55,403 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i.
+2026-06-17 03:59:55,420 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-17 03:59:55,439 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-17 03:59:55,441 - dashboard.drive_client - INFO - Listing files with query: trashed = false and '1JGo8S2-WagATODLDmPHcmvlWMC59nZOL' in parents
+2026-06-17 03:59:56,067 - dashboard.drive_client - INFO - Successfully retrieved 100 files.
+2026-06-17 03:59:56,086 - werkzeug - INFO - 127.0.0.1 - - [17/Jun/2026 03:59:56] "GET /api/tracks HTTP/1.1" 200 -
+2026-06-17 03:59:56,613 - werkzeug - INFO - 127.0.0.1 - - [17/Jun/2026 03:59:56] "GET /api/background/status HTTP/1.1" 200 -
+2026-06-17 03:59:57,176 - root - WARNING - LRCLIB fallback lookup failed for SHERIYA: HTTPSConnectionPool(host='lrclib.net', port=443): Read timed out. (read timeout=5)
+2026-06-17 03:59:57,176 - scraper.spotify_charts - INFO - detect_track_language: Checking language for 'SHERIYA' by 'ARJN, KDS, ronn, Suhas Moideen'...
+2026-06-17 03:59:58,282 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-17 03:59:58,288 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-17 03:59:58,291 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-17 03:59:59,846 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i.
+2026-06-17 03:59:59,850 - werkzeug - INFO - 127.0.0.1 - - [17/Jun/2026 03:59:59] "GET /api/app-imports HTTP/1.1" 200 -
+2026-06-17 04:00:00,651 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-17 04:00:00,662 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-17 04:00:00,664 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-17 04:00:00,790 - scraper.spotify_charts - INFO - detect_track_language: Language fallback to 'unknown' for 'SHERIYA'.
+2026-06-17 04:00:00,797 - root - INFO - Source inferred as 'legacy' based on timestamp 2026-06-09T18:42:46.771206Z for 'SHERIYA'
+2026-06-17 04:00:00,798 - root - INFO - Complete Backfill [34/132]: 'Chiri Thottu' by 'Justin Prabhakaran, Chinmayi Sripada, Manu Manjith, Nivin Pauly, Preity Mukhundhan'...
+2026-06-17 04:00:00,958 - werkzeug - INFO - 127.0.0.1 - - [17/Jun/2026 04:00:00] "GET /api/playlist/logs HTTP/1.1" 200 -
+2026-06-17 04:00:01,602 - werkzeug - INFO - 127.0.0.1 - - [17/Jun/2026 04:00:01] "GET /api/background/status HTTP/1.1" 200 -
+2026-06-17 04:00:02,033 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i.
+2026-06-17 04:00:02,054 - werkzeug - INFO - 127.0.0.1 - - [17/Jun/2026 04:00:02] "GET /api/download-logs HTTP/1.1" 200 -
+2026-06-17 04:00:06,612 - werkzeug - INFO - 127.0.0.1 - - [17/Jun/2026 04:00:06] "GET /api/background/status HTTP/1.1" 200 -
+2026-06-17 04:00:07,505 - root - WARNING - LRCLIB fallback lookup failed for Chiri Thottu: HTTPSConnectionPool(host='lrclib.net', port=443): Read timed out. (read timeout=5)
+2026-06-17 04:00:07,505 - scraper.spotify_charts - INFO - detect_track_language: Checking language for 'Chiri Thottu' by 'Justin Prabhakaran, Chinmayi Sripada, Manu Manjith, Nivin Pauly, Preity Mukhundhan'...
+2026-06-17 04:00:10,217 - scraper.spotify_charts - WARNING - detect_track_language: MusicBrainz API language detection failed: HTTPSConnectionPool(host='musicbrainz.org', port=443): Max retries exceeded with url: /ws/2/recording/?query=Chiri+Thottu+Justin+Prabhakaran%2C+Chinmayi+Sripada%2C+Manu+Manjith%2C+Nivin+Pauly%2C+Preity+Mukhundhan&fmt=json (Caused by SSLError(SSLEOFError(8, '[SSL: UNEXPECTED_EOF_WHILE_READING] EOF occurred in violation of protocol (_ssl.c:1082)')))
+2026-06-17 04:00:10,218 - scraper.spotify_charts - INFO - detect_track_language: Language fallback to 'unknown' for 'Chiri Thottu'.
+2026-06-17 04:00:10,218 - root - INFO - Source inferred as 'legacy' based on timestamp 2026-06-09T18:43:04.683941Z for 'Chiri Thottu'
+2026-06-17 04:00:10,218 - root - INFO - Complete Backfill [35/132]: 'Beevi Ayisha' by 'Iqbal kannur, Bappu Velliparamaba'...
+2026-06-17 04:00:11,613 - werkzeug - INFO - 127.0.0.1 - - [17/Jun/2026 04:00:11] "GET /api/background/status HTTP/1.1" 200 -
+2026-06-17 04:00:15,970 - root - WARNING - LRCLIB fallback lookup failed for Beevi Ayisha: HTTPSConnectionPool(host='lrclib.net', port=443): Read timed out. (read timeout=5)
+2026-06-17 04:00:15,970 - root - INFO - Source inferred as 'legacy' based on timestamp 2026-06-09T18:43:23.911272Z for 'Beevi Ayisha'
+2026-06-17 04:00:15,970 - root - INFO - Complete Backfill [36/132]: 'Angu Vaana Konilu' by 'Vaikom Vijayalakshmi, Dhibu Ninan Thomas, Manu Manjith, Tovino Thomas, Basil Joseph, Krithi Shetty, Surabhi Lakshmi, Aishwarya Rajesh'...
+2026-06-17 04:00:17,310 - werkzeug - INFO - 127.0.0.1 - - [17/Jun/2026 04:00:17] "GET /api/background/status HTTP/1.1" 200 -
+2026-06-17 04:00:21,576 - root - WARNING - LRCLIB fallback lookup failed for Angu Vaana Konilu: HTTPSConnectionPool(host='lrclib.net', port=443): Read timed out. (read timeout=5)
+2026-06-17 04:00:21,576 - root - INFO - Source inferred as 'legacy' based on timestamp 2026-06-09T18:43:51.632582Z for 'Angu Vaana Konilu'
+2026-06-17 04:00:21,577 - root - INFO - Complete Backfill [37/132]: 'Karineeli' by 'Vineesh Kallettumkara, Sethu Chandran'...
+2026-06-17 04:00:22,301 - werkzeug - INFO - 127.0.0.1 - - [17/Jun/2026 04:00:22] "GET /api/background/status HTTP/1.1" 200 -
+2026-06-17 04:00:27,311 - werkzeug - INFO - 127.0.0.1 - - [17/Jun/2026 04:00:27] "GET /api/background/status HTTP/1.1" 200 -
+2026-06-17 04:00:28,204 - root - WARNING - LRCLIB fallback lookup failed for Karineeli: HTTPSConnectionPool(host='lrclib.net', port=443): Read timed out. (read timeout=5)
+2026-06-17 04:00:28,204 - scraper.spotify_charts - INFO - detect_track_language: Checking language for 'Karineeli' by 'Vineesh Kallettumkara, Sethu Chandran'...
+2026-06-17 04:00:30,462 - scraper.spotify_charts - WARNING - detect_track_language: MusicBrainz API language detection failed: HTTPSConnectionPool(host='musicbrainz.org', port=443): Max retries exceeded with url: /ws/2/recording/?query=Karineeli+Vineesh+Kallettumkara%2C+Sethu+Chandran&fmt=json (Caused by SSLError(SSLEOFError(8, '[SSL: UNEXPECTED_EOF_WHILE_READING] EOF occurred in violation of protocol (_ssl.c:1082)')))
+2026-06-17 04:00:30,462 - scraper.spotify_charts - INFO - detect_track_language: Language fallback to 'unknown' for 'Karineeli'.
+2026-06-17 04:00:30,463 - root - INFO - Source inferred as 'legacy' based on timestamp 2026-06-09T18:44:12.738108Z for 'Karineeli'
+2026-06-17 04:00:30,463 - root - INFO - Complete Backfill [38/132]: 'Belyol' by 'Dabzee, Edappal Bappu, Rishi Roy'...
+2026-06-17 04:00:32,307 - werkzeug - INFO - 127.0.0.1 - - [17/Jun/2026 04:00:32] "GET /api/background/status HTTP/1.1" 200 -
+2026-06-17 04:00:35,978 - root - WARNING - LRCLIB fallback lookup failed for Belyol: HTTPSConnectionPool(host='lrclib.net', port=443): Read timed out. (read timeout=5)
+2026-06-17 04:00:35,979 - root - INFO - Source inferred as 'legacy' based on timestamp 2026-06-09T18:47:06.031833Z for 'Belyol'
+2026-06-17 04:00:35,979 - root - INFO - Complete Backfill [39/132]: 'Kaattuchembakam (From "Pallichattambi")' by 'Jakes Bejoy, Vishal Mishra, Aavani Malhar, Kaithapram, Kayadu, Tovino, Tovino Thomas, Kayadu Lohar'...
+2026-06-17 04:00:37,308 - werkzeug - INFO - 127.0.0.1 - - [17/Jun/2026 04:00:37] "GET /api/background/status HTTP/1.1" 200 -
+2026-06-17 04:00:41,495 - root - WARNING - LRCLIB fallback lookup failed for Kaattuchembakam (From "Pallichattambi"): HTTPSConnectionPool(host='lrclib.net', port=443): Read timed out. (read timeout=5)
+2026-06-17 04:00:41,495 - root - INFO - Source inferred as 'legacy' based on timestamp 2026-06-09T18:47:23.600099Z for 'Kaattuchembakam (From "Pallichattambi")'
+2026-06-17 04:00:41,496 - root - INFO - Complete Backfill [40/132]: 'Ammaputhappe' by 'Vishnu Vijay, Suhail Koya'...
+2026-06-17 04:00:42,304 - werkzeug - INFO - 127.0.0.1 - - [17/Jun/2026 04:00:42] "GET /api/background/status HTTP/1.1" 200 -
+2026-06-17 04:00:47,051 - root - WARNING - LRCLIB fallback lookup failed for Ammaputhappe: HTTPSConnectionPool(host='lrclib.net', port=443): Read timed out. (read timeout=5)
+2026-06-17 04:00:47,051 - root - INFO - Source inferred as 'legacy' based on timestamp 2026-06-09T18:47:42.172160Z for 'Ammaputhappe'
+2026-06-17 04:00:47,052 - root - INFO - Complete Backfill [41/132]: 'Makane X Koodappirannor' by 'Parvatish Pradeep, B.K. Harinarayanan'...
+2026-06-17 04:00:47,052 - root - INFO - Source inferred as 'legacy' based on timestamp 2026-06-09T18:48:00.683503Z for 'Makane X Koodappirannor'
+2026-06-17 04:00:47,052 - root - INFO - Complete Backfill [42/132]: 'ZILL' by 'M.H.R, Shafi Kollam, Joker390P'...
+2026-06-17 04:00:47,315 - werkzeug - INFO - 127.0.0.1 - - [17/Jun/2026 04:00:47] "GET /api/background/status HTTP/1.1" 200 -
+2026-06-17 04:00:52,301 - werkzeug - INFO - 127.0.0.1 - - [17/Jun/2026 04:00:52] "GET /api/background/status HTTP/1.1" 200 -
+2026-06-17 04:00:52,692 - root - WARNING - LRCLIB fallback lookup failed for ZILL: HTTPSConnectionPool(host='lrclib.net', port=443): Read timed out. (read timeout=5)
+2026-06-17 04:00:52,692 - root - INFO - Source inferred as 'legacy' based on timestamp 2026-06-09T18:48:20.388161Z for 'ZILL'
+2026-06-17 04:00:52,692 - root - INFO - Complete Backfill [43/132]: 'Vazhikatti (Kizhakku Suryan)' by 'Fejo, Jeffin Jestin, Violin Jacob, Daleema, Roy Kanjirathanam'...
+2026-06-17 04:00:57,314 - werkzeug - INFO - 127.0.0.1 - - [17/Jun/2026 04:00:57] "GET /api/background/status HTTP/1.1" 200 -
+2026-06-17 04:00:59,705 - root - WARNING - LRCLIB fallback lookup failed for Vazhikatti (Kizhakku Suryan): HTTPSConnectionPool(host='lrclib.net', port=443): Read timed out. (read timeout=5)
+2026-06-17 04:00:59,705 - scraper.spotify_charts - INFO - detect_track_language: Checking language for 'Vazhikatti (Kizhakku Suryan)' by 'Fejo, Jeffin Jestin, Violin Jacob, Daleema, Roy Kanjirathanam'...
+2026-06-17 04:01:02,249 - scraper.spotify_charts - WARNING - detect_track_language: MusicBrainz API language detection failed: HTTPSConnectionPool(host='musicbrainz.org', port=443): Max retries exceeded with url: /ws/2/recording/?query=Vazhikatti+%28Kizhakku+Suryan%29+Fejo%2C+Jeffin+Jestin%2C+Violin+Jacob%2C+Daleema%2C+Roy+Kanjirathanam&fmt=json (Caused by SSLError(SSLEOFError(8, '[SSL: UNEXPECTED_EOF_WHILE_READING] EOF occurred in violation of protocol (_ssl.c:1082)')))
+2026-06-17 04:01:02,249 - scraper.spotify_charts - INFO - detect_track_language: Language fallback to 'unknown' for 'Vazhikatti (Kizhakku Suryan)'.
+2026-06-17 04:01:02,250 - root - INFO - Source inferred as 'legacy' based on timestamp 2026-06-09T18:51:04.641146Z for 'Vazhikatti (Kizhakku Suryan)'
+2026-06-17 04:01:02,250 - root - INFO - Complete Backfill [44/132]: 'Puthu Mazha' by 'Justin Prabhakaran, Shakthisree Gopalan, Manu Manjith, Nivin Pauly, Riya Shibu'...
+2026-06-17 04:01:02,304 - werkzeug - INFO - 127.0.0.1 - - [17/Jun/2026 04:01:02] "GET /api/background/status HTTP/1.1" 200 -
+2026-06-17 04:01:07,309 - werkzeug - INFO - 127.0.0.1 - - [17/Jun/2026 04:01:07] "GET /api/background/status HTTP/1.1" 200 -
+2026-06-17 04:01:07,818 - root - WARNING - LRCLIB fallback lookup failed for Puthu Mazha: HTTPSConnectionPool(host='lrclib.net', port=443): Read timed out. (read timeout=5)
+2026-06-17 04:01:07,819 - root - INFO - Source inferred as 'legacy' based on timestamp 2026-06-09T18:51:23.074633Z for 'Puthu Mazha'
+2026-06-17 04:01:07,819 - root - INFO - Complete Backfill [45/132]: 'KALYANI' by 'Suhas Moideen, Vishnu V, ARJN, KDS, FIFTY4, ronn'...
+2026-06-17 04:01:12,317 - werkzeug - INFO - 127.0.0.1 - - [17/Jun/2026 04:01:12] "GET /api/background/status HTTP/1.1" 200 -
+2026-06-17 04:01:14,424 - root - WARNING - LRCLIB fallback lookup failed for KALYANI: HTTPSConnectionPool(host='lrclib.net', port=443): Read timed out. (read timeout=5)
+2026-06-17 04:01:14,424 - scraper.spotify_charts - INFO - detect_track_language: Checking language for 'KALYANI' by 'Suhas Moideen, Vishnu V, ARJN, KDS, FIFTY4, ronn'...
+2026-06-17 04:01:17,226 - scraper.spotify_charts - WARNING - detect_track_language: MusicBrainz API language detection failed: HTTPSConnectionPool(host='musicbrainz.org', port=443): Max retries exceeded with url: /ws/2/recording/?query=KALYANI+Suhas+Moideen%2C+Vishnu+V%2C+ARJN%2C+KDS%2C+FIFTY4%2C+ronn&fmt=json (Caused by SSLError(SSLEOFError(8, '[SSL: UNEXPECTED_EOF_WHILE_READING] EOF occurred in violation of protocol (_ssl.c:1082)')))
+2026-06-17 04:01:17,226 - scraper.spotify_charts - INFO - detect_track_language: Language fallback to 'unknown' for 'KALYANI'.
+2026-06-17 04:01:17,226 - root - INFO - Source inferred as 'legacy' based on timestamp 2026-06-09T18:51:40.630711Z for 'KALYANI'
+2026-06-17 04:01:17,233 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-17 04:01:17,241 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-17 04:01:17,257 - dashboard.drive_client - INFO - Updating existing JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-17 04:01:20,539 - dashboard.drive_client - INFO - Successfully updated JSON file: database.json (ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i)
+2026-06-17 04:01:20,540 - root - INFO - Incremental save completed after processing 45 tracks.
+2026-06-17 04:01:20,540 - root - INFO - Complete Backfill [46/132]: 'Kulasthree' by 'ThirumaLi, Thudwiser'...
+2026-06-17 04:01:20,540 - root - INFO - Source inferred as 'legacy' based on timestamp 2026-06-09T18:51:59.991596Z for 'Kulasthree'
+2026-06-17 04:01:20,540 - root - INFO - Complete Backfill [47/132]: 'Jaalakaari' by 'Sai Abhyankkar, Sublahshini, Vinayak Sasikumar, Preethi Asrani, Shane Nigam'...
+2026-06-17 04:01:25,305 - werkzeug - INFO - 127.0.0.1 - - [17/Jun/2026 04:01:25] "GET /api/background/status HTTP/1.1" 200 -
+2026-06-17 04:01:27,351 - root - WARNING - LRCLIB fallback lookup failed for Jaalakaari: HTTPSConnectionPool(host='lrclib.net', port=443): Read timed out. (read timeout=5)
+2026-06-17 04:01:27,351 - scraper.spotify_charts - INFO - detect_track_language: Checking language for 'Jaalakaari' by 'Sai Abhyankkar, Sublahshini, Vinayak Sasikumar, Preethi Asrani, Shane Nigam'...
+2026-06-17 04:01:30,150 - scraper.spotify_charts - WARNING - detect_track_language: MusicBrainz API language detection failed: HTTPSConnectionPool(host='musicbrainz.org', port=443): Max retries exceeded with url: /ws/2/recording/?query=Jaalakaari+Sai+Abhyankkar%2C+Sublahshini%2C+Vinayak+Sasikumar%2C+Preethi+Asrani%2C+Shane+Nigam&fmt=json (Caused by SSLError(SSLEOFError(8, '[SSL: UNEXPECTED_EOF_WHILE_READING] EOF occurred in violation of protocol (_ssl.c:1082)')))
+2026-06-17 04:01:30,151 - scraper.spotify_charts - INFO - detect_track_language: Language fallback to 'unknown' for 'Jaalakaari'.
+2026-06-17 04:01:30,151 - root - INFO - Source inferred as 'legacy' based on timestamp 2026-06-09T18:52:18.131857Z for 'Jaalakaari'
+2026-06-17 04:01:30,151 - root - INFO - Complete Backfill [48/132]: 'Manchild' by 'Sabrina Carpenter'...
+2026-06-17 04:01:30,151 - root - INFO - Source inferred as 'legacy' based on timestamp 2026-06-09T18:59:03.064785Z for 'Manchild'
+2026-06-17 04:01:30,151 - root - INFO - Complete Backfill [49/132]: 'Bunce Road Blues (with Future & Tems)' by 'J. Cole, Future, Tems'...
+2026-06-17 04:01:30,151 - root - INFO - Source inferred as 'legacy' based on timestamp 2026-06-09T18:59:23.502938Z for 'Bunce Road Blues (with Future & Tems)'
+2026-06-17 04:01:30,151 - root - INFO - Complete Backfill [50/132]: 'Chicken Talkin Bastard' by 'BossMan Dlow, YKNIECE'...
+2026-06-17 04:01:35,688 - root - WARNING - LRCLIB fallback lookup failed for Chicken Talkin Bastard: HTTPSConnectionPool(host='lrclib.net', port=443): Read timed out. (read timeout=5)
+2026-06-17 04:01:35,689 - root - INFO - Source inferred as 'legacy' based on timestamp 2026-06-09T18:59:41.211216Z for 'Chicken Talkin Bastard'
+2026-06-17 04:01:35,689 - root - INFO - Complete Backfill [51/132]: 'Rein Me In (with Olivia Dean)' by 'Sam Fender, Olivia Dean'...
+2026-06-17 04:01:35,689 - root - INFO - Source inferred as 'legacy' based on timestamp 2026-06-09T18:59:59.801693Z for 'Rein Me In (with Olivia Dean)'
+2026-06-17 04:01:35,689 - root - INFO - Complete Backfill [52/132]: 'One of Them (with Future & Lil Baby)' by 'DJ Khaled, Future, Lil Baby'...
+2026-06-17 04:01:35,689 - root - INFO - Source inferred as 'legacy' based on timestamp 2026-06-09T19:00:19.328306Z for 'One of Them (with Future & Lil Baby)'
+2026-06-17 04:01:35,690 - root - INFO - Complete Backfill [53/132]: 'Amsham - അംശം' by 'Aksomaniac, M.H.R, Bhumi, Circle Tone'...
+2026-06-17 04:01:36,821 - root - INFO - Source inferred as 'legacy' based on timestamp 2026-06-09T20:10:27.096640Z for 'Amsham - അംശം'
+2026-06-17 04:01:36,822 - root - INFO - Complete Backfill [54/132]: 'Kadavule Pole' by 'Deepak Dev, Karthik, Bharadwaj'...
+2026-06-17 04:01:36,822 - root - INFO - Source inferred as 'legacy' based on timestamp 2026-06-09T20:14:55.052876Z for 'Kadavule Pole'
+2026-06-17 04:01:36,822 - root - INFO - Complete Backfill [55/132]: 'SAME SH!T' by 'Isaiah Rashad'...
+2026-06-17 04:01:36,822 - root - INFO - Source inferred as 'scraper' based on timestamp 2026-06-10T08:38:59.404790Z for 'SAME SH!T'
+2026-06-17 04:01:36,822 - root - INFO - Complete Backfill [56/132]: 'Hostage (feat. 21 Savage)' by 'Latto, 21 Savage'...
+2026-06-17 04:01:36,822 - root - INFO - Source inferred as 'scraper' based on timestamp 2026-06-10T08:39:25.629098Z for 'Hostage (feat. 21 Savage)'
+2026-06-17 04:01:36,822 - root - INFO - Complete Backfill [57/132]: 'Ever Since U Left Me (I Went Deaf)' by 'French Montana, Max B'...
+2026-06-17 04:01:36,822 - root - INFO - Source inferred as 'scraper' based on timestamp 2026-06-10T08:39:52.613474Z for 'Ever Since U Left Me (I Went Deaf)'
+2026-06-17 04:01:36,823 - root - INFO - Complete Backfill [58/132]: 'Ca$ino' by 'Baby Keem'...
+2026-06-17 04:01:36,823 - root - INFO - Source inferred as 'scraper' based on timestamp 2026-06-10T08:40:23.069174Z for 'Ca$ino'
+2026-06-17 04:01:36,823 - root - INFO - Complete Backfill [59/132]: 'GOMF (feat. GloRilla)' by 'Latto, GloRilla'...
+2026-06-17 04:01:36,823 - root - INFO - Source inferred as 'scraper' based on timestamp 2026-06-10T08:40:52.876746Z for 'GOMF (feat. GloRilla)'
+2026-06-17 04:01:36,823 - root - INFO - Complete Backfill [60/132]: 'Arz Kiya Hai  Coke Studio Bharat' by 'Anuv Jain'...
+2026-06-17 04:01:36,828 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-17 04:01:36,840 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-17 04:01:36,852 - dashboard.drive_client - INFO - Updating existing JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-17 04:01:40,324 - dashboard.drive_client - INFO - Successfully updated JSON file: database.json (ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i)
+2026-06-17 04:01:40,324 - root - INFO - Incremental save completed after processing 60 tracks.
+2026-06-17 04:01:40,326 - root - INFO - Complete Backfill [61/132]: 'Jo Tum Mere Ho' by 'Anuv Jain'...
+2026-06-17 04:01:40,326 - root - INFO - Complete Backfill [62/132]: 'Afsos' by 'Anuv Jain,AP Dhillon'...
+2026-06-17 04:01:40,326 - root - INFO - Complete Backfill [63/132]: 'Husn' by 'Anuv Jain'...
+2026-06-17 04:01:40,326 - root - INFO - Complete Backfill [64/132]: 'Baarishein' by 'Anuv Jain'...
+2026-06-17 04:01:40,327 - root - INFO - Complete Backfill [65/132]: 'Inaam' by 'Anuv Jain'...
+2026-06-17 04:01:40,327 - root - INFO - Complete Backfill [66/132]: 'Alag Aasmaan' by 'Anuv Jain'...
+2026-06-17 04:01:40,327 - root - INFO - Complete Backfill [67/132]: 'Gul' by 'Anuv Jain'...
+2026-06-17 04:01:40,328 - root - INFO - Complete Backfill [68/132]: 'Mazaak' by 'Anuv Jain'...
+2026-06-17 04:01:40,328 - root - INFO - Complete Backfill [69/132]: 'Bairan' by 'Banjaare'...
+2026-06-17 04:01:40,328 - root - INFO - Complete Backfill [70/132]: 'Meri Baaton Mein Tu' by 'Anuv Jain'...
+2026-06-17 04:01:40,328 - root - INFO - Complete Backfill [71/132]: 'Mishri' by 'Anuv Jain'...
+2026-06-17 04:01:40,328 - root - INFO - Complete Backfill [72/132]: 'Sahiba' by 'Aditya Rikhari'...
+2026-06-17 04:01:40,329 - root - INFO - Complete Backfill [73/132]: 'Choo Lo' by 'The Local Train'...
+2026-06-17 04:01:40,329 - root - INFO - Complete Backfill [74/132]: 'Heat Waves' by 'Glass Animals'...
+2026-06-17 04:01:40,330 - root - INFO - Complete Backfill [75/132]: 'Jogi' by 'thiarajxtt,Bir'...
+2026-06-17 04:01:40,330 - root - INFO - Complete Backfill [76/132]: 'Paro' by 'Aditya Rikhari,UNPLG'd'...
+2026-06-17 04:01:40,330 - root - INFO - Complete Backfill [77/132]: 'Pal Pal' by 'Afusic,AliSoomroMusic'...
+2026-06-17 04:01:40,330 - root - INFO - Complete Backfill [78/132]: 'Die With A Smile' by 'Lady Gaga,Bruno Mars'...
+2026-06-17 04:01:40,330 - root - INFO - Complete Backfill [79/132]: 'Starboy' by 'The Weeknd,Daft Punk'...
+2026-06-17 04:01:40,331 - root - INFO - Complete Backfill [80/132]: 'Samjho Na' by 'Aditya Rikhari'...
+2026-06-17 04:01:40,331 - root - INFO - Complete Backfill [81/132]: 'Espresso' by 'Sabrina Carpenter'...
+2026-06-17 04:01:45,828 - root - WARNING - LRCLIB fallback lookup failed for Espresso: HTTPSConnectionPool(host='lrclib.net', port=443): Read timed out. (read timeout=5)
+2026-06-17 04:01:45,829 - root - INFO - Complete Backfill [82/132]: 'Kaise Ab Kahein - From Gutar Gu' by 'Gaurav Chatterji,Aasa Singh,Hansika Pareek,Hrishi Giridhar,Pratik Gangavane'...
+2026-06-17 04:01:45,829 - root - INFO - Complete Backfill [83/132]: 'Chor' by 'Justh'...
+2026-06-17 04:01:45,829 - root - INFO - Complete Backfill [84/132]: 'Baby' by 'Justin Bieber,Ludacris'...
+2026-06-17 04:01:45,830 - root - INFO - Complete Backfill [85/132]: 'Alfaazo' by 'Mitraz'...
+2026-06-17 04:01:45,830 - root - INFO - Complete Backfill [86/132]: 'Riha' by 'Anuv Jain'...
+2026-06-17 04:01:45,830 - root - INFO - Complete Backfill [87/132]: 'Kahaan Ho Tum' by 'Prateek Kuhad'...
+2026-06-17 04:01:51,407 - root - WARNING - LRCLIB fallback lookup failed for Kahaan Ho Tum: HTTPSConnectionPool(host='lrclib.net', port=443): Read timed out. (read timeout=5)
+2026-06-17 04:01:51,407 - root - INFO - Complete Backfill [88/132]: 'Teri Yaad' by 'Aditya Rikhari'...
+2026-06-17 04:01:51,407 - root - INFO - Complete Backfill [89/132]: 'Aaoge Tum Kabhi' by 'The Local Train'...
+2026-06-17 04:01:51,407 - root - INFO - Complete Backfill [90/132]: 'Sailor Song' by 'Gigi Perez'...
+2026-06-17 04:01:51,407 - root - INFO - Complete Backfill [91/132]: 'Bye' by 'Aditya Bhardwaj'...
+2026-06-17 04:01:51,407 - root - INFO - Complete Backfill [92/132]: 'Maula' by 'Anuv Jain'...
+2026-06-17 04:01:51,407 - root - INFO - Complete Backfill [93/132]: 'Lamhey' by 'Anubha Bajaj'...
+2026-06-17 04:01:51,407 - root - INFO - Complete Backfill [94/132]: 'Mera Safar' by 'Iqlipse Nova'...
+2026-06-17 04:01:51,407 - root - INFO - Complete Backfill [95/132]: 'Tu Chodiyon Na' by 'Ronit Vinta'...
+2026-06-17 04:01:51,407 - root - INFO - Complete Backfill [96/132]: 'Kasoor' by 'Prateek Kuhad'...
+2026-06-17 04:01:51,407 - root - INFO - Complete Backfill [97/132]: 'Chal Diye Tum Kahan (From Kabhi Main Kabhi Tum)' by 'AUR'...
+2026-06-17 04:01:51,407 - root - INFO - Complete Backfill [98/132]: 'Waqt Ki Baatein' by 'Dream Note'...
+2026-06-17 04:01:51,407 - root - INFO - Complete Backfill [99/132]: 'Aankhon Se Batana' by 'Dikshant'...
+2026-06-17 04:01:51,407 - root - INFO - Complete Backfill [100/132]: 'Khwab' by 'Iqlipse Nova,Aditya A'...
+2026-06-17 04:01:51,408 - root - INFO - Complete Backfill [101/132]: 'Khayaal' by 'Talwiinder,NDS'...
+2026-06-17 04:01:51,408 - root - INFO - Complete Backfill [102/132]: 'Aankhein Aur Tum' by 'Swarn Harsh,Swarnakk'...
+2026-06-17 04:01:56,930 - root - WARNING - LRCLIB fallback lookup failed for Aankhein Aur Tum: HTTPSConnectionPool(host='lrclib.net', port=443): Read timed out. (read timeout=5)
+2026-06-17 04:01:56,930 - root - INFO - Complete Backfill [103/132]: 'Muruga Muruga' by 'Gopi Sundar'...
+2026-06-17 04:02:02,415 - root - WARNING - LRCLIB fallback lookup failed for Muruga Muruga: HTTPSConnectionPool(host='lrclib.net', port=443): Read timed out. (read timeout=5)
+2026-06-17 04:02:02,415 - root - INFO - Complete Backfill [104/132]: 'Kadavule Pole' by 'Deepak Dev,Karthik,Bharadwaj'...
+2026-06-17 04:02:02,415 - root - INFO - Complete Backfill [105/132]: 'Hukum - Thalaivar Alappara' by 'Anirudh Ravichander,Super Subu'...
+2026-06-17 04:02:02,415 - root - INFO - Complete Backfill [106/132]: 'Lokiverse 2.0' by 'Anirudh Ravichander'...
+2026-06-17 04:02:07,929 - root - WARNING - LRCLIB fallback lookup failed for Lokiverse 2.0: HTTPSConnectionPool(host='lrclib.net', port=443): Read timed out. (read timeout=5)
+2026-06-17 04:02:07,929 - root - INFO - Complete Backfill [107/132]: 'Angu Vaana Konilu - From ARM' by 'Dhibu Ninan Thomas,Vaikom Vijayalakshmi,Manu Manjith'...
+2026-06-17 04:02:07,929 - root - INFO - Complete Backfill [108/132]: 'Chandrachooda' by 'Midhun Mukundan,Purandara Daasaru,Siddhartha Belmannu'...
+2026-06-17 04:02:08,896 - root - INFO - Complete Backfill [109/132]: 'Kannanjunnoru Naadu' by 'Shaan Rahman'...
+2026-06-17 04:02:08,897 - root - INFO - Complete Backfill [110/132]: 'Innalekalil - Treadmill Mix' by 'Niranj Suresh'...
+2026-06-17 04:02:08,897 - root - INFO - Complete Backfill [111/132]: 'Ranam - Title Track' by 'Ajaey Shravan,Neha S. Nair,Jakes Bejoy,Saint T.F.C.'...
+2026-06-17 04:02:08,897 - root - INFO - Complete Backfill [112/132]: 'Kalki - Intro' by 'Jakes Bejoy'...
+2026-06-17 04:02:14,399 - root - WARNING - LRCLIB fallback lookup failed for Kalki - Intro: HTTPSConnectionPool(host='lrclib.net', port=443): Read timed out. (read timeout=5)
+2026-06-17 04:02:14,400 - root - INFO - Complete Backfill [113/132]: 'Bhairavan Pattu' by 'Dhibu Ninan Thomas,Adithya K N,Adarsh P A'...
+2026-06-17 04:02:21,417 - root - WARNING - LRCLIB fallback lookup failed for Bhairavan Pattu: HTTPSConnectionPool(host='lrclib.net', port=443): Read timed out. (read timeout=5)
+2026-06-17 04:02:21,417 - scraper.spotify_charts - INFO - detect_track_language: Checking language for 'Bhairavan Pattu' by 'Dhibu Ninan Thomas,Adithya K N,Adarsh P A'...
+2026-06-17 04:02:24,797 - scraper.spotify_charts - WARNING - detect_track_language: MusicBrainz API language detection failed: HTTPSConnectionPool(host='musicbrainz.org', port=443): Max retries exceeded with url: /ws/2/recording/?query=Bhairavan+Pattu+Dhibu+Ninan+Thomas%2CAdithya+K+N%2CAdarsh+P+A&fmt=json (Caused by SSLError(SSLEOFError(8, '[SSL: UNEXPECTED_EOF_WHILE_READING] EOF occurred in violation of protocol (_ssl.c:1082)')))
+2026-06-17 04:02:24,798 - scraper.spotify_charts - INFO - detect_track_language: Language fallback to 'unknown' for 'Bhairavan Pattu'.
+2026-06-17 04:02:24,798 - root - INFO - Complete Backfill [114/132]: 'Arjunar Villu' by 'Sukhwinder Singh,Manikka Vinayagam,Kabilan'...
+2026-06-17 04:02:25,305 - werkzeug - INFO - 127.0.0.1 - - [17/Jun/2026 04:02:25] "GET /api/background/status HTTP/1.1" 200 -
+2026-06-17 04:02:26,449 - root - INFO - Complete Backfill [115/132]: 'Ennilerinju - From Jacobinte Swargarajyam' by 'Shaan Rahman,Rzee,Sithara Krishnakumar'...
+2026-06-17 04:02:26,449 - root - INFO - Complete Backfill [116/132]: 'Pablo Sandhanam - Background Score' by 'Anirudh Ravichander'...
+2026-06-17 04:02:26,450 - root - INFO - Complete Backfill [117/132]: 'Empurane - From Lucifer' by 'Deepak Dev,Usha Uthup'...
+2026-06-17 04:02:32,072 - root - WARNING - LRCLIB fallback lookup failed for Empurane - From Lucifer: HTTPSConnectionPool(host='lrclib.net', port=443): Read timed out. (read timeout=5)
+2026-06-17 04:02:32,072 - root - INFO - Complete Backfill [118/132]: 'L2 Empuraan Anthem' by 'Emil Carlton,Mahima Menon'...
+2026-06-17 04:02:37,619 - root - WARNING - LRCLIB fallback lookup failed for L2 Empuraan Anthem: HTTPSConnectionPool(host='lrclib.net', port=443): Read timed out. (read timeout=5)
+2026-06-17 04:02:37,620 - root - INFO - Complete Backfill [119/132]: 'Kotha Raja' by 'Jakes Bejoy,Asal Kolaar,Dabzee,Roll Rida,Resmi Sateesh'...
+2026-06-17 04:02:43,161 - root - WARNING - LRCLIB fallback lookup failed for Kotha Raja: HTTPSConnectionPool(host='lrclib.net', port=443): Read timed out. (read timeout=5)
+2026-06-17 04:02:43,162 - root - INFO - Complete Backfill [120/132]: 'Adakachakko' by 'Jakes Bejoy,ANJU BRAMASMI'...
+2026-06-17 04:02:49,737 - root - WARNING - LRCLIB fallback lookup failed for Adakachakko: HTTPSConnectionPool(host='lrclib.net', port=443): Read timed out. (read timeout=5)
+2026-06-17 04:02:49,737 - scraper.spotify_charts - INFO - detect_track_language: Checking language for 'Adakachakko' by 'Jakes Bejoy,ANJU BRAMASMI'...
+2026-06-17 04:02:52,164 - scraper.spotify_charts - WARNING - detect_track_language: MusicBrainz API language detection failed: HTTPSConnectionPool(host='musicbrainz.org', port=443): Max retries exceeded with url: /ws/2/recording/?query=Adakachakko+Jakes+Bejoy%2CANJU+BRAMASMI&fmt=json (Caused by SSLError(SSLEOFError(8, '[SSL: UNEXPECTED_EOF_WHILE_READING] EOF occurred in violation of protocol (_ssl.c:1082)')))
+2026-06-17 04:02:52,165 - scraper.spotify_charts - INFO - detect_track_language: Language fallback to 'unknown' for 'Adakachakko'.
+2026-06-17 04:02:52,171 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-17 04:02:52,203 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-17 04:02:52,217 - dashboard.drive_client - INFO - Updating existing JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-17 04:02:55,558 - dashboard.drive_client - INFO - Successfully updated JSON file: database.json (ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i)
+2026-06-17 04:02:55,559 - root - INFO - Incremental save completed after processing 120 tracks.
+2026-06-17 04:02:55,559 - root - INFO - Complete Backfill [121/132]: 'Azrael (From L2 Empuraan)' by 'Deepak Dev,Usha Uthup,Murali Gopy'...
+2026-06-17 04:02:55,559 - root - INFO - Complete Backfill [122/132]: 'The Jungle Pwoli - Kadavule Pole (From L2 Empuraan) (Reprise)' by 'Deepak Dev,Jakes Bejoy,Anand Sreeraj,Jeff J Panikulam,Rhyko,Logan'...
+2026-06-17 04:03:01,093 - root - WARNING - LRCLIB fallback lookup failed for The Jungle Pwoli - Kadavule Pole (From L2 Empuraan) (Reprise): HTTPSConnectionPool(host='lrclib.net', port=443): Read timed out. (read timeout=5)
+2026-06-17 04:03:01,094 - root - INFO - Complete Backfill [123/132]: 'Empuraane (From L2 Empuraan)' by 'Deepak Dev,Anand Sreeraj,Alankrita Menon Prithviraj,Vinayak Sasikumar'...
+2026-06-17 04:03:01,094 - root - INFO - Complete Backfill [124/132]: 'Kaderum Komba - Jail Fight' by 'Jakes Bejoy'...
+2026-06-17 04:03:01,094 - root - INFO - Complete Backfill [125/132]: 'Pemari' by 'Jakes Bejoy,Anila Rajeev'...
+2026-06-17 04:03:01,094 - root - INFO - Complete Backfill [126/132]: 'Veera Raja Veera' by 'A.R. Rahman,Shankar Mahadevan,K. S. Chithra,Harini'...
+2026-06-17 04:03:01,095 - root - INFO - Complete Backfill [127/132]: 'Toofan' by 'Mohan Krishna,Anwar Sadath,M.T.Sruthikanth,Vipin Xavier,Prakash Mahadevan,Santhosh Venky,Aishwarya Rangarajan,Ravi Basrur,Sudhamsu'...
+2026-06-17 04:03:08,161 - root - WARNING - LRCLIB fallback lookup failed for Toofan: HTTPSConnectionPool(host='lrclib.net', port=443): Read timed out. (read timeout=5)
+2026-06-17 04:03:08,162 - root - INFO - Complete Backfill [128/132]: 'Kokki' by 'Anirudh Ravichander,Sooraj Santhosh,Amogh Balaji'...
+2026-06-17 04:03:13,734 - root - WARNING - LRCLIB fallback lookup failed for Kokki: HTTPSConnectionPool(host='lrclib.net', port=443): Read timed out. (read timeout=5)
+2026-06-17 04:03:13,734 - root - INFO - Complete Backfill [129/132]: 'Karma Song' by 'B. Ajaneesh Loknath,Venkatesh D C,Trilok Trivikrama'...
+2026-06-17 04:03:13,734 - root - INFO - Complete Backfill [130/132]: 'Ishq Jalakar - Karvaan' by 'Shashwat Sachdev,Shahzad Ali,Subhadeep Das Chowdhury,Armaan Khan,Irshad Kamil,Roshan,Sahir Ludhianvi'...
+2026-06-17 04:03:13,735 - root - INFO - Complete Backfill [131/132]: 'Lutt Le Gaya' by 'Shashwat Sachdev,Simran Choudhary'...
+2026-06-17 04:03:13,735 - root - INFO - Complete Backfill [132/132]: 'Arkum Tholkathe' by 'Madhu Balakrishnan'...
+2026-06-17 04:03:13,735 - scraper.drive_uploader - INFO - audit_database_fields: Downloading database.json (ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i)...
+2026-06-17 04:03:13,741 - googleapiclient.discovery_cache - INFO - file_cache is only supported with oauth2client<4.0.0
+2026-06-17 04:03:13,792 - dashboard.drive_client - INFO - Authenticated successfully using OAuth credentials.
+2026-06-17 04:03:13,792 - dashboard.drive_client - INFO - Downloading JSON file with ID: 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i
+2026-06-17 04:03:15,804 - dashboard.drive_client - INFO - Successfully downloaded and parsed JSON file 1kRreUe9j3jBzT6UF3QQpvaEgE70WdZ6i.
+2026-06-17 04:03:15,805 - scraper.drive_uploader - INFO - audit_database_fields: Audited 132 tracks. 37 tracks have missing fields.
+2026-06-17 04:03:15,806 - root - INFO - ============================================================
+2026-06-17 04:03:15,806 - root - INFO - COMPLETE BACKFILL SUMMARY:
+2026-06-17 04:03:15,806 - root - INFO - Before: {'album_art': 13, 'duration': 13, 'durationSeconds': 13, 'language': 10, 'genre': 12, 'album': 5, 'lyrics': 23, 'syncedLyrics': 33, 'source': 59, 'spotify_id': 125}
+2026-06-17 04:03:15,806 - root - INFO - After:  {'album_art': 13, 'duration': 12, 'durationSeconds': 12, 'language': 8, 'genre': 9, 'album': 5, 'lyrics': 23, 'syncedLyrics': 33, 'source': 0, 'spotify_id': 125}
+2026-06-17 04:03:15,806 - root - INFO - ============================================================

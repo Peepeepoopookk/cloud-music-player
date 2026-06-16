@@ -18,9 +18,9 @@ from dashboard.drive_client import list_files, download_json, upload_json, delet
 from scraper.state_manager import load_config, save_config, load_state, save_state, is_duplicate
 from scraper.spotify_charts import get_track_by_spotify_url
 from scraper.downloader import download_track
-from scraper.drive_uploader import upload_track, update_database, normalize_database
+from scraper.drive_uploader import upload_track, update_database, normalize_database, audit_database_fields
 from scraper.metadata_enricher import enrich_track_metadata
-from scraper.main import run_full_enrichment_pass
+from scraper.main import run_full_enrichment_pass, run_complete_backfill
 from scraper.playlist_importer import get_playlist_preview, start_playlist_import, get_playlist_status, run_playlist_import
 import ctypes
 import threading
@@ -452,6 +452,41 @@ def normalize_library():
     except Exception as e:
         logger.error(f"Error in POST /api/library/normalize: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
+
+@app.route('/api/library/audit', methods=['GET'])
+def audit_library():
+    """
+    GET /api/library/audit — Audits all database tracks fields with defaults without modifying the database.
+    """
+    try:
+        results = audit_database_fields()
+        return jsonify({
+            "status": "success",
+            "data": results
+        })
+    except Exception as e:
+        logger.error(f"Error in GET /api/library/audit: {e}", exc_info=True)
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/backfill/complete', methods=['POST'])
+def complete_backfill():
+    """
+    POST /api/backfill/complete - Runs the complete backfill engine on all tracks in the background.
+    """
+    try:
+        logger.info("Starting complete backfill engine in a background thread...")
+        thread = threading.Thread(target=run_complete_backfill)
+        thread.daemon = True
+        thread.start()
+        
+        return jsonify({
+            "status": "success",
+            "message": "Complete backfill started in the background."
+        })
+    except Exception as e:
+        logger.error(f"Error starting complete backfill: {e}", exc_info=True)
+        return jsonify({"error": str(e)}), 500
+
 
 @app.route('/api/library/backup', methods=['POST'])
 def backup_library():

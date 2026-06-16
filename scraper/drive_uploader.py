@@ -288,6 +288,116 @@ def normalize_database():
         logger.error(f"normalize_database failed: {e}", exc_info=True)
         raise
 
+def audit_database_fields():
+    """
+    Downloads database.json (read only) and audits track fields for missing values.
+    Returns a dictionary with total tracks, missing counts per field, and complete tracks.
+    """
+    try:
+        db_file_id, _ = get_db_file_id()
+        if not db_file_id:
+            raise ValueError("database.json file ID not found.")
+            
+        logger.info(f"audit_database_fields: Downloading database.json (ID: {db_file_id})...")
+        db_data = download_json(db_file_id)
+        
+        tracks = []
+        if isinstance(db_data, list):
+            tracks = db_data
+        elif isinstance(db_data, dict) and 'tracks' in db_data:
+            tracks = db_data['tracks']
+        else:
+            raise ValueError("Database format is neither a list nor a dictionary containing 'tracks'.")
+            
+        results = {
+            "total_tracks": len(tracks),
+            "missing_counts": {
+                "album_art": 0,
+                "duration": 0,
+                "durationSeconds": 0,
+                "language": 0,
+                "genre": 0,
+                "album": 0,
+                "lyrics": 0,
+                "syncedLyrics": 0,
+                "source": 0,
+                "spotify_id": 0
+            },
+            "complete_tracks": 0,
+            "tracks_with_any_missing_field": 0
+        }
+        
+        for track in tracks:
+            missing_any = False
+            
+            # album_art / albumArt (missing if both are null/empty)
+            album_art = track.get('album_art')
+            album_art_camel = track.get('albumArt')
+            if not album_art and not album_art_camel:
+                results["missing_counts"]["album_art"] += 1
+                missing_any = True
+                
+            # duration (missing if "--:--" or null/empty)
+            duration = track.get('duration')
+            if not duration or duration == "--:--":
+                results["missing_counts"]["duration"] += 1
+                missing_any = True
+                
+            # durationSeconds (missing if null)
+            if track.get('durationSeconds') is None:
+                results["missing_counts"]["durationSeconds"] += 1
+                missing_any = True
+                
+            # language (missing if "Unknown"/"unknown"/null/empty)
+            lang = track.get('language')
+            if not lang or lang.lower() == "unknown":
+                results["missing_counts"]["language"] += 1
+                missing_any = True
+                
+            # genre (missing if "Unknown"/null/empty)
+            genre = track.get('genre')
+            if not genre or genre == "Unknown":
+                results["missing_counts"]["genre"] += 1
+                missing_any = True
+                
+            # album (missing if "Unknown Album"/null/empty)
+            album = track.get('album')
+            if not album or album == "Unknown Album":
+                results["missing_counts"]["album"] += 1
+                missing_any = True
+                
+            # lyrics (missing if null/empty)
+            if not track.get('lyrics'):
+                results["missing_counts"]["lyrics"] += 1
+                missing_any = True
+                
+            # syncedLyrics (missing if null/empty)
+            if not track.get('syncedLyrics'):
+                results["missing_counts"]["syncedLyrics"] += 1
+                missing_any = True
+                
+            # source (missing if "unknown"/null/empty)
+            source = track.get('source')
+            if not source or source == "unknown":
+                results["missing_counts"]["source"] += 1
+                missing_any = True
+                
+            # spotify_id (missing if null/empty) - don't count towards missing_any
+            if not track.get('spotify_id'):
+                results["missing_counts"]["spotify_id"] += 1
+                
+            if missing_any:
+                results["tracks_with_any_missing_field"] += 1
+            else:
+                results["complete_tracks"] += 1
+                
+        logger.info(f"audit_database_fields: Audited {len(tracks)} tracks. {results['tracks_with_any_missing_field']} tracks have missing fields.")
+        return results
+        
+    except Exception as e:
+        logger.error(f"audit_database_fields failed: {e}", exc_info=True)
+        raise
+
 def list_database_backups():
     """
     Lists all database_backup_*.json files in the database folder.

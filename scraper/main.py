@@ -638,5 +638,268 @@ def run_full_enrichment_pass():
         logger.error(f"Error in run_full_enrichment_pass: {e}", exc_info=True)
         return {"status": "error", "message": str(e)}
 
+def run_complete_backfill():
+    """
+    Advanced backfill engine that processes all tracks and aggressively fills missing fields
+    using lenient iTunes matching, LRCLIB fuzzy matching, and intelligent source inference.
+    """
+    import requests
+    import difflib
+    from dashboard.drive_client import upload_json
+    from scraper.drive_uploader import audit_database_fields
+    from scraper.metadata_enricher import detect_script_language_from_lyrics
+    from scraper.spotify_charts import detect_track_language
+    
+    logger.info("Starting run_complete_backfill...")
+    db_file_id, parent_id = get_db_file_id()
+    if not db_file_id:
+        logger.error("No database.json file ID resolved.")
+        return {"status": "error", "message": "Database not found."}
+
+    try:
+        db_data = download_json(db_file_id)
+        if not db_data:
+            return {"status": "error", "message": "Database is empty."}
+
+        tracks = db_data if isinstance(db_data, list) else db_data.get('tracks', [])
+        
+        # 1. Create Backup
+        now = datetime.datetime.now()
+        backup_filename = f"database_backup_complete_backfill_{now.strftime('%Y-%m-%d_%H-%M-%S')}.json"
+        upload_json(None, db_data, backup_filename, parent_id=parent_id)
+        logger.info(f"Created backup before complete backfill: {backup_filename}")
+
+        # 2. Audit Baseline
+        audit_before = audit_database_fields()
+        logger.info(f"Audit before backfill: {audit_before['missing_counts']}")
+
+        processed_count = 0
+        updated_since_last_save = False
+
+        for i, t in enumerate(tracks):
+            title = t.get("title", "Unknown Title")
+            artist = t.get("artist", "Unknown Artist")
+            track_updated = False
+            
+            logger.info(f"Complete Backfill [{i+1}/{len(tracks)}]: '{title}' by '{artist}'...")
+            
+            # Identify missing fields
+            missing_art = not t.get("album_art") and not t.get("albumArt")
+            missing_dur = not t.get("duration") or t.get("duration") == "--:--"
+            missing_genre = not t.get("genre") or t.get("genre") == "Unknown"
+            missing_album = not t.get("album") or t.get("album") == "Unknown Album"
+            missing_lyrics = not t.get("lyrics")
+            missing_synced = not t.get("syncedLyrics")
+            missing_lang = not t.get("language") or t.get("language") == "unknown"
+            missing_source = not t.get("source") or t.get("source") == "unknown"
+
+            # ALBUM_ART, GENRE, ALBUM
+            if missing_art or missing_genre or missing_album:
+                search_term = f"{artist} {title}"
+                itunes_url = "https://itunes.apple.com/search"
+                try:
+                    r = requests.get(itunes_url, params={"term": search_term, "media": "music", "limit": 10}, timeout=5)
+                    if r.status_code == 200:
+                        results = r.json().get("results", [])
+                        best_match = None
+                        best_score = -1.0
+                        norm_title = title.lower()
+                        norm_artist = artist.lower()
+                        for item in results:
+                            res_title = (item.get("trackName") or "").lower()
+                            res_artist = (item.get("artistName") or "").lower()
+                            score = difflib.SequenceMatcher(None, norm_title, res_title).ratio() + \
+                                    difflib.SequenceMatcher(None, norm_artist, res_artist).ratio()
+                            if score > best_score:
+                                best_score = score
+                                best_match = item
+                        
+                        # More lenient match (e.g. > 0.8 out of 2.0)
+                        if best_match and best_score > 0.8:
+                            if missing_art and best_match.get("artworkUrl100"):
+                                art = best_match.get("artworkUrl100").replace("100x100", "600x600").replace("100x100bb", "600x600bb")
+                                t["album_art"] = art
+                                t["albumArt"] = art
+                                track_updated = True
+                                missing_art = False
+                            if missing_album and best_match.get("collectionName"):
+                                t["album"] = best_match.get("collectionName")
+                                track_updated = True
+                                missing_album = False
+                            if missing_genre and best_match.get("primaryGenreName"):
+                                t["genre"] = best_match.get("primaryGenreName")
+                                track_updated = True
+                                missing_genre = False
+                except Exception as e:
+                    logger.warning(f"Lenient iTunes lookup failed for {title}: {e}")
+
+            # DURATION
+            if missing_dur:
+                try:
+                    r = requests.get("https://itunes.apple.com/search", params={"term": artist, "media": "music", "limit": 25}, timeout=5)
+                    if r.status_code == 200:
+                        results = r.json().get("results", [])
+                        best_match = None
+                        best_score = -1.0
+                        norm_title = title.lower()
+                        for item in results:
+                            res_title = (item.get("trackName") or "").lower()
+                            score = difflib.SequenceMatcher(None, norm_title, res_title).ratio()
+                            if score > best_score:
+                                best_score = score
+                                best_match = item
+                        if best_match and best_score > 0.6 and best_match.get("trackTimeMillis"):
+                            duration_seconds = int(best_match.get("trackTimeMillis")) // 1000
+                            t["duration"] = f"{duration_seconds // 60:02d}:{duration_seconds % 60:02d}"
+                            t["durationSeconds"] = duration_seconds
+                            track_updated = True
+                except Exception as e:
+                    logger.warning(f"Artist-only duration lookup failed for {title}: {e}")
+
+            # GENRE (Artist-only fallback)
+            if missing_genre:
+                try:
+                    r = requests.get("https://itunes.apple.com/search", params={"term": artist, "media": "music", "limit": 25}, timeout=5)
+                    if r.status_code == 200:
+                        results = r.json().get("results", [])
+                        genres = [item.get("primaryGenreName") for item in results if item.get("primaryGenreName")]
+                        if genres:
+                            from collections import Counter
+                            t["genre"] = Counter(genres).most_common(1)[0][0]
+                            track_updated = True
+                except Exception as e:
+                    pass
+
+            # LYRICS
+            if missing_lyrics or missing_synced:
+                try:
+                    headers = {"User-Agent": "CloudMusicPlayer/1.0.0"}
+                    d_sec = t.get("durationSeconds") or 0
+                    alb = t.get("album") if t.get("album") != "Unknown Album" else ""
+                    
+                    # 1. Exact
+                    found_lyrics = False
+                    r_exact = requests.get("https://lrclib.net/api/get", params={"artist_name": artist, "track_name": title, "album_name": alb, "duration": d_sec}, headers=headers, timeout=5)
+                    if r_exact.status_code == 200 and r_exact.json().get("plainLyrics"):
+                        t["lyrics"] = r_exact.json().get("plainLyrics")
+                        t["syncedLyrics"] = r_exact.json().get("syncedLyrics")
+                        found_lyrics = True
+                        track_updated = True
+                    
+                    # 2. Fuzzy title+artist
+                    if not found_lyrics:
+                        r_search = requests.get("https://lrclib.net/api/search", params={"track_name": title, "artist_name": artist}, headers=headers, timeout=5)
+                        if r_search.status_code == 200 and isinstance(r_search.json(), list):
+                            items = r_search.json()
+                            best_match = None
+                            best_score = -1.0
+                            norm_title = title.lower()
+                            norm_artist = artist.lower()
+                            for item in items:
+                                s = difflib.SequenceMatcher(None, norm_title, (item.get("trackName") or "").lower()).ratio() + \
+                                    difflib.SequenceMatcher(None, norm_artist, (item.get("artistName") or "").lower()).ratio()
+                                if s > best_score:
+                                    best_score = s
+                                    best_match = item
+                            if best_match and best_score > 1.0 and best_match.get("plainLyrics"):
+                                t["lyrics"] = best_match.get("plainLyrics")
+                                t["syncedLyrics"] = best_match.get("syncedLyrics")
+                                found_lyrics = True
+                                track_updated = True
+                    
+                    # 3. Fuzzy title only
+                    if not found_lyrics:
+                        r_search_title = requests.get("https://lrclib.net/api/search", params={"q": title}, headers=headers, timeout=5)
+                        if r_search_title.status_code == 200 and isinstance(r_search_title.json(), list):
+                            items = r_search_title.json()
+                            best_match = None
+                            best_score = -1.0
+                            norm_title = title.lower()
+                            for item in items:
+                                s = difflib.SequenceMatcher(None, norm_title, (item.get("trackName") or "").lower()).ratio()
+                                if s > best_score:
+                                    best_score = s
+                                    best_match = item
+                            if best_match and best_score > 0.8 and best_match.get("plainLyrics"):
+                                t["lyrics"] = best_match.get("plainLyrics")
+                                t["syncedLyrics"] = best_match.get("syncedLyrics")
+                                track_updated = True
+                except Exception as e:
+                    logger.warning(f"LRCLIB fallback lookup failed for {title}: {e}")
+
+            # LANGUAGE
+            if missing_lang:
+                new_lang = "unknown"
+                if t.get("lyrics"):
+                    script_lang = detect_script_language_from_lyrics(t.get("lyrics"))
+                    if script_lang: new_lang = script_lang
+                
+                if new_lang == "unknown":
+                    new_lang = determine_language_from_source(t.get("source"), "unknown")
+                    
+                if new_lang == "unknown":
+                    lang_det, _ = detect_track_language(title, artist)
+                    if lang_det == "hindi": new_lang = "indian"
+                    elif lang_det in ["english", "malayalam", "tamil"]: new_lang = lang_det
+                    
+                if new_lang != "unknown" and new_lang != t.get("language"):
+                    t["language"] = new_lang
+                    track_updated = True
+
+            # SOURCE
+            if missing_source:
+                added_at = t.get("addedAt") or t.get("timestamp")
+                if added_at:
+                    if "2026-06-1" in added_at:
+                        t["source"] = "scraper"
+                        logger.info(f"Source inferred as 'scraper' based on timestamp {added_at} for '{title}'")
+                    else:
+                        t["source"] = "legacy"
+                        logger.info(f"Source inferred as 'legacy' based on timestamp {added_at} for '{title}'")
+                else:
+                    t["source"] = "legacy"
+                    logger.info(f"Source inferred as 'legacy' due to missing timestamp for '{title}'")
+                track_updated = True
+
+            if track_updated:
+                updated_since_last_save = True
+
+            processed_count += 1
+            # Incremental save
+            if processed_count % 15 == 0 and updated_since_last_save:
+                if isinstance(db_data, dict):
+                    db_data['tracks'] = tracks
+                upload_json(db_file_id, db_data, 'database.json', parent_id=parent_id)
+                logger.info(f"Incremental save completed after processing {processed_count} tracks.")
+                updated_since_last_save = False
+
+        # Final Save
+        if updated_since_last_save:
+            if isinstance(db_data, dict):
+                db_data['tracks'] = tracks
+            upload_json(db_file_id, db_data, 'database.json', parent_id=parent_id)
+            logger.info("Final database save completed.")
+
+        # Audit After
+        audit_after = audit_database_fields()
+        
+        logger.info("=" * 60)
+        logger.info("COMPLETE BACKFILL SUMMARY:")
+        logger.info(f"Before: {audit_before['missing_counts']}")
+        logger.info(f"After:  {audit_after['missing_counts']}")
+        logger.info("=" * 60)
+
+        result = {
+            "status": "success",
+            "total_tracks": len(tracks),
+            "audit_before": audit_before,
+            "audit_after": audit_after
+        }
+        return result
+
+    except Exception as e:
+        logger.error(f"Error in run_complete_backfill: {e}", exc_info=True)
+        return {"status": "error", "message": str(e)}
+
 if __name__ == "__main__":
     run_scraper()
