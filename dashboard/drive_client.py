@@ -20,6 +20,37 @@ if not logger.handlers:
 
 SCOPES = ['https://www.googleapis.com/auth/drive']
 
+def _initialize_oauth_from_env():
+    """
+    Checks for OAUTH_TOKEN and OAUTH_CREDENTIALS environment variables.
+    If present and non-empty, writes them to token.json and oauth_credentials.json 
+    in the project root, enabling environments like Render to authenticate via env vars.
+    """
+    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    
+    oauth_token = os.environ.get('OAUTH_TOKEN')
+    if oauth_token and oauth_token.strip():
+        token_path = os.path.join(project_root, 'token.json')
+        try:
+            with open(token_path, 'w', encoding='utf-8') as f:
+                f.write(oauth_token)
+            logger.info("Wrote token.json from OAUTH_TOKEN environment variable")
+        except Exception as e:
+            logger.error(f"Failed to write token.json from environment variable: {e}")
+
+    oauth_credentials = os.environ.get('OAUTH_CREDENTIALS')
+    if oauth_credentials and oauth_credentials.strip():
+        credentials_path = os.path.join(project_root, 'oauth_credentials.json')
+        try:
+            with open(credentials_path, 'w', encoding='utf-8') as f:
+                f.write(oauth_credentials)
+            logger.info("Wrote oauth_credentials.json from OAUTH_CREDENTIALS environment variable")
+        except Exception as e:
+            logger.error(f"Failed to write oauth_credentials.json from environment variable: {e}")
+
+# Run initialization once on module import
+_initialize_oauth_from_env()
+
 def get_drive_service():
     """
     Builds and returns an authenticated Google Drive API v3 service object.
