@@ -1678,8 +1678,67 @@ document.addEventListener('DOMContentLoaded', () => {
     
     let allArtists = [];
     
+    function renderArtistsGrid() {
+        const grid = document.getElementById('artists-grid');
+        if (!grid) return;
+        
+        const sortSelect = document.getElementById('artists-sort-select');
+        const sortMode = sortSelect ? sortSelect.value : 'count_desc';
+        
+        // Sort allArtists
+        const sortedArtists = [...allArtists];
+        if (sortMode === 'count_desc') {
+            sortedArtists.sort((a, b) => b.track_count - a.track_count);
+        } else if (sortMode === 'alpha_asc') {
+            sortedArtists.sort((a, b) => a.artist_name.localeCompare(b.artist_name));
+        }
+        
+        if (sortedArtists.length === 0) {
+            grid.innerHTML = '<div style="color: var(--tertiary);">No artists found.</div>';
+            return;
+        }
+        
+        grid.innerHTML = '';
+        sortedArtists.forEach(artist => {
+            const card = document.createElement('div');
+            card.className = 'card artist-card';
+            card.style.cursor = 'pointer';
+            card.style.display = 'flex';
+            card.style.flexDirection = 'column';
+            card.style.alignItems = 'center';
+            card.style.textAlign = 'center';
+            card.style.padding = '20px';
+            card.style.transition = 'transform 0.2s, background 0.2s';
+            card.style.background = 'rgba(255,255,255,0.02)';
+            card.style.border = '1px solid var(--border)';
+            card.style.borderRadius = '12px';
+            
+            card.onmouseover = () => { card.style.background = 'rgba(255,255,255,0.05)'; card.style.transform = 'translateY(-2px)'; };
+            card.onmouseout = () => { card.style.background = 'rgba(255,255,255,0.02)'; card.style.transform = 'translateY(0)'; };
+            
+            // Set hash to open artist
+            card.onclick = () => {
+                window.location.hash = '#artist=' + encodeURIComponent(artist.artist_name);
+            };
+            
+            let imgHtml = '<div style="width: 80px; height: 80px; border-radius: 50%; background: #222; margin-bottom: 12px; display: flex; align-items: center; justify-content: center; color: var(--tertiary); font-size: 24px;">?</div>';
+            if (artist.cover_image) {
+                imgHtml = `<img src="${artist.cover_image}" alt="${artist.artist_name}" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; margin-bottom: 12px; border: 2px solid rgba(255,255,255,0.1);">`;
+            }
+            
+            card.innerHTML = `
+                ${imgHtml}
+                <h4 style="margin: 0 0 4px 0; color: #fff; font-size: 1rem;">${escapeHTML(artist.artist_name)}</h4>
+                <span class="badge" style="background: rgba(255,255,255,0.1); color: var(--tertiary); font-size: 0.8rem; padding: 2px 8px; border-radius: 12px;">${artist.track_count} Track${artist.track_count !== 1 ? 's' : ''}</span>
+            `;
+            
+            grid.appendChild(card);
+        });
+    }
+
     async function loadArtists(query = '') {
         const grid = document.getElementById('artists-grid');
+        const badge = document.getElementById('artists-total-badge');
         if (!grid) return;
         
         grid.innerHTML = '<div style="color: var(--tertiary);">Loading artists...</div>';
@@ -1693,52 +1752,24 @@ document.addEventListener('DOMContentLoaded', () => {
             const response = await fetch(url);
             if (!response.ok) throw new Error('Failed to load artists');
             
-            const artists = await response.json();
-            allArtists = artists;
+            allArtists = await response.json();
             
-            if (artists.length === 0) {
-                grid.innerHTML = '<div style="color: var(--tertiary);">No artists found.</div>';
-                return;
+            if (badge && !query) {
+                badge.textContent = `${allArtists.length} Total`;
             }
             
-            grid.innerHTML = '';
-            artists.forEach(artist => {
-                const card = document.createElement('div');
-                card.className = 'card artist-card';
-                card.style.cursor = 'pointer';
-                card.style.display = 'flex';
-                card.style.flexDirection = 'column';
-                card.style.alignItems = 'center';
-                card.style.textAlign = 'center';
-                card.style.padding = '20px';
-                card.style.transition = 'transform 0.2s, background 0.2s';
-                card.style.background = 'rgba(255,255,255,0.02)';
-                card.style.border = '1px solid var(--border)';
-                card.style.borderRadius = '12px';
-                
-                card.onmouseover = () => { card.style.background = 'rgba(255,255,255,0.05)'; card.style.transform = 'translateY(-2px)'; };
-                card.onmouseout = () => { card.style.background = 'rgba(255,255,255,0.02)'; card.style.transform = 'translateY(0)'; };
-                
-                card.onclick = () => openArtistTracks(artist.artist_name);
-                
-                let imgHtml = '<div style="width: 80px; height: 80px; border-radius: 50%; background: #222; margin-bottom: 12px; display: flex; align-items: center; justify-content: center; color: var(--tertiary); font-size: 24px;">?</div>';
-                if (artist.cover_image) {
-                    imgHtml = `<img src="${artist.cover_image}" alt="${artist.artist_name}" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; margin-bottom: 12px; border: 2px solid rgba(255,255,255,0.1);">`;
-                }
-                
-                card.innerHTML = `
-                    ${imgHtml}
-                    <h4 style="margin: 0 0 4px 0; color: #fff; font-size: 1rem;">${artist.artist_name}</h4>
-                    <span class="badge" style="background: rgba(255,255,255,0.1); color: var(--tertiary); font-size: 0.8rem; padding: 2px 8px; border-radius: 12px;">${artist.track_count} Track${artist.track_count !== 1 ? 's' : ''}</span>
-                `;
-                
-                grid.appendChild(card);
-            });
+            renderArtistsGrid();
             
         } catch (err) {
             grid.innerHTML = `<div style="color: #ff453a;">Error: ${err.message}</div>`;
             showToast('Error loading artists', 'error');
         }
+    }
+    
+    // Sort Dropdown
+    const sortSelect = document.getElementById('artists-sort-select');
+    if (sortSelect) {
+        sortSelect.addEventListener('change', renderArtistsGrid);
     }
     
     // Artist Search Input Event
@@ -1753,63 +1784,134 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     
-    // Artist Tracks Modal
-    const artistTracksModal = document.getElementById('artist-tracks-modal');
-    const artistTracksTitle = document.getElementById('artist-tracks-title');
-    const artistTracksTableBody = document.getElementById('artist-tracks-table-body');
-    const artistTracksCloseBtn = document.getElementById('artist-tracks-modal-close-x');
-    const artistTracksCancelBtn = document.getElementById('modal-btn-artist-close');
+    // Artist Detail View Logic
+    const artistDetailView = document.getElementById('artist-detail-view');
+    const artistsGrid = document.getElementById('artists-grid');
+    const btnBackToArtists = document.getElementById('btn-back-to-artists');
     
-    if (artistTracksCloseBtn) artistTracksCloseBtn.addEventListener('click', closeArtistTracksModal);
-    if (artistTracksCancelBtn) artistTracksCancelBtn.addEventListener('click', closeArtistTracksModal);
-    
-    function closeArtistTracksModal() {
-        artistTracksModal.classList.add('hidden');
+    if (btnBackToArtists) {
+        btnBackToArtists.addEventListener('click', () => {
+            window.location.hash = '#artists';
+        });
     }
     
     async function openArtistTracks(artistName) {
-        artistTracksModal.classList.remove('hidden');
-        artistTracksTitle.textContent = artistName;
-        artistTracksTableBody.innerHTML = '<tr><td colspan="4" class="table-placeholder">Loading tracks...</td></tr>';
+        if (artistsGrid) artistsGrid.style.display = 'none';
+        if (artistDetailView) artistDetailView.style.display = 'block';
+        
+        const nameEl = document.getElementById('artist-detail-name');
+        const countEl = document.getElementById('artist-detail-count');
+        const imgEl = document.getElementById('artist-detail-image');
+        const listEl = document.getElementById('artist-detail-tracks-list');
+        
+        nameEl.textContent = artistName;
+        countEl.textContent = 'Loading...';
+        listEl.innerHTML = '<div style="color: var(--tertiary); padding: 16px 0;">Loading tracks...</div>';
+        imgEl.src = '';
         
         try {
+            // Find artist in allArtists to set cover image quickly
+            const artistData = allArtists.find(a => a.artist_name === artistName);
+            if (artistData && artistData.cover_image) {
+                imgEl.src = artistData.cover_image;
+            } else {
+                imgEl.src = "data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='1'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cpath d='M12 8v4l3 3'/%3E%3C/svg%3E";
+            }
+
             const response = await fetch('/api/artists/' + encodeURIComponent(artistName));
             if (!response.ok) throw new Error('Failed to load artist tracks');
             
             const tracks = await response.json();
+            countEl.textContent = `${tracks.length} Track${tracks.length !== 1 ? 's' : ''}`;
             
             if (tracks.length === 0) {
-                artistTracksTableBody.innerHTML = '<tr><td colspan="4" class="table-placeholder">No tracks found.</td></tr>';
+                listEl.innerHTML = '<div style="color: var(--tertiary); padding: 16px 0;">No tracks found.</div>';
                 return;
             }
             
-            artistTracksTableBody.innerHTML = '';
+            listEl.innerHTML = '';
             tracks.forEach(track => {
-                const tr = document.createElement('tr');
+                const row = document.createElement('div');
+                row.style.display = 'flex';
+                row.style.alignItems = 'center';
+                row.style.gap = '16px';
+                row.style.padding = '12px 16px';
+                row.style.background = 'rgba(255,255,255,0.02)';
+                row.style.border = '1px solid rgba(255,255,255,0.05)';
+                row.style.borderRadius = '8px';
                 
-                let artHtml = '<div class="track-artwork-placeholder"></div>';
+                let artHtml = '<div style="width: 48px; height: 48px; background: #222; border-radius: 6px;"></div>';
                 if (track.album_art) {
-                    artHtml = `<img src="${track.album_art}" class="track-artwork">`;
+                    artHtml = `<img src="${track.album_art}" style="width: 48px; height: 48px; object-fit: cover; border-radius: 6px;">`;
                 }
                 
-                tr.innerHTML = `
-                    <td class="artwork-col">${artHtml}</td>
-                    <td>
-                        <div class="track-title">${track.title}</div>
-                        <div class="track-artist">${track.artist}</div>
-                    </td>
-                    <td><div class="track-album">${track.album || 'Unknown'}</div></td>
-                    <td><div class="track-duration">${track.duration || '--:--'}</div></td>
-                `;
+                const langBadgeColor = track.language === 'unknown' ? '#666' : '#0a84ff';
+                const langBadge = `<span class="badge" style="background: ${langBadgeColor}20; color: ${langBadgeColor}; border: 1px solid ${langBadgeColor}40; padding: 2px 8px; border-radius: 12px; font-size: 0.75rem;">${escapeHTML(track.language || 'unknown')}</span>`;
                 
-                artistTracksTableBody.appendChild(tr);
+                const genreBadgeColor = track.genre === 'Unknown' ? '#666' : '#30d158';
+                const genreBadge = `<span class="badge" style="background: ${genreBadgeColor}20; color: ${genreBadgeColor}; border: 1px solid ${genreBadgeColor}40; padding: 2px 8px; border-radius: 12px; font-size: 0.75rem;">${escapeHTML(track.genre || 'Unknown')}</span>`;
+
+                row.innerHTML = `
+                    ${artHtml}
+                    <div style="flex: 1; display: flex; flex-direction: column; gap: 4px;">
+                        <div style="color: #fff; font-weight: 500;">${escapeHTML(track.title)}</div>
+                        <div style="color: var(--tertiary); font-size: 0.85rem;">${escapeHTML(track.album || 'Unknown Album')}</div>
+                    </div>
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end;">
+                        ${langBadge}
+                        ${genreBadge}
+                    </div>
+                    <div style="color: var(--tertiary); font-size: 0.85rem; width: 60px; text-align: right;">
+                        ${track.duration || '--:--'}
+                    </div>
+                `;
+                listEl.appendChild(row);
             });
             
         } catch (err) {
-            artistTracksTableBody.innerHTML = `<tr><td colspan="4" style="color: #ff453a; text-align: center; padding: 20px;">Error: ${err.message}</td></tr>`;
+            listEl.innerHTML = `<div style="color: #ff453a; padding: 16px 0;">Error: ${err.message}</div>`;
             showToast('Error loading artist tracks', 'error');
         }
     }
+
+    // Routing Logic for Deep Linking
+    async function handleHashChange() {
+        const hash = window.location.hash;
+        if (hash.startsWith('#artist=')) {
+            const artistName = decodeURIComponent(hash.substring(8));
+            
+            // 1. Ensure the Artists section is visible FIRST
+            const btnArtists = document.getElementById('nav-btn-artists');
+            const sectionArtists = document.getElementById('section-artists');
+            
+            // If the section isn't active, activate it.
+            if (sectionArtists && !sectionArtists.classList.contains('active')) {
+                if (btnArtists) {
+                    btnArtists.click(); // This will trigger loadArtists() in the background
+                } else {
+                    // Fallback just in case btn isn't found
+                    document.querySelectorAll('.content-section').forEach(s => s.classList.remove('active'));
+                    sectionArtists.classList.add('active');
+                }
+            }
+            
+            // 2. Await data load if necessary to avoid race conditions
+            if (allArtists.length === 0) {
+                await loadArtists();
+            }
+            
+            // 3. Now safely open the detail view
+            openArtistTracks(artistName);
+            
+        } else {
+            if (artistDetailView) artistDetailView.style.display = 'none';
+            if (artistsGrid) artistsGrid.style.display = 'grid';
+        }
+    }
+    
+    window.addEventListener('hashchange', handleHashChange);
+    // Initial check on load
+    setTimeout(handleHashChange, 100);
     
     window.loadArtists = loadArtists;
 
