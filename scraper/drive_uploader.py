@@ -288,6 +288,54 @@ def normalize_database():
         logger.error(f"normalize_database failed: {e}", exc_info=True)
         raise
 
+def backfill_lyrics_status():
+    """
+    Downloads database.json, adds the 'lyricsStatus' field (default 'ok') 
+    to all tracks that don't have it, and uploads the database back to Drive.
+    """
+    try:
+        db_file_id, parent_folder_id = get_db_file_id()
+        if not db_file_id:
+            raise ValueError("database.json file ID not found.")
+            
+        logger.info(f"backfill_lyrics_status: Downloading database.json (ID: {db_file_id})...")
+        db_data = download_json(db_file_id)
+        
+        is_dict = False
+        tracks = []
+        if isinstance(db_data, list):
+            tracks = db_data
+        elif isinstance(db_data, dict) and 'tracks' in db_data:
+            tracks = db_data['tracks']
+            is_dict = True
+        else:
+            raise ValueError("Database format is neither a list nor a dictionary containing 'tracks'.")
+            
+        tracks_changed = 0
+        
+        for track in tracks:
+            if 'lyricsStatus' not in track:
+                track['lyricsStatus'] = "ok"
+                tracks_changed += 1
+                
+        if tracks_changed == 0:
+            logger.info("backfill_lyrics_status: No tracks needed updating.")
+            return 0
+            
+        logger.info(f"backfill_lyrics_status: Uploading updated database.json ({tracks_changed} tracks modified)...")
+        if is_dict:
+            db_data['tracks'] = tracks
+            upload_json(db_file_id, db_data, 'database.json', parent_id=parent_folder_id)
+        else:
+            upload_json(db_file_id, tracks, 'database.json', parent_id=parent_folder_id)
+            
+        logger.info(f"backfill_lyrics_status: Finished backfilling {tracks_changed} tracks.")
+        return tracks_changed
+        
+    except Exception as e:
+        logger.error(f"backfill_lyrics_status failed: {e}", exc_info=True)
+        raise
+
 def audit_database_fields():
     """
     Downloads database.json (read only) and audits track fields for missing values.

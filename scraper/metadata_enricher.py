@@ -136,6 +136,48 @@ def detect_script_language_from_lyrics(lyrics_text):
         
     return None
 
+def detect_script_mixing(lyrics_text):
+    if not lyrics_text:
+        return False
+        
+    counts = {
+        "malayalam": 0,
+        "tamil": 0,
+        "telugu": 0,
+        "devanagari": 0,
+        "kannada": 0
+    }
+    
+    total_valid_chars = 0
+    
+    for char in lyrics_text:
+        if char.isspace() or char in "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~":
+            continue
+            
+        code = ord(char)
+        total_valid_chars += 1
+        
+        if 0x0D00 <= code <= 0x0D7F:
+            counts["malayalam"] += 1
+        elif 0x0B80 <= code <= 0x0BFF:
+            counts["tamil"] += 1
+        elif 0x0C00 <= code <= 0x0C7F:
+            counts["telugu"] += 1
+        elif 0x0900 <= code <= 0x097F:
+            counts["devanagari"] += 1
+        elif 0x0C80 <= code <= 0x0CFF:
+            counts["kannada"] += 1
+            
+    if total_valid_chars == 0:
+        return False
+        
+    scripts_above_threshold = 0
+    for count in counts.values():
+        if (count / total_valid_chars) > 0.08:
+            scripts_above_threshold += 1
+            
+    return scripts_above_threshold >= 2
+
 def enrich_track_metadata(title, artist, local_file_path=None, source="unknown"):
     """
     Master metadata enrichment function.
@@ -151,7 +193,8 @@ def enrich_track_metadata(title, artist, local_file_path=None, source="unknown")
         "genre": "Unknown",
         "album": "Unknown Album",
         "lyrics": None,
-        "syncedLyrics": None
+        "syncedLyrics": None,
+        "lyricsStatus": "ok"
     }
     
     # 1. Duration (Local ffprobe priority)
@@ -230,6 +273,10 @@ def enrich_track_metadata(title, artist, local_file_path=None, source="unknown")
     plain_lyrics, synced_lyrics = fetch_lrclib_lyrics(title, artist, alb, d_sec)
     metadata["lyrics"] = plain_lyrics
     metadata["syncedLyrics"] = synced_lyrics
+
+    if plain_lyrics and detect_script_mixing(plain_lyrics):
+        metadata["lyricsStatus"] = "needs_review"
+        logger.warning(f"Mixed-script lyrics detected for '{title}' by '{artist}' - flagged for review")
 
     # 4. Language Detection
     source_lower = source.lower() if source else "unknown"
