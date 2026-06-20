@@ -212,13 +212,17 @@ def run_playlist_import(playlist_id, batch_size=15, source_override=None):
             
             logger.info(f"Processing playlist track: {title} by {artist}")
             
-            is_dup = False
-            title_lower = title.lower() if title else ""
-            artist_lower = artist.lower() if artist else ""
-            for et in existing_tracks:
-                if (et.get("title") or "").lower() == title_lower and (et.get("artist") or "").lower() == artist_lower:
-                    is_dup = True
-                    break
+            from scraper.state_manager import is_duplicate, load_state
+            track_to_check = {
+                "title": title,
+                "artist": artist,
+                "spotify_id": spotify_id
+            }
+            try:
+                scraper_state = load_state()
+            except Exception:
+                scraper_state = {}
+            is_dup = is_duplicate(track_to_check, scraper_state, existing_tracks)
             
             if is_dup:
                 logger.info(f"Skipping duplicate: {title}")

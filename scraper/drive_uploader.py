@@ -153,11 +153,16 @@ def update_database(drive_file_id, metadata):
             "album": metadata.get('album', 'Unknown Album'),
             "genre": metadata.get('genre', 'Unknown'),
             "duration": metadata.get('duration', '--:--'),
+            "durationSeconds": metadata.get('durationSeconds'),
             "spotify_id": metadata.get('spotify_id'),
             "album_art": resolved_art,
             "albumArt": resolved_art,
+            "language": metadata.get('language', 'Unknown'),
             "source": metadata.get('source', 'unknown'),
             "requestedBy": metadata.get('requestedBy'),
+            "lyrics": metadata.get('lyrics'),
+            "syncedLyrics": metadata.get('syncedLyrics'),
+            "lyricsStatus": metadata.get('lyricsStatus', 'ok'),
             "timestamp": timestamp
         }
         
