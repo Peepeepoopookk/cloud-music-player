@@ -1,0 +1,19 @@
+name: Keep Render Alive
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Render
+        run: |
+          response=$(curl -s -o /dev/null -w "%{http_code}" https://wavify-proxy.onrender.com/ping)
+          echo "Ping response code: $response"
+          if [ "$response" != "200" ]; then
+            echo "Ping failed with status $response"
+            exit 1
+          fi
