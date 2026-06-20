@@ -1284,106 +1284,7 @@ def ping():
 import uuid
 app_import_tasks = {}
 
-@app.route('/api/app/song/add', methods=['POST'])
-def app_song_add():
-    body = request.json or {}
-    spotify_url = body.get('spotifyUrl')
-    device_id = body.get('deviceId')
-    
-    if not spotify_url or not device_id:
-        return jsonify({"error": "Missing 'spotifyUrl' or 'deviceId'"}), 400
-        
-    task_id = str(uuid.uuid4())
-    app_import_tasks[task_id] = {"status": "running", "track": None, "error": None}
-    
-    def run_app_song_task(tid, url, dev_id):
-        temp_file_path = None
-        try:
-            metadata = get_track_by_spotify_url(url)
-            title = metadata["title"]
-            artist = metadata["artist"]
-            spotify_id = metadata["spotify_id"]
-            genre = metadata["genre"]
-            
-            # No manual album_art or language fetching here; handled by enricher
-                
-            state = load_state()
-            existing_tracks = []
-            db_file_id = get_db_file_id()
-            if db_file_id:
-                try:
-                    existing_data = download_json(db_file_id)
-                    if isinstance(existing_data, list):
-                        existing_tracks = existing_data
-                    elif isinstance(existing_data, dict) and 'tracks' in existing_data:
-                        existing_tracks = existing_data['tracks']
-                except Exception:
-                    pass
-                    
-            track_to_check = {
-                "title": title,
-                "artist": artist,
-                "spotify_id": spotify_id
-            }
-            
-            if is_duplicate(track_to_check, state, existing_tracks):
-                app_import_tasks[tid]["status"] = "duplicate"
-                app_import_tasks[tid]["error"] = "Song already exists in database"
-                return
-                
-            temp_dir = os.environ.get('TEMP_DIR', os.path.join(project_root, 'temp'))
-            os.makedirs(temp_dir, exist_ok=True)
-            
-            temp_file_path = download_track(title, artist, temp_dir)
-            drive_file_id = upload_track(temp_file_path)
-            enriched = enrich_track_metadata(title, artist, local_file_path=temp_file_path, source="app_single")
-            
-            db_metadata = {
-                "title": title,
-                "artist": artist,
-                "album": enriched.get("album", "Single"),
-                "genre": enriched.get("genre", genre),
-                "duration": enriched.get("duration", "--:--"),
-                "durationSeconds": enriched.get("durationSeconds"),
-                "spotify_id": spotify_id,
-                "album_art": enriched.get("album_art"),
-                "language": enriched.get("language", "unknown"),
-                "source": "app_single",
-                "requestedBy": dev_id,
-                "lyrics": enriched.get("lyrics"),
-                "syncedLyrics": enriched.get("syncedLyrics")
-            }
-            
-            update_database(drive_file_id, db_metadata)
-            
-            try:
-                current_state = load_state()
-                if spotify_id is not None:
-                    current_state.setdefault("downloaded_ids", []).append(spotify_id)
-                current_state.setdefault("downloaded_titles", []).append(f"{title} {artist}")
-                save_state(current_state)
-            except Exception:
-                pass
-                
-            app_import_tasks[tid]["status"] = "completed"
-            app_import_tasks[tid]["track"] = db_metadata
-            
-        except Exception as e:
-            logger.error(f"Error in app_song_add: {e}", exc_info=True)
-            app_import_tasks[tid]["status"] = "failed"
-            app_import_tasks[tid]["error"] = str(e)
-        finally:
-            if temp_file_path and os.path.exists(temp_file_path):
-                try:
-                    os.remove(temp_file_path)
-                except Exception:
-                    pass
 
-    thread = threading.Thread(target=run_app_song_task, args=(task_id, spotify_url, device_id))
-    thread.daemon = True
-    thread.start()
-    
-    return jsonify({"status": "started", "taskId": task_id})
 
 @app.route('/api/app/song/status', methods=['GET'])
 def app_song_status():
@@ -1396,32 +1297,7 @@ def app_song_status():
         
     return jsonify(app_import_tasks[task_id])
 
-@app.route('/api/app/playlist/start', methods=['POST'])
-def app_playlist_start():
-    body = request.json or {}
-    playlist_url = body.get('playlistUrl')
-    device_id = body.get('deviceId')
-    
-    if not playlist_url or not device_id:
-        return jsonify({"error": "Missing 'playlistUrl' or 'deviceId'"}), 400
-        
-    try:
-        playlist_id = start_playlist_import(playlist_url, device_id=device_id, imported_via="app")
-        
-        def run_app_playlist_import():
-            try:
-                run_playlist_import(playlist_id, source_override="app_playlist")
-            except Exception as e:
-                logger.error(f"Error in background app playlist import: {e}", exc_info=True)
 
-        thread = threading.Thread(target=run_app_playlist_import)
-        thread.daemon = True
-        thread.start()
-        
-        return jsonify({"status": "started", "playlistId": playlist_id})
-    except Exception as e:
-        logger.error(f"Error in app_playlist_start: {e}", exc_info=True)
-        return jsonify({"error": str(e)}), 500
 
 @app.route('/api/app/playlist/status', methods=['GET'])
 def app_playlist_status():
@@ -1474,26 +1350,7 @@ def app_get_playlists():
         logger.error(f"Error in GET /api/app/playlists: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
 
-@app.route('/api/app/my-imports', methods=['GET'])
-def app_my_imports():
-    device_id = request.args.get('deviceId')
-    if not device_id:
-        return jsonify({"error": "Missing deviceId"}), 400
-        
-    try:
-        db_file_id = get_db_file_id()
-        if not db_file_id:
-            return jsonify([])
-        data = download_json(db_file_id)
-        tracks = data.get('tracks', data) if isinstance(data, dict) else data
-        
-        my_tracks = [t for t in tracks if t.get('requestedBy') == device_id]
-        my_tracks.sort(key=lambda x: x.get('addedAt', x.get('timestamp', '')), reverse=True)
-        
-        return jsonify(my_tracks)
-    except Exception as e:
-        logger.error(f"Error in app_my_imports: {e}", exc_info=True)
-        return jsonify({"error": str(e)}), 500
+
 
 @app.route('/api/app-imports', methods=['GET'])
 def get_app_imports():
