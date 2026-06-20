@@ -1411,3 +1411,153 @@ h1, h2, h3, .gradient-heading {
     box-shadow: none;
 }
 
+/* Mobile-specific adjustments for max-width: 480px */
+@media (max-width: 480px) {
+    /* Navbar collapse */
+    .navbar {
+        padding: 0 16px;
+    }
+    .nav-brand h1 {
+        font-size: 1.1rem;
+    }
+    #navbar-song-badge,
+    #background-task-indicators,
+    #drive-connection-status {
+        display: none !important;
+    }
+
+    /* Bottom tab bar for sidebar */
+    .app-layout {
+        padding-bottom: 70px; /* space for bottom tab bar */
+    }
+    .sidebar {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        width: 100%;
+        background: rgba(13, 17, 23, 0.95);
+        backdrop-filter: blur(24px);
+        -webkit-backdrop-filter: blur(24px);
+        border-top: 1px solid var(--border);
+        border-bottom: none;
+        padding: 8px;
+        z-index: 1000;
+        flex-direction: row;
+        overflow-x: auto;
+        justify-content: flex-start;
+    }
+    .nav-menu {
+        flex-direction: row;
+        gap: 8px;
+        justify-content: flex-start;
+        flex-wrap: nowrap;
+        min-width: max-content;
+    }
+    .nav-item {
+        padding: 10px 14px;
+        border-radius: 20px;
+    }
+    .nav-item svg {
+        width: 22px;
+        height: 22px;
+    }
+    .sidebar-footer {
+        display: none;
+    }
+
+    /* Main Content */
+    .main-content {
+        padding: 16px 12px;
+    }
+
+    .card {
+        padding: 16px;
+    }
+
+    .section-header {
+        align-items: flex-start;
+        gap: 12px;
+    }
+    .section-header .section-title-wrap h2 {
+        font-size: 1.25rem;
+    }
+
+    .storage-metrics-grid, 
+    .downloader-grid, 
+    .settings-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .artists-grid {
+        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)) !important;
+    }
+
+    /* Modals & Toasts */
+    .modal-card {
+        width: 95%;
+        margin: 0 auto;
+        max-height: 85vh;
+        overflow-y: auto;
+    }
+    .toast-container {
+        bottom: 80px;
+        right: 16px;
+        left: 16px;
+    }
+    .toast {
+        min-width: 0;
+        width: 100%;
+        max-width: none;
+    }
+
+    /* Safety constraint for fixed elements */
+    img, svg, table, input, button {
+        max-width: 100%;
+    }
+
+    /* Library Table columns (8 cols): Keep Artwork(1), Title(3), Actions(8) */
+    #tracks-table th:nth-child(2),
+    #tracks-table td:nth-child(2),
+    #tracks-table th:nth-child(4),
+    #tracks-table td:nth-child(4),
+    #tracks-table th:nth-child(5),
+    #tracks-table td:nth-child(5),
+    #tracks-table th:nth-child(6),
+    #tracks-table td:nth-child(6),
+    #tracks-table th:nth-child(7),
+    #tracks-table td:nth-child(7) {
+        display: none !important;
+    }
+
+    /* App Imports Table columns (8 cols): Keep Artwork(1), Title(2), Artist(3) */
+    #app-imports-table th:nth-child(4),
+    #app-imports-table td:nth-child(4),
+    #app-imports-table th:nth-child(5),
+    #app-imports-table td:nth-child(5),
+    #app-imports-table th:nth-child(6),
+    #app-imports-table td:nth-child(6),
+    #app-imports-table th:nth-child(7),
+    #app-imports-table td:nth-child(7),
+    #app-imports-table th:nth-child(8),
+    #app-imports-table td:nth-child(8) {
+        display: none !important;
+    }
+
+    /* Download Logs Table columns (6 cols): Keep Title(1), Artist(2) */
+    #download-logs-table th:nth-child(3),
+    #download-logs-table td:nth-child(3),
+    #download-logs-table th:nth-child(4),
+    #download-logs-table td:nth-child(4),
+    #download-logs-table th:nth-child(5),
+    #download-logs-table td:nth-child(5),
+    #download-logs-table th:nth-child(6),
+    #download-logs-table td:nth-child(6) {
+        display: none !important;
+    }
+
+    /* Adjust padding for tables on mobile */
+    .tracks-table th, .tracks-table td {
+        padding: 12px 8px;
+    }
+}
