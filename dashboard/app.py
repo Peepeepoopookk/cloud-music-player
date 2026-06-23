@@ -30,6 +30,18 @@ import datetime
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
+# Check for YOUTUBE_COOKIES environment variable and write to /tmp/cookies.txt for yt-dlp
+youtube_cookies = os.environ.get('YOUTUBE_COOKIES')
+if youtube_cookies and youtube_cookies.strip():
+    cookies_path = '/tmp/cookies.txt'
+    try:
+        os.makedirs(os.path.dirname(cookies_path), exist_ok=True)
+        with open(cookies_path, 'w', encoding='utf-8') as f:
+            f.write(youtube_cookies)
+        logger.info(f"Wrote {cookies_path} from YOUTUBE_COOKIES environment variable")
+    except Exception as e:
+        logger.error(f"Failed to write {cookies_path} from environment variable: {e}")
+
 app = Flask(__name__, 
             template_folder=os.path.join(project_root, 'dashboard', 'templates'),
             static_folder=os.path.join(project_root, 'dashboard', 'static'))
