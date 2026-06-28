@@ -137,15 +137,37 @@ def get_playlist_status(playlist_id):
 def run_playlist_import(playlist_id, batch_size=15, source_override=None):
     from datetime import datetime
     logger.info(f"Starting background playlist import for {playlist_id}")
-    db_file_id, parent_id = get_db_file_id()
     state_filename = f"playlist_import_state_{playlist_id}.json"
+    
+    file_id = None
+    parent_id = None
+
+    def mark_failed_and_raise(e):
+        logger.error(f"Error during playlist import: {e}", exc_info=True)
+        if file_id and parent_id:
+            try:
+                st = download_json(file_id)
+                if st.get("status") not in ("cancelled", "completed"):
+                    st["status"] = "failed"
+                    st["error"] = str(e)
+                    active_imports[playlist_id] = st
+                    upload_json(file_id, st, state_filename, parent_id=parent_id)
+            except Exception as write_err:
+                logger.error(f"Failed to write failure state: {write_err}")
+        raise e
+
+    try:
+        db_file_id, parent_id = get_db_file_id()
+    except Exception as e:
+        mark_failed_and_raise(e)
+        return
     
     playlist_name = "Spotify Playlist"
     if parent_id:
         try:
-            f_id = search_file_by_name(state_filename, parent_id)
-            if f_id:
-                st = download_json(f_id)
+            file_id = search_file_by_name(state_filename, parent_id)
+            if file_id:
+                st = download_json(file_id)
                 if st:
                     playlist_name = st.get("playlist_name", playlist_name)
         except Exception as e:
@@ -160,8 +182,11 @@ def run_playlist_import(playlist_id, batch_size=15, source_override=None):
     except Exception as e:
         logger.warning(f"Could not write separator line to scraper.log: {e}")
 
-    temp_dir = os.environ.get('TEMP_DIR', os.path.join(os.path.dirname(os.path.dirname(__file__)), 'temp'))
-    os.makedirs(temp_dir, exist_ok=True)
+    try:
+        temp_dir = os.environ.get('TEMP_DIR', os.path.join(os.path.dirname(os.path.dirname(__file__)), 'temp'))
+        os.makedirs(temp_dir, exist_ok=True)
+    except Exception as e:
+        mark_failed_and_raise(e)
     
     existing_tracks = []
     if db_file_id:
@@ -175,12 +200,16 @@ def run_playlist_import(playlist_id, batch_size=15, source_override=None):
             logger.warning(f"Failed to fetch existing tracks: {e}")
             
     while True:
-        file_id = search_file_by_name(state_filename, parent_id)
-        if not file_id:
-            logger.error(f"State file {state_filename} not found.")
+        try:
+            file_id = search_file_by_name(state_filename, parent_id)
+            if not file_id:
+                logger.error(f"State file {state_filename} not found.")
+                break
+            state = download_json(file_id)
+        except Exception as e:
+            mark_failed_and_raise(e)
             break
-            
-        state = download_json(file_id)
+
         active_imports[playlist_id] = state
         if state.get("status") in ("cancelled", "completed"):
             logger.info(f"Import {playlist_id} is {state.get('status')}. Stopping.")
@@ -190,15 +219,27 @@ def run_playlist_import(playlist_id, batch_size=15, source_override=None):
         tracks = state.get("tracks", [])
         
         if processed >= len(tracks):
-            state["status"] = "completed"
-            active_imports[playlist_id] = state
-            upload_json(file_id, state, state_filename, parent_id=parent_id)
+            try:
+                latest_state = download_json(file_id)
+                if latest_state.get("status") == "cancelled":
+                    active_imports[playlist_id] = latest_state
+                    break
+                latest_state["status"] = "completed"
+                active_imports[playlist_id] = latest_state
+                upload_json(file_id, latest_state, state_filename, parent_id=parent_id)
+            except Exception as e:
+                mark_failed_and_raise(e)
             break
             
         batch = tracks[processed:processed+batch_size]
         for idx, t in enumerate(batch):
             cursor = processed + idx
-            state = download_json(file_id)
+            
+            try:
+                state = download_json(file_id)
+            except Exception as e:
+                mark_failed_and_raise(e)
+
             active_imports[playlist_id] = state
             if state.get("status") == "cancelled":
                 logger.info(f"Import cancelled by user at cursor {cursor}")
@@ -219,18 +260,27 @@ def run_playlist_import(playlist_id, batch_size=15, source_override=None):
                 "spotify_id": spotify_id
             }
             try:
-                scraper_state = load_state()
-            except Exception:
-                scraper_state = {}
-            is_dup = is_duplicate(track_to_check, scraper_state, existing_tracks)
+                try:
+                    scraper_state = load_state()
+                except Exception:
+                    scraper_state = {}
+                is_dup = is_duplicate(track_to_check, scraper_state, existing_tracks)
+            except Exception as e:
+                mark_failed_and_raise(e)
             
             if is_dup:
                 logger.info(f"Skipping duplicate: {title}")
                 state["skipped"] += 1
             else:
                 local_file_path = None
+                def cancel_check():
+                    st = active_imports.get(playlist_id)
+                    if st and st.get("status") == "cancelled":
+                        return True
+                    return False
+                    
                 try:
-                    local_file_path = download_track(title, artist, temp_dir)
+                    local_file_path = download_track(title, artist, temp_dir, cancel_check_callback=cancel_check)
                     drive_file_id_upload = upload_track(local_file_path)
                     
                     enriched = enrich_track_metadata(title, artist, local_file_path=local_file_path, source=source)
@@ -248,7 +298,8 @@ def run_playlist_import(playlist_id, batch_size=15, source_override=None):
                         "source": source,
                         "requestedBy": device_id,
                         "lyrics": enriched.get("lyrics"),
-                        "syncedLyrics": enriched.get("syncedLyrics")
+                        "syncedLyrics": enriched.get("syncedLyrics"),
+                        "lyricsStatus": enriched.get("lyricsStatus", "ok")
                     }
                     
                     update_database(drive_file_id_upload, metadata)
@@ -258,8 +309,11 @@ def run_playlist_import(playlist_id, batch_size=15, source_override=None):
                     
                     state["downloaded"] += 1
                 except Exception as e:
-                    logger.error(f"Failed to process {title}: {e}", exc_info=True)
-                    state["failed"] += 1
+                    if str(e) == "Download cancelled by user":
+                        logger.info(f"Download for {title} aborted: {e}")
+                    else:
+                        logger.error(f"Failed to process {title}: {e}", exc_info=True)
+                        state["failed"] += 1
                 finally:
                     if local_file_path and os.path.exists(local_file_path):
                         try:
@@ -267,15 +321,18 @@ def run_playlist_import(playlist_id, batch_size=15, source_override=None):
                         except:
                             pass
                             
-            latest_state = download_json(file_id)
-            if latest_state.get("status") == "cancelled":
-                active_imports[playlist_id] = latest_state
-                logger.info(f"Import cancelled by user at cursor {cursor}")
-                break
-            latest_state["processed"] = cursor + 1
-            latest_state["downloaded"] = state["downloaded"]
-            latest_state["skipped"] = state["skipped"]
-            latest_state["failed"] = state["failed"]
-            state = latest_state
-            active_imports[playlist_id] = state
-            upload_json(file_id, state, state_filename, parent_id=parent_id)
+            try:
+                latest_state = download_json(file_id)
+                if latest_state.get("status") == "cancelled":
+                    active_imports[playlist_id] = latest_state
+                    logger.info(f"Import cancelled by user at cursor {cursor}")
+                    break
+                latest_state["processed"] = cursor + 1
+                latest_state["downloaded"] = state["downloaded"]
+                latest_state["skipped"] = state["skipped"]
+                latest_state["failed"] = state["failed"]
+                state = latest_state
+                active_imports[playlist_id] = state
+                upload_json(file_id, state, state_filename, parent_id=parent_id)
+            except Exception as e:
+                mark_failed_and_raise(e)

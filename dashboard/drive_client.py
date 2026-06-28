@@ -8,6 +8,10 @@ from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseDownload, MediaInMemoryUpload, MediaFileUpload
 from googleapiclient.errors import HttpError
+import socket
+
+# Add explicit timeout for all Google API HTTP requests to prevent hanging
+socket.setdefaulttimeout(60)
 
 # Configure logger
 logger = logging.getLogger(__name__)

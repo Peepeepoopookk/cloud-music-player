@@ -48,7 +48,7 @@ def fetch_lrclib_lyrics(title, artist, album, duration_seconds):
         "duration": duration_seconds
     }
     logger.info(f"metadata_enricher: Trying exact lrclib get for '{title}' by '{artist}' (duration: {duration_seconds}s)")
-    data = fetch_with_retry(get_url, params=params, headers=headers)
+    data = fetch_with_retry(get_url, params=params, headers=headers, timeout=3, retries=0)
     
     if data and isinstance(data, dict) and (data.get("plainLyrics") or data.get("syncedLyrics")):
         logger.info(f"metadata_enricher: Found exact match lyrics on lrclib.")
@@ -61,7 +61,7 @@ def fetch_lrclib_lyrics(title, artist, album, duration_seconds):
         "track_name": title,
         "artist_name": artist
     }
-    results = fetch_with_retry(search_url, params=search_params, headers=headers)
+    results = fetch_with_retry(search_url, params=search_params, headers=headers, timeout=3, retries=0)
     
     if results and isinstance(results, list) and len(results) > 0:
         norm_title = title.lower()

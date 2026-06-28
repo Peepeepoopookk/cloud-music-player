@@ -88,7 +88,7 @@ def choose_best_video(entries, artist):
             
     return best_entry if best_entry else entries[0]
 
-def download_track(title, artist, output_dir):
+def download_track(title, artist, output_dir, cancel_check_callback=None):
     """
     Downloads the best quality audio for a track using yt-dlp.
     Searches YouTube, enforces quality controls, and saves as '{artist} - {title}.opus'.
@@ -240,6 +240,13 @@ def download_track(title, artist, output_dir):
                 }
                 if os.path.exists('/tmp/cookies.txt'):
                     ydl_opts_download['cookiefile'] = '/tmp/cookies.txt'
+                    
+                if cancel_check_callback:
+                    def yt_dlp_progress_hook(d):
+                        if cancel_check_callback():
+                            raise Exception("Download cancelled by user")
+                    ydl_opts_download['progress_hooks'] = [yt_dlp_progress_hook]
+
                 
                 if ffmpeg_available:
                     pp_opts = {

@@ -318,9 +318,13 @@ def backfill_lyrics_status():
             
         tracks_changed = 0
         
+        from scraper.metadata_enricher import detect_script_mixing
         for track in tracks:
-            if 'lyricsStatus' not in track:
-                track['lyricsStatus'] = "ok"
+            old_status = track.get('lyricsStatus')
+            lyrics = track.get('lyrics') or ""
+            new_status = "needs_review" if detect_script_mixing(lyrics) else "ok"
+            if old_status != new_status:
+                track['lyricsStatus'] = new_status
                 tracks_changed += 1
                 
         if tracks_changed == 0:

@@ -48,6 +48,29 @@ app = Flask(__name__,
 
 db_file_id_cache = None
 
+import time
+
+_db_cache = {"data": None, "timestamp": 0}
+CACHE_TTL_SECONDS = 30
+
+def get_database_cached():
+    db_file_id = get_db_file_id()
+    if not db_file_id:
+        return None
+        
+    if _db_cache["data"] is not None and (time.time() - _db_cache["timestamp"]) < CACHE_TTL_SECONDS:
+        return _db_cache["data"]
+        
+    data = download_json(db_file_id)
+    _db_cache["data"] = data
+    _db_cache["timestamp"] = time.time()
+    return data
+
+def invalidate_db_cache():
+    _db_cache["data"] = None
+    _db_cache["timestamp"] = 0
+
+
 # Global background tasks state tracking
 background_tasks = {
     "scraper": {"status": "idle", "started_at": None},
@@ -55,6 +78,8 @@ background_tasks = {
     "backfill": {"status": "idle", "started_at": None, "type": None},
     "single_add": {"status": "idle", "started_at": None}
 }
+
+backfill_cancel_event = threading.Event()
 
 app_import_tasks = {}
 
@@ -285,6 +310,7 @@ def delete_track(file_id):
         
         # 3. Save updated database.json back to Drive
         upload_json(db_file_id, db_data, 'database.json')
+        invalidate_db_cache()
         
         # 4. Delete media file from Drive
         delete_file(file_id)
@@ -455,6 +481,7 @@ def normalize_library():
     """
     try:
         tracks_changed, total_tracks = normalize_database()
+        invalidate_db_cache()
         return jsonify({
             "status": "success",
             "message": f"Database normalized successfully. {tracks_changed} of {total_tracks} tracks were updated.",
@@ -487,6 +514,8 @@ def complete_backfill():
     """
     try:
         logger.info("Starting complete backfill engine in a background thread...")
+        backfill_cancel_event.clear()
+        background_tasks["backfill"]["status"] = "running"
         thread = threading.Thread(target=run_complete_backfill)
         thread.daemon = True
         thread.start()
@@ -498,6 +527,15 @@ def complete_backfill():
     except Exception as e:
         logger.error(f"Error starting complete backfill: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
+
+@app.route('/api/backfill/cancel', methods=['POST'])
+def cancel_backfill():
+    """
+    POST /api/backfill/cancel - Cancels the running backfill engine.
+    """
+    backfill_cancel_event.set()
+    background_tasks["backfill"]["status"] = "cancelled"
+    return jsonify({"status": "success", "message": "Backfill cancellation requested."})
 
 
 @app.route('/api/library/backup', methods=['POST'])
@@ -616,13 +654,15 @@ def _process_single_song(spotify_url, task_key, source, device_id=None):
             "language": enriched.get("language", "unknown"),
             "source": source,
             "lyrics": enriched.get("lyrics"),
-            "syncedLyrics": enriched.get("syncedLyrics")
+            "syncedLyrics": enriched.get("syncedLyrics"),
+            "lyricsStatus": enriched.get("lyricsStatus", "ok")
         }
         if device_id:
             db_metadata["requestedBy"] = device_id
         
         # 7. Update database on Drive
         update_database(drive_file_id, db_metadata)
+        invalidate_db_cache()
         
         # Update scraper state on Drive
         try:
@@ -735,16 +775,32 @@ def app_playlist_start():
                 run_playlist_import(playlist_id, source_override="app_playlist")
             except Exception as e:
                 logger.error(f"Error in background playlist import: {e}", exc_info=True)
+                from scraper.playlist_importer import active_imports, get_db_file_id
+                from dashboard.drive_client import upload_json, search_file_by_name
+                state = active_imports.get(playlist_id, {})
+                if state.get("status") not in ("cancelled", "completed"):
+                    state["status"] = "failed"
+                    active_imports[playlist_id] = state
+                    db_file_id, parent_id = get_db_file_id()
+                    if parent_id:
+                        state_filename = f"playlist_import_state_{playlist_id}.json"
+                        file_id = search_file_by_name(state_filename, parent_id)
+                        if file_id:
+                            upload_json(file_id, state, state_filename, parent_id=parent_id)
             finally:
                 from scraper.playlist_importer import active_imports
                 state = active_imports.get(playlist_id)
                 if state and state.get("status") == "cancelled":
                     app_import_tasks[task_key]["status"] = "cancelled"
+                elif state and state.get("status") == "failed":
+                    app_import_tasks[task_key]["status"] = "failed"
                 else:
                     app_import_tasks[task_key]["status"] = "completed"
+                app_import_tasks[task_key].pop("thread", None)
 
         thread = threading.Thread(target=run_playlist_import_wrapper)
         thread.daemon = True
+        app_import_tasks[task_key]["thread"] = thread
         thread.start()
         
         # Append clear session marker to scraper.log
@@ -988,16 +1044,32 @@ def playlist_start():
                 run_playlist_import(playlist_id)
             except Exception as e:
                 logger.error(f"Error in background playlist import: {e}", exc_info=True)
+                from scraper.playlist_importer import active_imports, get_db_file_id
+                from dashboard.drive_client import upload_json, search_file_by_name
+                state = active_imports.get(playlist_id, {})
+                if state.get("status") not in ("cancelled", "completed"):
+                    state["status"] = "failed"
+                    active_imports[playlist_id] = state
+                    db_file_id, parent_id = get_db_file_id()
+                    if parent_id:
+                        state_filename = f"playlist_import_state_{playlist_id}.json"
+                        file_id = search_file_by_name(state_filename, parent_id)
+                        if file_id:
+                            upload_json(file_id, state, state_filename, parent_id=parent_id)
             finally:
                 from scraper.playlist_importer import active_imports
                 state = active_imports.get(playlist_id)
                 if state and state.get("status") == "cancelled":
                     background_tasks["playlist_import"]["status"] = "cancelled"
+                elif state and state.get("status") == "failed":
+                    background_tasks["playlist_import"]["status"] = "failed"
                 else:
                     background_tasks["playlist_import"]["status"] = "completed"
+                background_tasks["playlist_import"].pop("thread", None)
 
         thread = threading.Thread(target=run_playlist_import_wrapper)
         thread.daemon = True
+        background_tasks["playlist_import"]["thread"] = thread
         thread.start()
         
         # Append clear session marker to scraper.log
@@ -1177,6 +1249,45 @@ def download_logs():
 
 # --- Backfill Engine Routes ---
 
+
+@app.route('/api/backfill/run', methods=['POST'])
+def run_backfill_specific():
+    if background_tasks["backfill"]["status"] == "running":
+        return jsonify({"status": "already_running"}), 400
+        
+    data = request.json or {}
+    btype = data.get("type")
+    if not btype:
+        return jsonify({"error": "Missing type"}), 400
+        
+    def run_job():
+        background_tasks["backfill"]["status"] = "running"
+        background_tasks["backfill"]["started_at"] = datetime.datetime.utcnow().isoformat() + 'Z'
+        background_tasks["backfill"]["type"] = btype
+        try:
+            from scraper.main import backfill_album_art, backfill_durations, backfill_languages, run_complete_backfill
+            if btype == "album_art":
+                backfill_album_art()
+            elif btype == "duration":
+                backfill_durations()
+            elif btype == "language":
+                backfill_languages()
+            elif btype == "all":
+                run_complete_backfill()
+            else:
+                logger.warning(f"Unknown backfill type: {btype}")
+        except Exception as e:
+            logger.error(f"Backfill job {btype} failed: {e}")
+        finally:
+            background_tasks["backfill"]["status"] = "idle"
+            
+    import threading
+    import datetime
+    thread = threading.Thread(target=run_job)
+    thread.daemon = True
+    thread.start()
+    return jsonify({"status": "started"})
+
 @app.route('/api/backfill/status', methods=['GET'])
 def get_backfill_status():
     tracks = []
@@ -1256,7 +1367,7 @@ def get_backfill_logs():
 @app.route('/api/background/status', methods=['GET'])
 def get_background_status():
     pl_state = background_tasks["playlist_import"]
-    if pl_state["status"] == "running" and pl_state["playlist_id"]:
+    if pl_state.get("playlist_id"):
         from scraper.playlist_importer import active_imports
         state = active_imports.get(pl_state["playlist_id"])
         if state:
@@ -1280,7 +1391,15 @@ def get_background_status():
                         pl_state["status"] = st.get("status")
             except Exception as e:
                 logger.warning(f"Failed to fetch playlist status from Drive: {e}")
-    return jsonify(background_tasks)
+                
+    clean_tasks = {}
+    for task_name, state_dict in background_tasks.items():
+        clean_state = {k: v for k, v in state_dict.items() if k != "thread"}
+        if "thread" in state_dict:
+            clean_state["is_alive"] = state_dict["thread"].is_alive()
+        clean_tasks[task_name] = clean_state
+        
+    return jsonify(clean_tasks)
 
 @app.route('/ping', methods=['GET'])
 def ping():
@@ -1307,7 +1426,12 @@ def app_song_status():
     if task_id not in app_import_tasks:
         return jsonify({"error": "Task not found"}), 404
         
-    return jsonify(app_import_tasks[task_id])
+    state_dict = app_import_tasks[task_id]
+    clean_state = {k: v for k, v in state_dict.items() if k != "thread"}
+    if "thread" in state_dict:
+        clean_state["is_alive"] = state_dict["thread"].is_alive()
+        
+    return jsonify(clean_state)
 
 
 

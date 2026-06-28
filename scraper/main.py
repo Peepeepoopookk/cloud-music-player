@@ -43,7 +43,7 @@ load_dotenv(dotenv_path=os.path.join(project_root, '.env'))
 from scraper.spotify_charts import build_song_pool
 from scraper.metadata_enricher import enrich_track_metadata
 from scraper.downloader import download_track
-from scraper.drive_uploader import upload_track, update_database, get_db_file_id
+from scraper.drive_uploader import upload_track, update_database, get_db_file_id, fetch_album_art
 from dashboard.drive_client import download_json, upload_json
 from scraper.state_manager import (
     load_config,
@@ -445,7 +445,8 @@ def run_scraper():
                 "language": enriched.get("language", "unknown"),
                 "source": source,
                 "lyrics": enriched.get("lyrics"),
-                "syncedLyrics": enriched.get("syncedLyrics")
+                "syncedLyrics": enriched.get("syncedLyrics"),
+                "lyricsStatus": enriched.get("lyricsStatus", "ok")
             }
             
             logger.info("Updating central database.json index on Google Drive...")
@@ -466,6 +467,7 @@ def run_scraper():
                 "source": source,
                 "lyrics": enriched.get("lyrics"),
                 "syncedLyrics": enriched.get("syncedLyrics"),
+                "lyricsStatus": enriched.get("lyricsStatus", "ok"),
                 "timestamp": datetime.datetime.utcnow().isoformat() + 'Z',
                 "spotify_id": spotify_id
             })
@@ -559,6 +561,12 @@ def run_full_enrichment_pass():
         }
 
         for i, t in enumerate(tracks):
+            from dashboard.app import backfill_cancel_event, background_tasks
+            if backfill_cancel_event.is_set():
+                logger.info("Backfill run cleanly interrupted by user request.")
+                background_tasks["backfill"]["status"] = "idle"
+                return {"status": "cancelled", "message": "Backfill run cleanly interrupted by user request."}
+
             title = t.get("title", "Unknown Title")
             artist = t.get("artist", "Unknown Artist")
             source = t.get("source", "unknown")
@@ -677,6 +685,12 @@ def run_complete_backfill():
         updated_since_last_save = False
 
         for i, t in enumerate(tracks):
+            from dashboard.app import backfill_cancel_event, background_tasks
+            if backfill_cancel_event.is_set():
+                logger.info("Backfill run cleanly interrupted by user request.")
+                background_tasks["backfill"]["status"] = "idle"
+                return {"status": "cancelled", "message": "Backfill run cleanly interrupted by user request."}
+
             title = t.get("title", "Unknown Title")
             artist = t.get("artist", "Unknown Artist")
             track_updated = False

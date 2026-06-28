@@ -1115,11 +1115,15 @@ document.addEventListener('DOMContentLoaded', () => {
         btnCancelPlaylistImport.addEventListener('click', async () => {
             if (!currentPlaylistId) return;
             try {
-                await fetch('/api/playlist/cancel', {
+                const response = await fetch('/api/playlist/cancel', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({playlist_id: currentPlaylistId})
                 });
+                if (!response.ok) {
+                    const data = await response.json().catch(() => ({}));
+                    throw new Error(data.error || "Failed to cancel import");
+                }
                 playlistStatusBadge.textContent = "Cancelled";
                 playlistStatusBadge.style.background = "#ff453a";
                 showToast("Import cancelled", "success");
@@ -1309,6 +1313,33 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    window.cancelBackfillRun = function() {
+        const cancelBtn = document.getElementById('btn-cancel-backfill');
+        if (cancelBtn) {
+            cancelBtn.disabled = true;
+            cancelBtn.innerText = 'Cancelling...';
+        }
+
+        fetch('/api/backfill/cancel', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log('Cancellation signal dispatched:', data);
+            // Let the global status poller handle updating the badge state naturally
+        })
+        .catch(err => {
+            console.error('Error dispatching backfill cancel:', err);
+            if (cancelBtn) {
+                cancelBtn.disabled = false;
+                cancelBtn.innerText = 'Cancel Run';
+            }
+        });
+    };
+
     async function runBackfill(type) {
         if (backfillRunning) return;
         try {
@@ -1463,6 +1494,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 } else if (pl.status === 'completed') {
                     playlistStatusBadge.style.background = "#30d158";
                     if (btnCancelPlaylistImport) btnCancelPlaylistImport.disabled = true;
+                    if (playlistProgressText) playlistProgressText.textContent = `Import finished: ${pl.downloaded || 0} songs added`;
+
                 } else if (pl.status === 'cancelled') {
                     playlistStatusBadge.style.background = "#ff453a";
                     if (btnCancelPlaylistImport) btnCancelPlaylistImport.disabled = true;
@@ -1477,6 +1510,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // 3. Backfill Engine Sync
         const bf = status.backfill;
+        const btnCancelBackfill = document.getElementById('btn-cancel-backfill');
+        
         if (bf.status === 'running') {
             backfillRunning = true;
             if (backfillStatusBadge) {
@@ -1485,6 +1520,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 backfillStatusBadge.style.color = '#30d158';
             }
             if (btnRunAllBackfill) btnRunAllBackfill.disabled = true;
+            if (btnCancelBackfill) btnCancelBackfill.disabled = false;
             if (btnRunBackfillList) {
                 btnRunBackfillList.forEach(btn => btn.disabled = true);
             }
@@ -1494,17 +1530,18 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             if (backfillRunning) {
                 backfillRunning = false;
-                showToast('Backfill task completed!', 'success');
+                showToast(bf.status === 'cancelled' ? 'Backfill task cancelled!' : 'Backfill task completed!', 'success');
                 loadBackfillStatus();
                 loadTracks(false);
                 loadStorage();
             }
             if (backfillStatusBadge) {
-                backfillStatusBadge.textContent = 'Idle';
+                backfillStatusBadge.textContent = bf.status === 'cancelled' ? 'Cancelled' : 'Idle';
                 backfillStatusBadge.style.backgroundColor = 'rgba(255, 255, 255, 0.05)';
                 backfillStatusBadge.style.color = 'var(--tertiary)';
             }
             if (btnRunAllBackfill) btnRunAllBackfill.disabled = false;
+            if (btnCancelBackfill) btnCancelBackfill.disabled = true;
             if (btnRunBackfillList) {
                 btnRunBackfillList.forEach(btn => btn.disabled = false);
             }
@@ -1539,7 +1576,14 @@ document.addEventListener('DOMContentLoaded', () => {
     async function pollBackgroundStatus() {
         try {
             const response = await fetch('/api/background/status');
-            if (!response.ok) return;
+            if (!response.ok) {
+                console.error(`Background status fetch failed: ${response.status} ${response.statusText}`);
+                const playlistProgressText = document.getElementById('playlist-progress-text');
+                if (playlistProgressText && playlistProgressText.parentElement && !playlistProgressText.parentElement.classList.contains('hidden')) {
+                    playlistProgressText.textContent = "Unable to fetch progress, retrying...";
+                }
+                return;
+            }
             const status = await response.json();
             window.backgroundStatus = status;
             
