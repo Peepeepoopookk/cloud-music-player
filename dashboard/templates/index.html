@@ -77,6 +77,12 @@
                     </svg>
                     <span>App Imports</span>
                 </button>
+                <button class="nav-item" id="nav-btn-data-health" data-target="section-data-health">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M22 12h-4l-3 9L9 3l-3 9H2"></path>
+                    </svg>
+                    <span>Data Health</span>
+                </button>
                 <button class="nav-item" id="nav-btn-settings" data-target="section-settings">
                     <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
                         <circle cx="12" cy="12" r="3"></circle>
@@ -133,6 +139,55 @@
                                 </tr>
                             </tbody>
                         </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- DATA HEALTH SECTION -->
+            <section class="content-section" id="section-data-health">
+                <div class="section-header">
+                    <div class="section-title-wrap">
+                        <h2>Data Health</h2>
+                        <p class="section-desc">Monitor per-field database completeness and execute targeted backfills. <span id="data-health-update-time" class="db-update-time"></span></p>
+                    </div>
+                    <button class="btn btn-secondary" id="btn-refresh-data-health">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+                        </svg>
+                        <span>Refresh</span>
+                    </button>
+                </div>
+
+                <div class="card data-health-card">
+                    <div class="table-container">
+                        <table class="tracks-table" id="data-health-table">
+                            <thead>
+                                <tr>
+                                    <th>Field Name</th>
+                                    <th style="width: 40%">Completeness</th>
+                                    <th>Present / Missing</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="data-health-body">
+                                <tr>
+                                    <td colspan="4" class="table-placeholder">Loading field completeness...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Missing Tracks Viewer Modal / Inline -->
+                <div id="missing-tracks-viewer" class="hidden" style="margin-top: 24px; background: var(--bg-surface); padding: 20px; border-radius: 12px; border: 1px solid var(--border);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                        <h3 id="missing-tracks-title">Missing Tracks</h3>
+                        <button class="btn btn-secondary" id="btn-close-missing-tracks" style="padding: 4px 8px;">Close</button>
+                    </div>
+                    <div style="max-height: 300px; overflow-y: auto;">
+                        <ul id="missing-tracks-list" style="list-style-type: none; padding: 0; margin: 0; color: var(--tertiary); font-size: 0.9rem;">
+                            <!-- Inserted dynamically -->
+                        </ul>
                     </div>
                 </div>
             </section>

@@ -48,6 +48,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 loadAppImports();
             } else if (targetId === 'section-artists') {
                 loadArtists();
+            } else if (targetId === 'section-data-health') {
+                loadDataHealth();
             }
         });
     });
@@ -1958,5 +1960,220 @@ document.addEventListener('DOMContentLoaded', () => {
     setTimeout(handleHashChange, 100);
     
     window.loadArtists = loadArtists;
+
+    // --- Data Health / Field Completeness ---
+    const btnRefreshDataHealth = document.getElementById('btn-refresh-data-health');
+    if (btnRefreshDataHealth) {
+        btnRefreshDataHealth.addEventListener('click', loadDataHealth);
+    }
+
+    const missingTracksViewer = document.getElementById('missing-tracks-viewer');
+    const btnCloseMissingTracks = document.getElementById('btn-close-missing-tracks');
+    if (btnCloseMissingTracks) {
+        btnCloseMissingTracks.addEventListener('click', () => {
+            missingTracksViewer.classList.add('hidden');
+        });
+    }
+
+    async function loadDataHealth() {
+        const tbody = document.getElementById('data-health-body');
+        if (!tbody) return;
+        
+        tbody.innerHTML = '<tr><td colspan="4" class="table-placeholder">Loading field completeness...</td></tr>';
+        
+        try {
+            const response = await fetch('/api/library/field-completeness');
+            const data = await response.json();
+            
+            if (data.error) {
+                tbody.innerHTML = `<tr><td colspan="4" class="table-placeholder error">Error: ${data.error}</td></tr>`;
+                return;
+            }
+            
+            const timeSpan = document.getElementById('data-health-update-time');
+            if (timeSpan && data.generated_at) {
+                const dt = new Date(data.generated_at);
+                timeSpan.textContent = `(Last updated: ${dt.toLocaleTimeString()})`;
+            }
+            
+            let fieldsArray = Object.keys(data.fields).map(key => ({
+                name: key,
+                ...data.fields[key]
+            }));
+            
+            // Sort by percentage ascending (worst first)
+            fieldsArray.sort((a, b) => a.percentage - b.percentage);
+            
+            tbody.innerHTML = '';
+            
+            fieldsArray.forEach(field => {
+                const tr = document.createElement('tr');
+                
+                // Field Name
+                const tdName = document.createElement('td');
+                tdName.textContent = field.name;
+                tdName.style.fontWeight = '500';
+                
+                // Completeness
+                const tdComp = document.createElement('td');
+                tdComp.innerHTML = `
+                    <div style="display: flex; align-items: center; gap: 12px; width: 100%;">
+                        <div class="progress-bar-container" style="flex: 1; max-width: 200px; height: 8px;">
+                            <div class="progress-bar-fill" style="width: ${field.percentage}%; background-color: ${field.percentage === 100 ? '#30d158' : field.percentage > 50 ? '#ffbd2e' : '#ff453a'}"></div>
+                        </div>
+                        <span style="font-size: 0.85rem; color: var(--tertiary);">${field.percentage.toFixed(1)}%</span>
+                    </div>
+                `;
+                
+                // Present / Missing
+                const tdCounts = document.createElement('td');
+                const presentSpan = document.createElement('span');
+                presentSpan.style.color = 'var(--text-primary)';
+                presentSpan.textContent = field.present;
+                
+                const missingSpan = document.createElement('a');
+                missingSpan.href = 'javascript:void(0)';
+                missingSpan.style.color = field.missing > 0 ? '#ff453a' : 'var(--tertiary)';
+                missingSpan.style.textDecoration = field.missing > 0 ? 'underline' : 'none';
+                missingSpan.style.cursor = field.missing > 0 ? 'pointer' : 'default';
+                missingSpan.textContent = field.missing;
+                
+                if (field.missing > 0) {
+                    missingSpan.addEventListener('click', () => {
+                        loadMissingTracks(field.name);
+                    });
+                }
+                
+                tdCounts.appendChild(presentSpan);
+                tdCounts.appendChild(document.createTextNode(' / '));
+                tdCounts.appendChild(missingSpan);
+                
+                // Actions
+                const tdActions = document.createElement('td');
+                const knownBackfills = {
+                    'album_art': 'album_art',
+                    'albumArt': 'album_art',
+                    'durationSeconds': 'duration',
+                    'duration': 'duration',
+                    'language': 'language',
+                    'lyricsStatus': 'lyrics_status',
+                    'source': 'normalize',
+                    'addedAt': 'normalize',
+                    'updatedAt': 'normalize',
+                    'spotify_id': 'normalize'
+                };
+                
+                if (field.percentage < 100 && knownBackfills[field.name]) {
+                    const btn = document.createElement('button');
+                    btn.className = 'btn btn-secondary';
+                    btn.style.padding = '4px 10px';
+                    btn.style.fontSize = '0.75rem';
+                    btn.textContent = 'Backfill Now';
+                    btn.onclick = () => {
+                        runDataHealthBackfill(knownBackfills[field.name], field.name);
+                    };
+                    tdActions.appendChild(btn);
+                } else if (field.percentage < 100) {
+                    const span = document.createElement('span');
+                    span.className = 'badge';
+                    span.style.backgroundColor = 'transparent';
+                    span.style.color = 'var(--tertiary)';
+                    span.style.border = '1px dashed var(--border)';
+                    span.textContent = 'No backfill available';
+                    tdActions.appendChild(span);
+                } else {
+                    const span = document.createElement('span');
+                    span.className = 'badge badge-genre';
+                    span.textContent = 'Complete';
+                    tdActions.appendChild(span);
+                }
+                
+                tr.appendChild(tdName);
+                tr.appendChild(tdComp);
+                tr.appendChild(tdCounts);
+                tr.appendChild(tdActions);
+                
+                tbody.appendChild(tr);
+            });
+            
+        } catch (error) {
+            console.error("Error loading data health:", error);
+            tbody.innerHTML = `<tr><td colspan="4" class="table-placeholder error">Failed to load data.</td></tr>`;
+        }
+    }
+
+    async function loadMissingTracks(fieldName) {
+        if (missingTracksViewer) missingTracksViewer.classList.remove('hidden');
+        const list = document.getElementById('missing-tracks-list');
+        const title = document.getElementById('missing-tracks-title');
+        
+        list.innerHTML = '<li>Loading...</li>';
+        title.textContent = `Missing Tracks: ${fieldName}`;
+        
+        try {
+            const response = await fetch(`/api/library/field-completeness/${fieldName}/missing-tracks`);
+            const data = await response.json();
+            
+            list.innerHTML = '';
+            if (data.length === 0) {
+                list.innerHTML = '<li>No tracks missing this field.</li>';
+                return;
+            }
+            
+            data.forEach(track => {
+                const li = document.createElement('li');
+                li.style.padding = '8px 0';
+                li.style.borderBottom = '1px solid var(--border)';
+                li.textContent = `${track.title} — ${track.artist}`;
+                list.appendChild(li);
+            });
+        } catch (error) {
+            list.innerHTML = `<li>Error loading tracks: ${error.message}</li>`;
+        }
+    }
+
+    async function runDataHealthBackfill(btype, fieldName) {
+        showToast(`Starting backfill for ${fieldName}...`);
+        
+        // Ensure any running backfill is cancelled
+        if (window.cancelBackfillRun) {
+             try { window.cancelBackfillRun(); } catch(e){} // fire and forget
+        }
+        
+        try {
+            const response = await fetch('/api/backfill/run', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ type: btype })
+            });
+            
+            const data = await response.json();
+            if (response.ok) {
+                showToast(`Backfill started!`);
+                // Wait for it to finish then refresh
+                pollUntilBackfillDone();
+            } else {
+                showToast(`Failed: ${data.error || data.status}`, true);
+            }
+        } catch (error) {
+            showToast(`Error starting backfill`, true);
+        }
+    }
+
+    function pollUntilBackfillDone() {
+        const interval = setInterval(async () => {
+            try {
+                const response = await fetch('/api/background/status');
+                const data = await response.json();
+                if (data.backfill && data.backfill.status === 'idle') {
+                    clearInterval(interval);
+                    showToast('Backfill completed!');
+                    loadDataHealth();
+                }
+            } catch (error) {
+                console.error("Polling error:", error);
+            }
+        }, 2000);
+    }
 
 });

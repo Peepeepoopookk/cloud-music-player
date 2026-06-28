@@ -507,6 +507,69 @@ def audit_library():
         logger.error(f"Error in GET /api/library/audit: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
 
+@app.route('/api/library/field-completeness', methods=['GET'])
+def get_field_completeness():
+    try:
+        from scraper.drive_uploader import get_db_file_id
+        db_file_id, _ = get_db_file_id()
+        if not db_file_id:
+            return jsonify({"error": "No database found"}), 404
+            
+        db_data = download_json(db_file_id)
+        tracks = db_data.get('tracks', db_data) if isinstance(db_data, dict) else db_data
+        if not isinstance(tracks, list):
+            return jsonify({"error": "Invalid database format"}), 500
+            
+        total = len(tracks)
+        fields_set = set()
+        for t in tracks:
+            fields_set.update(t.keys())
+            
+        fields_data = {}
+        for f in fields_set:
+            present = sum(1 for t in tracks if t.get(f) not in [None, "", "Unknown", "unknown", "--:--"])
+            fields_data[f] = {
+                "present": present,
+                "missing": total - present,
+                "percentage": round(present / total * 100, 1) if total > 0 else 0
+            }
+            
+        import datetime
+        return jsonify({
+            "total_tracks": total,
+            "fields": fields_data,
+            "generated_at": datetime.datetime.utcnow().isoformat() + 'Z'
+        })
+    except Exception as e:
+        logger.error(f"Error getting field completeness: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/library/field-completeness/<field_name>/missing-tracks', methods=['GET'])
+def get_missing_tracks(field_name):
+    try:
+        from scraper.drive_uploader import get_db_file_id
+        db_file_id, _ = get_db_file_id()
+        if not db_file_id:
+            return jsonify({"error": "No database found"}), 404
+            
+        db_data = download_json(db_file_id)
+        tracks = db_data.get('tracks', db_data) if isinstance(db_data, dict) else db_data
+        if not isinstance(tracks, list):
+            return jsonify({"error": "Invalid database format"}), 500
+            
+        missing = []
+        for t in tracks:
+            if t.get(field_name) in [None, "", "Unknown", "unknown", "--:--"]:
+                missing.append({
+                    "id": t.get("id"),
+                    "title": t.get("title", "Unknown Title"),
+                    "artist": t.get("artist", "Unknown Artist")
+                })
+        return jsonify(missing)
+    except Exception as e:
+        logger.error(f"Error getting missing tracks: {e}")
+        return jsonify({"error": str(e)}), 500
+
 @app.route('/api/backfill/complete', methods=['POST'])
 def complete_backfill():
     """
@@ -1274,6 +1337,12 @@ def run_backfill_specific():
                 backfill_languages()
             elif btype == "all":
                 run_complete_backfill()
+            elif btype == "lyrics_status":
+                from scraper.drive_uploader import backfill_lyrics_status
+                backfill_lyrics_status()
+            elif btype == "normalize":
+                from scraper.drive_uploader import normalize_database
+                normalize_database()
             else:
                 logger.warning(f"Unknown backfill type: {btype}")
         except Exception as e:
