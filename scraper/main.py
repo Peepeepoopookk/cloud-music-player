@@ -915,5 +915,268 @@ def run_complete_backfill():
         logger.error(f"Error in run_complete_backfill: {e}", exc_info=True)
         return {"status": "error", "message": str(e)}
 
+def run_gemini_backfill(mode="auto", task_state=None, cancel_event=None):
+    """
+    Advanced backfill engine leveraging Gemini LLM to intelligently guess missing metadata.
+    Chunks tracks into batches of 20 to maintain high LLM output quality and avoid rate limits.
+    """
+    import time
+    from dashboard.drive_client import upload_json
+    from scraper.gemini_metadata_judge import GeminiJudge, is_noncanonical_genre_value, is_noncanonical_language_value, normalize_genre_value, normalize_language_value
+
+    if task_state is None or cancel_event is None:
+        import sys
+        import threading
+        app_module = sys.modules.get("dashboard.app") or sys.modules.get("__main__")
+        if task_state is None and app_module and hasattr(app_module, "background_tasks"):
+            task_state = app_module.background_tasks.setdefault("backfill", {})
+        if cancel_event is None and app_module and hasattr(app_module, "backfill_cancel_event"):
+            cancel_event = app_module.backfill_cancel_event
+        if task_state is None:
+            task_state = {}
+        if cancel_event is None:
+            cancel_event = threading.Event()
+
+    task_state.setdefault("changelog", [])
+    task_state.setdefault("processed", 0)
+    task_state.setdefault("total_candidates", 0)
+    task_state.setdefault("api_call_count", 0)
+    task_state.setdefault("logs", [])
+
+    def append_task_log(level, message):
+        task_state.setdefault("logs", []).append({
+            "time": datetime.datetime.utcnow().isoformat() + "Z",
+            "level": level,
+            "message": message
+        })
+        task_state["logs"] = task_state["logs"][-200:]
+    
+    logger.info(f"Starting run_gemini_backfill in {mode} mode...")
+    append_task_log("info", f"Worker started in {mode} mode.")
+    db_file_id, parent_id = get_db_file_id()
+    if not db_file_id:
+        logger.error("No database.json file ID resolved.")
+        append_task_log("error", "database.json could not be resolved from Drive configuration.")
+        return {"status": "error", "message": "Database not found."}
+
+    try:
+        db_data = download_json(db_file_id)
+        if not db_data:
+            append_task_log("error", "database.json downloaded successfully but was empty.")
+            return {"status": "error", "message": "Database is empty."}
+
+        tracks = db_data if isinstance(db_data, list) else db_data.get('tracks', [])
+        
+        # 1. Create Backup
+        now = datetime.datetime.now()
+        backup_filename = f"database_backup_gemini_backfill_{now.strftime('%Y-%m-%d_%H-%M-%S')}.json"
+        upload_json(None, db_data, backup_filename, parent_id=parent_id)
+        logger.info(f"Created backup before Gemini backfill: {backup_filename}")
+        append_task_log("success", f"Created backup {backup_filename}.")
+
+        # 2. Identify Candidates
+        candidates = []
+        for t in tracks:
+            language_value = normalize_language_value(t.get("language"))
+            genre_value = normalize_genre_value(t.get("genre"))
+            if not language_value or language_value == "unknown" or is_noncanonical_language_value(t.get("language")) or \
+               not genre_value or is_noncanonical_genre_value(t.get("genre")) or \
+               not t.get("album") or t.get("album") == "Unknown Album":
+                candidates.append(t)
+                
+        if mode == "single":
+            candidates = candidates[:20]
+                
+        logger.info(f"Found {len(candidates)} tracks needing Gemini metadata backfill.")
+        task_state["total_candidates"] = len(candidates)
+        append_task_log("info", f"Found {len(candidates)} candidate tracks for Gemini analysis.")
+        
+        if not candidates:
+            append_task_log("success", "No tracks require Gemini backfill.")
+            return {"status": "success", "message": "No tracks require Gemini backfill."}
+
+        judge = GeminiJudge()
+        chunk_size = 20
+        total_updated = 0
+        consecutive_failures = 0
+
+        # 3. Process in Chunks
+        for i in range(0, len(candidates), chunk_size):
+            if cancel_event.is_set():
+                logger.info("Gemini backfill run cleanly interrupted by user request.")
+                append_task_log("warning", "Backfill cancelled before starting the next Gemini batch.")
+                task_state["status"] = "idle"
+                return {"status": "cancelled", "message": "Backfill cancelled by user.", "updated": total_updated}
+
+            chunk = candidates[i:i + chunk_size]
+            batch_number = i // chunk_size + 1
+            batch_total = (len(candidates) + chunk_size - 1) // chunk_size
+            logger.info(f"Processing Gemini batch {batch_number} / {batch_total} (Tracks {i+1} to {min(i+chunk_size, len(candidates))})...")
+            append_task_log("info", f"Starting Gemini batch {batch_number} of {batch_total} with {len(chunk)} tracks.")
+            
+            try:
+                task_state["api_call_count"] += 1
+                response = judge.analyze_tracks_batch(chunk)
+                
+                if isinstance(response, dict) and response.get("status") == "error":
+                    consecutive_failures += 1
+                    logger.error(f"Gemini API returned error: {response.get('message')}")
+                    append_task_log("error", f"Gemini batch {batch_number} failed: {response.get('message')}")
+                    task_state["changelog"].append({
+                        "track": f"Batch Failed ({len(chunk)} tracks)",
+                        "field": "System",
+                        "old": "N/A",
+                        "new": f"API Error: {str(response.get('message'))[:30]}",
+                        "confidence": 0.0
+                    })
+                    
+                    if mode == "auto" and consecutive_failures >= 3:
+                        logger.error("CIRCUIT BREAKER TRIPPED: 3 consecutive API failures.")
+                        append_task_log("error", "Circuit breaker tripped after 3 consecutive Gemini API failures.")
+                        task_state["changelog"].append({
+                            "track": "System Abort",
+                            "field": "API",
+                            "old": "N/A",
+                            "new": "Circuit Breaker Tripped",
+                            "confidence": 0.0
+                        })
+                        task_state["status"] = "idle"
+                        return {"status": "error", "message": "Circuit breaker tripped due to consecutive failures."}
+                        
+                    continue
+                    
+                consecutive_failures = 0
+                    
+                if response and getattr(response, "tracks", None):
+                    suggestions = response.tracks
+                    chunk_by_id = {
+                        str(t.get("id") or t.get("driveFileId")): t
+                        for t in chunk
+                        if t.get("id") or t.get("driveFileId")
+                    }
+                    
+                    # We must re-download the database right before update to prevent race conditions
+                    fresh_db_data = download_json(db_file_id)
+                    fresh_tracks = fresh_db_data if isinstance(fresh_db_data, list) else fresh_db_data.get('tracks', [])
+                    
+                    batch_updates = 0
+                    
+                    for suggestion in suggestions:
+                        original_track = chunk_by_id.get(str(suggestion.track_id))
+                        if not original_track:
+                            logger.warning(f"Gemini returned suggestion for unknown track ID {suggestion.track_id}. Skipped.")
+                            continue
+                        track_id = original_track.get("id") or original_track.get("driveFileId")
+                        
+                        # Find the track in the fresh database
+                        fresh_track_ref = next((t for t in fresh_tracks if (t.get("id") == track_id or t.get("driveFileId") == track_id)), None)
+                        if not fresh_track_ref:
+                            logger.warning(f"Track ID {track_id} not found in fresh database during Gemini backfill. Skipped.")
+                            continue
+                            
+                        # Apply suggestions with high confidence
+                        applied_any = False
+                        
+                        def apply_change(field_name, suggestion_obj):
+                            if suggestion_obj.value and suggestion_obj.confidence > 0.6:
+                                old_val = fresh_track_ref.get(field_name)
+                                new_val = suggestion_obj.value
+                                if field_name == "language":
+                                    new_val = normalize_language_value(new_val)
+                                    if not new_val or new_val == "unknown":
+                                        return False
+                                elif field_name == "genre":
+                                    new_val = normalize_genre_value(new_val)
+                                    if not new_val:
+                                        return False
+                                if old_val != new_val:
+                                    fresh_track_ref[field_name] = new_val
+                                    task_state["changelog"].append({
+                                        "track": fresh_track_ref.get("title", "Unknown"),
+                                        "field": field_name,
+                                        "old": old_val,
+                                        "new": new_val,
+                                        "confidence": suggestion_obj.confidence
+                                    })
+                                    return True
+                            return False
+
+                        if apply_change("language", suggestion.suggested_language): applied_any = True
+                        if apply_change("genre", suggestion.suggested_genre): applied_any = True
+                        if apply_change("title", suggestion.clean_title): applied_any = True
+                        if apply_change("artist", suggestion.clean_artist): applied_any = True
+                            
+                        if applied_any:
+                            batch_updates += 1
+                            logger.debug(f"Gemini updated {fresh_track_ref.get('title')}: {suggestion.reasoning}")
+                            
+                    if batch_updates > 0:
+                        # Re-upload the fresh database with our batch modifications
+                        if isinstance(fresh_db_data, dict):
+                            fresh_db_data['tracks'] = fresh_tracks
+                        try:
+                            upload_result = upload_json(db_file_id, fresh_db_data, 'database.json', parent_id=parent_id)
+                            if not upload_result:
+                                raise Exception("upload_json returned empty or False")
+                            total_updated += batch_updates
+                            logger.info(f"Batch successful. Updated {batch_updates} tracks in database.")
+                            append_task_log("success", f"Batch {batch_number} saved successfully. Updated {batch_updates} tracks.")
+                        except Exception as upload_err:
+                            logger.error(f"Critical Drive Upload Failure: {upload_err}")
+                            append_task_log("error", f"Drive upload failed after batch {batch_number}: {str(upload_err)}")
+                            task_state["changelog"].append({
+                                "track": "System Abort",
+                                "field": "Database",
+                                "old": "N/A",
+                                "new": "Upload Failed",
+                                "confidence": 0.0
+                            })
+                            task_state["status"] = "idle"
+                            return {"status": "error", "message": f"Drive upload failed: {str(upload_err)}"}
+                    else:
+                        append_task_log("info", f"Batch {batch_number} completed with no high-confidence updates.")
+                    
+                    task_state["processed"] += len(chunk)
+                        
+            except Exception as batch_err:
+                consecutive_failures += 1
+                logger.error(f"Gemini API batch failed: {batch_err}. Skipping batch and continuing...", exc_info=True)
+                append_task_log("error", f"Batch {batch_number} raised an exception: {str(batch_err)}")
+                task_state["changelog"].append({
+                    "track": f"Batch Failed ({len(chunk)} tracks)",
+                    "field": "System",
+                    "old": "N/A",
+                    "new": f"Exception: {str(batch_err)[:80]}",
+                    "confidence": 0.0
+                })
+                if mode == "auto" and consecutive_failures >= 3:
+                    logger.error("CIRCUIT BREAKER TRIPPED: 3 consecutive API failures.")
+                    append_task_log("error", "Circuit breaker tripped after 3 consecutive batch exceptions.")
+                    task_state["changelog"].append({
+                        "track": "System Abort",
+                        "field": "API",
+                        "old": "N/A",
+                        "new": "Circuit Breaker Tripped",
+                        "confidence": 0.0
+                    })
+                    task_state["status"] = "idle"
+                    return {"status": "error", "message": "Circuit breaker tripped due to consecutive failures."}
+                
+            # Light sleep between batches to avoid rate limits
+            time.sleep(2.0)
+
+        logger.info(f"Gemini backfill complete. Total tracks successfully updated: {total_updated}")
+        append_task_log("success", f"Gemini backfill complete. Updated {total_updated} tracks.")
+        return {
+            "status": "success",
+            "total_candidates": len(candidates),
+            "updated": total_updated
+        }
+
+    except Exception as e:
+        logger.error(f"Error in run_gemini_backfill: {e}", exc_info=True)
+        append_task_log("error", f"Gemini backfill failed: {str(e)}")
+        return {"status": "error", "message": str(e)}
+
 if __name__ == "__main__":
     run_scraper()

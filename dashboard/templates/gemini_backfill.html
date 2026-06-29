@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Metadata Backfill | Cloud Music Player</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        .changelog-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0 4px;
+            margin-top: 16px;
+        }
+        .changelog-table th {
+            text-align: left;
+            padding: 12px;
+            color: var(--tertiary);
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            border-bottom: 1px solid var(--border);
+        }
+        .changelog-table td {
+            padding: 12px;
+            background-color: var(--surface-light);
+            font-size: 0.95rem;
+        }
+        .changelog-table td:first-child {
+            border-top-left-radius: 8px;
+            border-bottom-left-radius: 8px;
+        }
+        .changelog-table td:last-child {
+            border-top-right-radius: 8px;
+            border-bottom-right-radius: 8px;
+        }
+        .confidence-high { color: #30d158; }
+        .confidence-med { color: #ffd60a; }
+        .confidence-low { color: #ff453a; }
+        .old-val { text-decoration: line-through; color: var(--tertiary); margin-right: 8px; }
+        .new-val { font-weight: 600; color: var(--primary); }
+        .live-log-panel {
+            margin-top: 16px;
+            max-height: 320px;
+            overflow-y: auto;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: rgba(0, 0, 0, 0.18);
+            font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+        }
+        .live-log-line {
+            display: grid;
+            grid-template-columns: 168px 88px minmax(0, 1fr);
+            gap: 12px;
+            padding: 10px 12px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+            font-size: 0.86rem;
+            line-height: 1.35;
+        }
+        .live-log-line:last-child { border-bottom: 0; }
+        .live-log-time { color: var(--tertiary); white-space: nowrap; }
+        .live-log-level {
+            text-transform: uppercase;
+            font-weight: 700;
+            letter-spacing: 0;
+        }
+        .live-log-message {
+            color: var(--text);
+            overflow-wrap: anywhere;
+        }
+        .live-log-level.info { color: #64d2ff; }
+        .live-log-level.success { color: #30d158; }
+        .live-log-level.warning { color: #ffd60a; }
+        .live-log-level.error { color: #ff453a; }
+    </style>
+</head>
+<body>
+    <header class="navbar" id="app-navbar">
+        <div class="nav-brand">
+            <svg class="brand-icon" viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M17.5 19C19.93 19 21.9 17.03 21.9 14.6C21.9 12.35 20.21 10.49 18 10.23C17.52 6.64 14.43 4 10.75 4C7.8 4 5.26 5.68 4.21 8.24C2.17 8.79 0.75 10.63 0.75 12.8C0.75 15.67 3.08 18 5.95 18H17.5M10 17v-6l4.5 3-4.5 3z" />
+            </svg>
+            <h1>AI Backfill Monitor</h1>
+        </div>
+        <div style="display: flex; align-items: center; gap: 16px;">
+            <a href="/" class="btn btn-secondary" style="text-decoration: none;">&larr; Back to Dashboard</a>
+        </div>
+    </header>
+
+    <div class="app-layout" style="padding: 24px; max-width: 1200px; margin: 0 auto; display: block;">
+        
+        <div class="card" style="margin-bottom: 24px;">
+            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <h2>Gemini Mass Backfill</h2>
+                    <p class="section-desc">Monitors real-time LLM metadata extraction across your library.</p>
+                </div>
+                <div style="display: flex; gap: 12px;">
+                    <button class="btn btn-primary" id="btn-run-single">Run Single Batch (20 Tracks)</button>
+                    <button class="btn btn-warning" id="btn-run-auto">Auto-Run Full Database</button>
+                    <button class="btn btn-danger" id="btn-cancel" disabled>Cancel Run</button>
+                </div>
+            </div>
+            
+            <div style="margin-top: 24px;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                    <div>
+                        <span id="progress-text" style="color: var(--tertiary); font-size: 0.9rem;">Idle (0 / 0)</span>
+                        <span class="badge text-bg-secondary" style="margin-left: 12px;">API Calls Made: <span id="api-call-count">0</span></span>
+                    </div>
+                    <span id="status-badge" class="badge" style="background: rgba(255,255,255,0.1);">Status: Idle</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progress-fill" style="width: 0%; transition: width 0.3s ease;"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card" style="margin-bottom: 24px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 16px;">
+                <h3 style="margin: 0;">Live Run Log</h3>
+                <span id="log-poll-status" style="color: var(--tertiary); font-size: 0.85rem;">Polling every 1.5s</span>
+            </div>
+            <div class="live-log-panel" id="live-log-panel">
+                <div id="live-log-body">
+                    <div class="live-log-line">
+                        <span class="live-log-time">--</span>
+                        <span class="live-log-level info">info</span>
+                        <span class="live-log-message">Waiting for a Gemini backfill run.</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3 style="margin-bottom: 16px;">AI Metadata Changes</h3>
+            <table class="changelog-table">
+                <thead>
+                    <tr>
+                        <th>Track Title</th>
+                        <th>Field Changed</th>
+                        <th>Value Update</th>
+                        <th>AI Confidence</th>
+                    </tr>
+                </thead>
+                <tbody id="changelog-body">
+                    <tr><td colspan="4" style="text-align: center; color: var(--tertiary);">No changes logged yet. Start the backfill to see real-time updates.</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        const btnRunSingle = document.getElementById('btn-run-single');
+        const btnRunAuto = document.getElementById('btn-run-auto');
+        const btnCancel = document.getElementById('btn-cancel');
+        const progressFill = document.getElementById('progress-fill');
+        const progressText = document.getElementById('progress-text');
+        const statusBadge = document.getElementById('status-badge');
+        const apiCallCount = document.getElementById('api-call-count');
+        const changelogBody = document.getElementById('changelog-body');
+        const liveLogBody = document.getElementById('live-log-body');
+        const liveLogPanel = document.getElementById('live-log-panel');
+        const logPollStatus = document.getElementById('log-poll-status');
+        
+        let pollingInterval = null;
+
+        const languageDisplayMap = {
+            en: 'english',
+            eng: 'english',
+            english: 'english',
+            hi: 'hindi',
+            hin: 'hindi',
+            hindi: 'hindi',
+            ta: 'tamil',
+            tam: 'tamil',
+            tamil: 'tamil',
+            ml: 'malayalam',
+            mal: 'malayalam',
+            malayalam: 'malayalam',
+            es: 'spanish',
+            spa: 'spanish',
+            spanish: 'spanish',
+            ko: 'korean',
+            kor: 'korean',
+            korean: 'korean',
+            fr: 'french',
+            fra: 'french',
+            french: 'french'
+        };
+
+        const genreDisplayMap = {
+            'hip hop': 'hip-hop',
+            hiphop: 'hip-hop',
+            rap: 'hip-hop',
+            rnb: 'r&b',
+            'r and b': 'r&b',
+            edm: 'electronic',
+            dance: 'electronic',
+            electronic: 'electronic',
+            'indian pop': 'pop',
+            'indian-pop': 'pop',
+            'folk-pop': 'folk',
+            'film soundtrack': 'bollywood',
+            soundtrack: 'bollywood',
+            'indian film': 'bollywood',
+            'indian film soundtrack': 'bollywood',
+            'indian soundtrack': 'bollywood',
+            bollywood: 'bollywood'
+        };
+
+        function canonicalChangelogValue(field, value) {
+            if (value === null || value === undefined || value === '') return 'null';
+            const rawValue = String(value);
+            const key = rawValue.trim().toLowerCase();
+            const fieldName = String(field || '').toLowerCase();
+
+            if (fieldName === 'language') {
+                return languageDisplayMap[key] || key;
+            }
+            if (fieldName === 'genre') {
+                if (genreDisplayMap[key]) return genreDisplayMap[key];
+                if (key.includes('hip') && key.includes('hop')) return 'hip-hop';
+                if (key.includes('indian') && key.includes('pop')) return 'pop';
+                if (key.includes('film') && key.includes('soundtrack')) return 'bollywood';
+                return key;
+            }
+            return rawValue;
+        }
+
+        function escapeHtml(value) {
+            return String(value)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        function formatLogTime(value) {
+            if (!value) return '--';
+            const date = new Date(value);
+            if (Number.isNaN(date.getTime())) return value;
+            return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        }
+
+        function renderLiveLogs(logs) {
+            const visibleLogs = Array.isArray(logs) ? logs.slice(-100) : [];
+            liveLogBody.innerHTML = '';
+
+            if (visibleLogs.length === 0) {
+                const row = document.createElement('div');
+                row.className = 'live-log-line';
+
+                const time = document.createElement('span');
+                time.className = 'live-log-time';
+                time.textContent = '--';
+
+                const level = document.createElement('span');
+                level.className = 'live-log-level info';
+                level.textContent = 'info';
+
+                const message = document.createElement('span');
+                message.className = 'live-log-message';
+                message.textContent = 'Waiting for a Gemini backfill run.';
+
+                row.append(time, level, message);
+                liveLogBody.appendChild(row);
+                return;
+            }
+
+            visibleLogs.forEach(log => {
+                const levelValue = String(log.level || 'info').toLowerCase();
+                const row = document.createElement('div');
+                row.className = 'live-log-line';
+
+                const time = document.createElement('span');
+                time.className = 'live-log-time';
+                time.textContent = formatLogTime(log.time);
+
+                const level = document.createElement('span');
+                level.className = `live-log-level ${levelValue}`;
+                level.textContent = levelValue;
+
+                const message = document.createElement('span');
+                message.className = 'live-log-message';
+                message.textContent = log.message || '';
+
+                row.append(time, level, message);
+                liveLogBody.appendChild(row);
+            });
+
+            liveLogPanel.scrollTop = liveLogPanel.scrollHeight;
+        }
+
+        function updateUI(status) {
+            const bf = status.backfill;
+            if (!bf) return;
+
+            // Status Badge
+            if (bf.status === 'running') {
+                statusBadge.textContent = 'Running...';
+                statusBadge.style.background = 'rgba(48, 209, 88, 0.2)';
+                statusBadge.style.color = '#30d158';
+                btnRunSingle.disabled = true;
+                btnRunAuto.disabled = true;
+                btnCancel.disabled = false;
+            } else {
+                statusBadge.textContent = bf.status.charAt(0).toUpperCase() + bf.status.slice(1);
+                statusBadge.style.background = 'rgba(255,255,255,0.1)';
+                statusBadge.style.color = 'var(--text)';
+                btnRunSingle.disabled = false;
+                btnRunAuto.disabled = false;
+                btnCancel.disabled = true;
+            }
+
+            apiCallCount.textContent = bf.api_call_count || 0;
+            renderLiveLogs(bf.logs || []);
+
+            // Progress Bar
+            const total = bf.total_candidates || 0;
+            const processed = bf.processed || 0;
+            if (total > 0) {
+                const pct = (processed / total) * 100;
+                progressFill.style.width = `${pct}%`;
+                progressText.textContent = `Processed: ${processed} / ${total} candidates`;
+            } else if (bf.status === 'running') {
+                progressText.textContent = "Scanning for candidates...";
+                progressFill.style.width = '100%';
+            } else {
+                progressFill.style.width = '0%';
+                progressText.textContent = `Idle`;
+            }
+
+            // Changelog Table
+            const changelog = bf.changelog || [];
+            if (changelog.length > 0) {
+                changelogBody.innerHTML = '';
+                // Render newest first
+                [...changelog].reverse().forEach(log => {
+                    const tr = document.createElement('tr');
+                    
+                    let confClass = 'confidence-med';
+                    if (log.confidence >= 0.85) confClass = 'confidence-high';
+                    if (log.confidence < 0.6) confClass = 'confidence-low';
+
+                    const oldValue = canonicalChangelogValue(log.field, log.old);
+                    const newValue = canonicalChangelogValue(log.field, log.new);
+                    
+                    tr.innerHTML = `
+                        <td style="font-weight: 500;">${escapeHtml(log.track || 'Unknown')}</td>
+                        <td><span class="badge" style="background: rgba(255,255,255,0.05); font-family: monospace;">${escapeHtml(log.field || '')}</span></td>
+                        <td>
+                            <span class="old-val">${escapeHtml(oldValue)}</span> 
+                            &rarr; 
+                            <span class="new-val">${escapeHtml(newValue)}</span>
+                        </td>
+                        <td class="${confClass}">${(log.confidence * 100).toFixed(1)}%</td>
+                    `;
+                    changelogBody.appendChild(tr);
+                });
+            }
+        }
+
+        async function pollStatus() {
+            try {
+                const res = await fetch('/api/background/status');
+                if (res.ok) {
+                    const data = await res.json();
+                    updateUI(data);
+                    logPollStatus.textContent = `Last update: ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`;
+                }
+            } catch (err) {
+                console.error("Polling error:", err);
+                logPollStatus.textContent = 'Polling failed';
+            }
+        }
+
+        btnRunSingle.addEventListener('click', async () => {
+            btnRunSingle.disabled = true;
+            btnRunAuto.disabled = true;
+            try {
+                const res = await fetch('/api/backfill/gemini', { 
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ mode: 'single' })
+                });
+                if (res.ok) {
+                    pollStatus();
+                }
+            } catch (err) {
+                alert("Failed to start single batch backfill");
+                btnRunSingle.disabled = false;
+                btnRunAuto.disabled = false;
+            }
+        });
+
+        btnRunAuto.addEventListener('click', async () => {
+            btnRunSingle.disabled = true;
+            btnRunAuto.disabled = true;
+            try {
+                const res = await fetch('/api/backfill/gemini', { 
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ mode: 'auto' })
+                });
+                if (res.ok) {
+                    pollStatus();
+                }
+            } catch (err) {
+                alert("Failed to start auto backfill");
+                btnRunSingle.disabled = false;
+                btnRunAuto.disabled = false;
+            }
+        });
+
+        btnCancel.addEventListener('click', async () => {
+            btnCancel.disabled = true;
+            try {
+                await fetch('/api/backfill/cancel', { method: 'POST' });
+            } catch (err) {
+                alert("Failed to cancel backfill");
+            }
+        });
+
+        // Start polling loop
+        pollStatus();
+        pollingInterval = setInterval(pollStatus, 1500);
+    </script>
+</body>
+</html>

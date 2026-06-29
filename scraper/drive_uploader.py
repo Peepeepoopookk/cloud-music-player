@@ -177,6 +177,77 @@ def update_database(drive_file_id, metadata):
         logger.error(f"Failed to update database: {e}", exc_info=True)
         raise
 
+def bulk_update_database(new_tracks):
+    """
+    Downloads database.json from Drive, appends all tracks in new_tracks list,
+    and uploads the updated database back to Drive.
+    """
+    try:
+        db_file_id, parent_folder_id = get_db_file_id()
+        
+        db_data = []
+        if db_file_id:
+            logger.info(f"Downloading existing database.json (ID: {db_file_id}) from Drive for bulk update...")
+            db_data = download_json(db_file_id)
+        else:
+            logger.info("database.json not found on Drive. Creating a fresh index list.")
+
+        is_dict = False
+        if not isinstance(db_data, list):
+            if isinstance(db_data, dict) and 'tracks' in db_data:
+                db_tracks = db_data['tracks']
+                is_dict = True
+            else:
+                db_tracks = []
+        else:
+            db_tracks = db_data
+                
+        timestamp = datetime.datetime.utcnow().isoformat() + 'Z'
+        
+        for metadata in new_tracks:
+            title = metadata.get('title', 'Unknown Title')
+            artist = metadata.get('artist', 'Unknown Artist')
+            resolved_art = metadata.get('album_art') or fetch_album_art(title, artist)
+            drive_file_id = metadata.get('id') or metadata.get('driveFileId')
+            
+            new_track = {
+                "id": drive_file_id,
+                "driveFileId": drive_file_id,
+                "title": title,
+                "artist": artist,
+                "album": metadata.get('album', 'Unknown Album'),
+                "genre": metadata.get('genre', 'Unknown'),
+                "duration": metadata.get('duration', '--:--'),
+                "durationSeconds": metadata.get('durationSeconds'),
+                "spotify_id": metadata.get('spotify_id'),
+                "album_art": resolved_art,
+                "albumArt": resolved_art,
+                "language": metadata.get('language', 'Unknown'),
+                "source": metadata.get('source', 'unknown'),
+                "requestedBy": metadata.get('requestedBy'),
+                "lyrics": metadata.get('lyrics'),
+                "syncedLyrics": metadata.get('syncedLyrics'),
+                "lyricsStatus": metadata.get('lyricsStatus', 'ok'),
+                "timestamp": metadata.get('timestamp') or timestamp
+            }
+            db_tracks.append(new_track)
+            logger.info(f"Appending track '{title}' to database in bulk.")
+            
+        if is_dict:
+            db_data['tracks'] = db_tracks
+        else:
+            db_data = db_tracks
+        try:
+            result = upload_json(db_file_id, db_data, 'database.json', parent_id=parent_folder_id)
+            logger.info(f"Successfully bulk updated database.json with {len(new_tracks)} tracks.")
+            return True if result else False
+        except Exception as e:
+            logger.error(f"Failed to upload bulk update to Drive: {e}", exc_info=True)
+            return False
+            
+    except Exception as e:
+        logger.error(f"Failed to bulk update database: {e}", exc_info=True)
+        return False
 def normalize_database():
     """
     Downloads database.json, normalizes all track fields according to the schema rules,

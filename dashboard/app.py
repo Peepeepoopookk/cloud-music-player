@@ -45,6 +45,8 @@ if youtube_cookies and youtube_cookies.strip():
 app = Flask(__name__, 
             template_folder=os.path.join(project_root, 'dashboard', 'templates'),
             static_folder=os.path.join(project_root, 'dashboard', 'static'))
+app.config['TEMPLATES_AUTO_RELOAD'] = True
+app.jinja_env.auto_reload = True
 
 db_file_id_cache = None
 
@@ -75,7 +77,16 @@ def invalidate_db_cache():
 background_tasks = {
     "scraper": {"status": "idle", "started_at": None},
     "playlist_import": {"status": "idle", "started_at": None, "playlist_id": None},
-    "backfill": {"status": "idle", "started_at": None, "type": None},
+    "backfill": {
+        "status": "idle",
+        "started_at": None,
+        "type": None,
+        "logs": [],
+        "changelog": [],
+        "processed": 0,
+        "total_candidates": 0,
+        "api_call_count": 0
+    },
     "single_add": {"status": "idle", "started_at": None}
 }
 
@@ -160,6 +171,17 @@ def index():
         return render_template('index.html')
     except Exception as e:
         logger.error(f"Error rendering index.html: {e}", exc_info=True)
+        return f"Error loading page: {str(e)}", 500
+
+@app.route('/gemini-backfill')
+def gemini_backfill_page():
+    """
+    GET /gemini-backfill — serves the Gemini AI Backfill monitor page
+    """
+    try:
+        return render_template('gemini_backfill.html')
+    except Exception as e:
+        logger.error(f"Error rendering gemini_backfill.html: {e}", exc_info=True)
         return f"Error loading page: {str(e)}", 500
 
 @app.route('/api/tracks', methods=['GET'])
@@ -590,6 +612,73 @@ def complete_backfill():
     except Exception as e:
         logger.error(f"Error starting complete backfill: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
+@app.route('/api/backfill/gemini', methods=['POST'])
+def gemini_backfill():
+    """
+    POST /api/backfill/gemini - Runs the Gemini LLM backfill engine in the background.
+    """
+    try:
+        data = request.get_json(silent=True) or {}
+        mode = data.get("mode", "auto")
+        
+        from scraper.main import run_gemini_backfill
+        logger.info(f"Starting Gemini backfill engine ({mode} mode) in a background thread...")
+        backfill_cancel_event.clear()
+        background_tasks["backfill"]["status"] = "running"
+        background_tasks["backfill"]["started_at"] = datetime.datetime.utcnow().isoformat() + 'Z'
+        background_tasks["backfill"]["type"] = f"gemini-{mode}"
+        background_tasks["backfill"]["logs"] = [{
+            "time": datetime.datetime.utcnow().isoformat() + 'Z',
+            "level": "info",
+            "message": f"Starting Gemini backfill in {mode} mode."
+        }]
+        background_tasks["backfill"]["changelog"] = []
+        background_tasks["backfill"]["processed"] = 0
+        background_tasks["backfill"]["total_candidates"] = 0
+        background_tasks["backfill"]["api_call_count"] = 0
+        
+        def run_gemini_job():
+            try:
+                result = run_gemini_backfill(
+                    mode=mode,
+                    task_state=background_tasks["backfill"],
+                    cancel_event=backfill_cancel_event
+                )
+                if result.get("status") == "cancelled":
+                    background_tasks["backfill"]["status"] = "cancelled"
+                    background_tasks["backfill"]["logs"].append({
+                        "time": datetime.datetime.utcnow().isoformat() + 'Z',
+                        "level": "warning",
+                        "message": result.get("message", "Gemini backfill was cancelled.")
+                    })
+                else:
+                    background_tasks["backfill"]["status"] = "idle"
+                    level = "error" if result.get("status") == "error" else "success"
+                    background_tasks["backfill"]["logs"].append({
+                        "time": datetime.datetime.utcnow().isoformat() + 'Z',
+                        "level": level,
+                        "message": result.get("message") or f"Gemini backfill finished. Updated {result.get('updated', 0)} tracks."
+                    })
+            except Exception as e:
+                logger.error(f"Gemini job failed: {e}", exc_info=True)
+                background_tasks["backfill"].setdefault("logs", []).append({
+                    "time": datetime.datetime.utcnow().isoformat() + 'Z',
+                    "level": "error",
+                    "message": f"Gemini job crashed: {str(e)}"
+                })
+                background_tasks["backfill"]["status"] = "idle"
+                
+        thread = threading.Thread(target=run_gemini_job)
+        thread.daemon = True
+        thread.start()
+        
+        return jsonify({
+            "status": "success",
+            "message": "Gemini backfill started in the background."
+        })
+    except Exception as e:
+        logger.error(f"Error starting Gemini backfill: {e}", exc_info=True)
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/api/backfill/cancel', methods=['POST'])
 def cancel_backfill():
@@ -598,6 +687,11 @@ def cancel_backfill():
     """
     backfill_cancel_event.set()
     background_tasks["backfill"]["status"] = "cancelled"
+    background_tasks["backfill"].setdefault("logs", []).append({
+        "time": datetime.datetime.utcnow().isoformat() + 'Z',
+        "level": "warning",
+        "message": "Cancellation requested by user."
+    })
     return jsonify({"status": "success", "message": "Backfill cancellation requested."})
 
 
@@ -722,6 +816,35 @@ def _process_single_song(spotify_url, task_key, source, device_id=None):
         }
         if device_id:
             db_metadata["requestedBy"] = device_id
+        
+        # --- GEMINI INTERCEPTION START ---
+        db_metadata["id"] = drive_file_id
+        db_metadata["driveFileId"] = drive_file_id
+        try:
+            from scraper.gemini_metadata_judge import GeminiJudge, normalize_genre_value, normalize_language_value
+            judge = GeminiJudge()
+            logger.info(f"Invoking GeminiJudge for single track: {title} - {artist}")
+            gemini_response = judge.analyze_tracks_batch([db_metadata])
+            
+            if gemini_response and gemini_response.tracks:
+                suggestion = gemini_response.tracks[0]
+                # Apply high confidence suggestions
+                if suggestion.suggested_language.value and suggestion.suggested_language.confidence > 0.6:
+                    normalized_language = normalize_language_value(suggestion.suggested_language.value)
+                    if normalized_language and normalized_language != "unknown":
+                        db_metadata["language"] = normalized_language
+                if suggestion.suggested_genre.value and suggestion.suggested_genre.confidence > 0.6:
+                    normalized_genre = normalize_genre_value(suggestion.suggested_genre.value)
+                    if normalized_genre:
+                        db_metadata["genre"] = normalized_genre
+                if suggestion.clean_title.value and suggestion.clean_title.confidence > 0.6:
+                    db_metadata["title"] = suggestion.clean_title.value
+                if suggestion.clean_artist.value and suggestion.clean_artist.confidence > 0.6:
+                    db_metadata["artist"] = suggestion.clean_artist.value
+                logger.info(f"Applied Gemini suggestions: {suggestion.reasoning}")
+        except Exception as gemini_err:
+            logger.error(f"Gemini API interception failed for {title}: {gemini_err}. Proceeding with original metadata.")
+        # --- GEMINI INTERCEPTION END ---
         
         # 7. Update database on Drive
         update_database(drive_file_id, db_metadata)

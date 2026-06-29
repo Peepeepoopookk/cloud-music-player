@@ -815,6 +815,26 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    const btnRunGeminiBackfill = document.getElementById('btn-run-gemini-backfill');
+    if (btnRunGeminiBackfill) {
+        btnRunGeminiBackfill.addEventListener('click', async () => {
+            btnRunGeminiBackfill.disabled = true;
+            try {
+                const response = await fetch('/api/backfill/gemini', { method: 'POST' });
+                const resData = await response.json();
+                if (response.ok && resData.status === 'success') {
+                    showToast('Gemini AI Backfill Engine started in background.', 'success');
+                    setTimeout(pollBackgroundStatus, 500);
+                } else {
+                    throw new Error(resData.error || 'Failed to start Gemini backfill');
+                }
+            } catch (err) {
+                showToast(`Error: ${err.message}`, 'error');
+                btnRunGeminiBackfill.disabled = false;
+            }
+        });
+    }
+
     // ADD SONG: Modal Handlers
     const addSongModal = document.getElementById('add-song-modal');
     const btnOpenAddSongModal = document.getElementById('btn-open-add-song-modal');
@@ -1487,6 +1507,16 @@ document.addEventListener('DOMContentLoaded', () => {
             if (playlistStatDownloaded) playlistStatDownloaded.textContent = `Downloaded: ${pl.downloaded || 0}`;
             if (playlistStatSkipped) playlistStatSkipped.textContent = `Skipped: ${pl.skipped || 0}`;
             if (playlistStatFailed) playlistStatFailed.textContent = `Failed: ${pl.failed || 0}`;
+            
+            const geminiPendingBadge = document.getElementById('gemini-pending-status');
+            if (geminiPendingBadge) {
+                if (pl.gemini_pending > 0) {
+                    geminiPendingBadge.textContent = `⏳ ${pl.gemini_pending} tracks awaiting AI analysis`;
+                    geminiPendingBadge.style.display = 'inline-block';
+                } else {
+                    geminiPendingBadge.style.display = 'none';
+                }
+            }
             
             if (playlistStatusBadge) {
                 playlistStatusBadge.textContent = pl.status.charAt(0).toUpperCase() + pl.status.slice(1);

@@ -109,6 +109,7 @@ def start_playlist_import(playlist_url, batch_size=15, device_id=None, imported_
         "downloaded": 0,
         "skipped": 0,
         "failed": 0,
+        "gemini_pending": 0,
         "status": "running",
         "device_id": device_id,
         "tracks": tracks
@@ -199,6 +200,68 @@ def run_playlist_import(playlist_id, batch_size=15, source_override=None):
         except Exception as e:
             logger.warning(f"Failed to fetch existing tracks: {e}")
             
+    pending_gemini_batch = []
+    
+    def cancel_check():
+        st = active_imports.get(playlist_id)
+        if st and st.get("status") == "cancelled":
+            return True
+        return False
+        
+    def _flush_gemini_batch(batch, state):
+        if cancel_check() or not batch:
+            return
+            
+        logger.info(f"Flushing batch of {len(batch)} tracks to Gemini Judge and Database...")
+        try:
+            from scraper.gemini_metadata_judge import GeminiJudge, normalize_genre_value, normalize_language_value
+            from scraper.drive_uploader import bulk_update_database
+            judge = GeminiJudge()
+            
+            try:
+                response = judge.analyze_tracks_batch(batch)
+                if response and response.tracks:
+                    suggestions = response.tracks
+                    batch_by_id = {
+                        str(t.get("id") or t.get("driveFileId")): t
+                        for t in batch
+                        if t.get("id") or t.get("driveFileId")
+                    }
+                    for suggestion in suggestions:
+                        track_ref = batch_by_id.get(str(suggestion.track_id))
+                        if not track_ref:
+                            logger.warning(f"Gemini returned suggestion for unknown playlist track ID {suggestion.track_id}. Skipped.")
+                            continue
+                        if suggestion.suggested_language.value and suggestion.suggested_language.confidence > 0.6:
+                            normalized_language = normalize_language_value(suggestion.suggested_language.value)
+                            if normalized_language and normalized_language != "unknown":
+                                track_ref["language"] = normalized_language
+                        if suggestion.suggested_genre.value and suggestion.suggested_genre.confidence > 0.6:
+                            normalized_genre = normalize_genre_value(suggestion.suggested_genre.value)
+                            if normalized_genre:
+                                track_ref["genre"] = normalized_genre
+                        if suggestion.clean_title.value and suggestion.clean_title.confidence > 0.6:
+                            track_ref["title"] = suggestion.clean_title.value
+                        if suggestion.clean_artist.value and suggestion.clean_artist.confidence > 0.6:
+                            track_ref["artist"] = suggestion.clean_artist.value
+            except Exception as e:
+                logger.error(f"Gemini processing failed during batch flush: {e}. Falling back to scraped metadata.")
+                
+            bulk_update_database(batch)
+            for t in batch:
+                existing_tracks.append(t)
+                add_track_to_playlist(playlist_id, t["id"])
+                
+        except Exception as batch_err:
+            mark_failed_and_raise(batch_err)
+        finally:
+            batch.clear()
+            state["gemini_pending"] = 0
+            try:
+                upload_json(file_id, state, state_filename, parent_id=parent_id)
+            except Exception as e:
+                logger.error(f"Failed to update state after flush: {e}")
+                
     while True:
         try:
             file_id = search_file_by_name(state_filename, parent_id)
@@ -301,12 +364,15 @@ def run_playlist_import(playlist_id, batch_size=15, source_override=None):
                         "syncedLyrics": enriched.get("syncedLyrics"),
                         "lyricsStatus": enriched.get("lyricsStatus", "ok")
                     }
+                    metadata["id"] = drive_file_id_upload
+                    metadata["driveFileId"] = drive_file_id_upload
                     
-                    update_database(drive_file_id_upload, metadata)
-                    existing_tracks.append(metadata)
+                    pending_gemini_batch.append(metadata)
+                    state["gemini_pending"] = len(pending_gemini_batch)
                     
-                    add_track_to_playlist(playlist_id, drive_file_id_upload)
-                    
+                    if len(pending_gemini_batch) >= 20:
+                        _flush_gemini_batch(pending_gemini_batch, state)
+                        
                     state["downloaded"] += 1
                 except Exception as e:
                     if str(e) == "Download cancelled by user":
@@ -336,3 +402,12 @@ def run_playlist_import(playlist_id, batch_size=15, source_override=None):
                 upload_json(file_id, state, state_filename, parent_id=parent_id)
             except Exception as e:
                 mark_failed_and_raise(e)
+
+    # Leftover flush
+    if pending_gemini_batch:
+        logger.info(f"Flushing remaining {len(pending_gemini_batch)} tracks after main loop.")
+        try:
+            state = download_json(file_id)
+            _flush_gemini_batch(pending_gemini_batch, state)
+        except Exception as e:
+            logger.error(f"Failed to flush leftover Gemini batch: {e}")
