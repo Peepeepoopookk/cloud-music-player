@@ -178,6 +178,99 @@ def is_noncanonical_genre_value(value: Optional[str]) -> bool:
         return True
     return normalized != str(value).strip().lower() or normalized not in CANONICAL_GENRE_VALUES
 
+def get_gemini_fields_to_fill(track: Dict[str, Any], force_fields: Optional[List[str]] = None) -> List[str]:
+    fields = []
+    force_fields = force_fields or []
+
+    language_value = normalize_language_value(track.get("language"))
+    language_needs_ai = (
+        not language_value
+        or language_value == "unknown"
+        or is_noncanonical_language_value(track.get("language"))
+    )
+    if "language" in force_fields or language_needs_ai:
+        fields.append("language")
+
+    genre_value = normalize_genre_value(track.get("genre"))
+    genre_needs_ai = (
+        not genre_value
+        or genre_value == "Unknown"
+        or is_noncanonical_genre_value(track.get("genre"))
+    )
+    if "genre" in force_fields or genre_needs_ai:
+        fields.append("genre")
+
+    return fields
+
+def build_gemini_candidate(track: Dict[str, Any], force_fields: Optional[List[str]] = None) -> Optional[Dict[str, Any]]:
+    fields_to_fill = get_gemini_fields_to_fill(track, force_fields=force_fields)
+    if not fields_to_fill:
+        return None
+
+    candidate = dict(track)
+    lyrics_present = bool(candidate.get("lyrics"))
+    synced_lyrics_present = bool(candidate.get("syncedLyrics"))
+    source_present = bool(candidate.get("source") and candidate.get("source") != "unknown")
+    title_present = bool(candidate.get("title"))
+    artist_present = bool(candidate.get("artist"))
+    album_present = bool(candidate.get("album") and candidate.get("album") != "Unknown Album")
+
+    evidence_signals = []
+    if lyrics_present:
+        evidence_signals.append("lyrics")
+    if synced_lyrics_present:
+        evidence_signals.append("syncedLyrics")
+    if title_present:
+        evidence_signals.append("title")
+    if artist_present:
+        evidence_signals.append("artist")
+    if album_present:
+        evidence_signals.append("album")
+    if source_present:
+        evidence_signals.append("source")
+
+    evidence_score = 0
+    if "language" in fields_to_fill:
+        evidence_score += 5 if lyrics_present or synced_lyrics_present else 0
+        evidence_score += 2 if title_present else 0
+        evidence_score += 1 if artist_present else 0
+        evidence_score += 1 if source_present else 0
+    if "genre" in fields_to_fill:
+        evidence_score += 3 if artist_present else 0
+        evidence_score += 2 if title_present else 0
+        evidence_score += 2 if album_present else 0
+        evidence_score += 1 if source_present else 0
+        evidence_score += 1 if lyrics_present or synced_lyrics_present else 0
+
+    candidate["fields_to_fill"] = fields_to_fill
+    candidate["evidence_signals"] = evidence_signals
+    candidate["evidence_score"] = evidence_score
+    has_language = "language" in fields_to_fill
+    has_genre = "genre" in fields_to_fill
+    if has_language and has_genre:
+        field_priority = 0
+    elif has_language:
+        field_priority = 1
+    else:
+        field_priority = 2
+
+    candidate["_gemini_priority"] = (
+        field_priority,
+        -evidence_score,
+        0 if lyrics_present or synced_lyrics_present else 1,
+        str(candidate.get("title") or "").lower()
+    )
+    return candidate
+
+def build_gemini_candidates(tracks: List[Dict[str, Any]], force_fields: Optional[List[str]] = None) -> List[Dict[str, Any]]:
+    candidates = []
+    for track in tracks:
+        candidate = build_gemini_candidate(track, force_fields=force_fields)
+        if candidate:
+            candidates.append(candidate)
+    candidates.sort(key=lambda item: item.get("_gemini_priority", (9, 0, 9, "")))
+    return candidates
+
 class GeminiJudge:
     def __init__(self, model_name: str = "gemini-3.1-flash-lite"):
         self.api_key = os.environ.get('GEMINI_API_KEY')
@@ -192,12 +285,15 @@ class GeminiJudge:
         tracks_for_prompt = []
         for t in tracks:
             tracks_for_prompt.append({
-                "track_id": t.get("id"),
+                "track_id": t.get("id") or t.get("driveFileId"),
                 "title": t.get("title", ""),
                 "artist": t.get("artist", ""),
                 "album": t.get("album", ""),
                 "genre": t.get("genre", "Unknown"),
                 "language": t.get("language", "unknown"),
+                "fields_to_fill": t.get("fields_to_fill") or ["language", "genre"],
+                "evidence_signals": t.get("evidence_signals") or [],
+                "evidence_score": t.get("evidence_score", 0),
                 "source": t.get("source", "unknown"),
                 "lyrics": t.get("lyrics", "")[:500] if t.get("lyrics") else None # truncate lyrics if present
             })
@@ -218,6 +314,8 @@ Rules:
 6. If you cannot make a determination for a field, output null for its value.
 7. Return exactly one suggestion object per input track, using the same track_id.
 8. Provide a succinct overall 'reasoning' for your assessment per track.
+9. Only fill fields listed in each track's fields_to_fill array. For fields not listed there, output null.
+10. Use evidence_signals and evidence_score to understand how much supporting context exists, but still make the final decision from the actual metadata text.
 
 Language rules:
 - For suggested_language.value, use Wavify's lowercase full-name values only:
@@ -234,13 +332,18 @@ Genre rules:
   j-pop, or c-pop.
 - Do not invent hybrid labels such as folk-pop or electro-pop. Pick the closest bucket, or output null.
 
-Title/artist cleanup rules:
-- Only clean obvious formatting noise, casing, separators, or duplicated artist text.
-- Do not rewrite stylized titles or artist names unless the correction is obvious.
+Title/artist rules:
+- Titles and artists are context only. Do not correct, rewrite, normalize, or restyle them.
+- Always output null for clean_title.value and clean_artist.value.
 """
 
     def _normalize_response(self, response: BatchMetadataResponse, tracks: List[Dict[str, Any]]) -> BatchMetadataResponse:
-        input_ids = {str(t.get("id")) for t in tracks if t.get("id")}
+        track_fields_by_id = {
+            str(t.get("id") or t.get("driveFileId")): set(t.get("fields_to_fill") or ["language", "genre"])
+            for t in tracks
+            if t.get("id") or t.get("driveFileId")
+        }
+        input_ids = set(track_fields_by_id.keys())
         response_ids = {str(t.track_id) for t in response.tracks if t.track_id}
 
         missing_ids = input_ids - response_ids
@@ -251,6 +354,10 @@ Title/artist cleanup rules:
             logger.warning(f"Gemini response included unexpected track IDs: {sorted(extra_ids)}")
 
         for suggestion in response.tracks:
+            requested_fields = track_fields_by_id.get(str(suggestion.track_id), {"language", "genre"})
+
+            if "language" not in requested_fields:
+                suggestion.suggested_language.value = None
             if suggestion.suggested_language.value is not None:
                 normalized_language = normalize_language_value(suggestion.suggested_language.value)
                 if normalized_language in CANONICAL_LANGUAGE_VALUES and normalized_language != "unknown":
@@ -258,12 +365,17 @@ Title/artist cleanup rules:
                 else:
                     suggestion.suggested_language.value = None
 
+            if "genre" not in requested_fields:
+                suggestion.suggested_genre.value = None
             if suggestion.suggested_genre.value is not None:
                 normalized_genre = normalize_genre_value(suggestion.suggested_genre.value)
                 if normalized_genre and normalized_genre in CANONICAL_GENRE_VALUES:
                     suggestion.suggested_genre.value = normalized_genre
                 else:
                     suggestion.suggested_genre.value = None
+
+            suggestion.clean_title.value = None
+            suggestion.clean_artist.value = None
 
             for confidence_obj in (
                 suggestion.suggested_language,

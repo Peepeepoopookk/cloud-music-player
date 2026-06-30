@@ -110,6 +110,9 @@ def start_playlist_import(playlist_url, batch_size=15, device_id=None, imported_
         "skipped": 0,
         "failed": 0,
         "gemini_pending": 0,
+        "gemini_deferred": 0,
+        "gemini_status": "idle",
+        "gemini_last_batch": None,
         "status": "running",
         "device_id": device_id,
         "tracks": tracks
@@ -200,7 +203,9 @@ def run_playlist_import(playlist_id, batch_size=15, source_override=None):
         except Exception as e:
             logger.warning(f"Failed to fetch existing tracks: {e}")
             
+    from scraper.gemini_import_pipeline import GEMINI_IMPORT_BATCH_SIZE
     pending_gemini_batch = []
+    deferred_gemini_tracks = []
     
     def cancel_check():
         st = active_imports.get(playlist_id)
@@ -208,46 +213,55 @@ def run_playlist_import(playlist_id, batch_size=15, source_override=None):
             return True
         return False
         
-    def _flush_gemini_batch(batch, state):
+    def _flush_gemini_batch(batch, state, final_attempt=False):
         if cancel_check() or not batch:
             return
-            
+             
         logger.info(f"Flushing batch of {len(batch)} tracks to Gemini Judge and Database...")
+        deferred_for_retry = False
         try:
-            from scraper.gemini_metadata_judge import GeminiJudge, normalize_genre_value, normalize_language_value
+            from scraper.gemini_import_pipeline import apply_gemini_to_import_batch
             from scraper.drive_uploader import bulk_update_database
-            judge = GeminiJudge()
-            
+
+            state["gemini_status"] = "processing"
+            state["gemini_pending"] = len(batch)
+            state["gemini_deferred"] = len(deferred_gemini_tracks)
+            active_imports[playlist_id] = state
             try:
-                response = judge.analyze_tracks_batch(batch)
-                if response and response.tracks:
-                    suggestions = response.tracks
-                    batch_by_id = {
-                        str(t.get("id") or t.get("driveFileId")): t
-                        for t in batch
-                        if t.get("id") or t.get("driveFileId")
-                    }
-                    for suggestion in suggestions:
-                        track_ref = batch_by_id.get(str(suggestion.track_id))
-                        if not track_ref:
-                            logger.warning(f"Gemini returned suggestion for unknown playlist track ID {suggestion.track_id}. Skipped.")
-                            continue
-                        if suggestion.suggested_language.value and suggestion.suggested_language.confidence > 0.6:
-                            normalized_language = normalize_language_value(suggestion.suggested_language.value)
-                            if normalized_language and normalized_language != "unknown":
-                                track_ref["language"] = normalized_language
-                        if suggestion.suggested_genre.value and suggestion.suggested_genre.confidence > 0.6:
-                            normalized_genre = normalize_genre_value(suggestion.suggested_genre.value)
-                            if normalized_genre:
-                                track_ref["genre"] = normalized_genre
-                        if suggestion.clean_title.value and suggestion.clean_title.confidence > 0.6:
-                            track_ref["title"] = suggestion.clean_title.value
-                        if suggestion.clean_artist.value and suggestion.clean_artist.confidence > 0.6:
-                            track_ref["artist"] = suggestion.clean_artist.value
+                upload_json(file_id, state, state_filename, parent_id=parent_id)
             except Exception as e:
-                logger.error(f"Gemini processing failed during batch flush: {e}. Falling back to scraped metadata.")
-                
-            bulk_update_database(batch)
+                logger.warning(f"Could not persist Gemini processing state before batch flush: {e}")
+
+            gemini_stats = apply_gemini_to_import_batch(batch, logger, force_fields=["language", "genre"])
+            state["gemini_last_batch"] = {
+                "submitted": gemini_stats.get("tracks_submitted", len(batch)),
+                "tracksUpdated": gemini_stats.get("tracks_updated", 0),
+                "fieldsUpdated": gemini_stats.get("fields_updated", 0),
+                "languageUpdates": gemini_stats.get("language_updates", 0),
+                "genreUpdates": gemini_stats.get("genre_updates", 0),
+                "errors": gemini_stats.get("errors", []),
+            }
+
+            if gemini_stats.get("ai_failed") and not final_attempt:
+                deferred_gemini_tracks.extend(batch)
+                state["gemini_deferred"] = len(deferred_gemini_tracks)
+                state["gemini_status"] = "deferred"
+                active_imports[playlist_id] = state
+                deferred_for_retry = True
+                logger.warning(
+                    f"Gemini failed for {len(batch)} playlist import tracks. "
+                    "Deferring database write until all downloads finish, then retrying AI."
+                )
+                return
+
+            if gemini_stats.get("ai_failed") and final_attempt:
+                logger.error(
+                    f"Final Gemini retry failed for {len(batch)} playlist import tracks. "
+                    "Writing fallback metadata so downloaded songs are not lost."
+                )
+
+            if not bulk_update_database(batch):
+                raise RuntimeError("bulk_update_database returned False during playlist Gemini batch flush")
             for t in batch:
                 existing_tracks.append(t)
                 add_track_to_playlist(playlist_id, t["id"])
@@ -257,6 +271,8 @@ def run_playlist_import(playlist_id, batch_size=15, source_override=None):
         finally:
             batch.clear()
             state["gemini_pending"] = 0
+            state["gemini_deferred"] = len(deferred_gemini_tracks)
+            state["gemini_status"] = "deferred" if deferred_for_retry or deferred_gemini_tracks else "idle"
             try:
                 upload_json(file_id, state, state_filename, parent_id=parent_id)
             except Exception as e:
@@ -370,7 +386,7 @@ def run_playlist_import(playlist_id, batch_size=15, source_override=None):
                     pending_gemini_batch.append(metadata)
                     state["gemini_pending"] = len(pending_gemini_batch)
                     
-                    if len(pending_gemini_batch) >= 20:
+                    if len(pending_gemini_batch) >= GEMINI_IMPORT_BATCH_SIZE:
                         _flush_gemini_batch(pending_gemini_batch, state)
                         
                     state["downloaded"] += 1
@@ -403,11 +419,25 @@ def run_playlist_import(playlist_id, batch_size=15, source_override=None):
             except Exception as e:
                 mark_failed_and_raise(e)
 
+    # Retry any batches whose Gemini call failed earlier, then flush leftovers.
+    if deferred_gemini_tracks:
+        logger.info(f"Retrying {len(deferred_gemini_tracks)} deferred Gemini playlist import tracks after downloads finished.")
+        while deferred_gemini_tracks:
+            retry_chunk = deferred_gemini_tracks[:GEMINI_IMPORT_BATCH_SIZE]
+            retry_count = len(retry_chunk)
+            try:
+                state = download_json(file_id)
+                _flush_gemini_batch(retry_chunk, state, final_attempt=True)
+                del deferred_gemini_tracks[:retry_count]
+            except Exception as e:
+                logger.error(f"Failed to flush deferred Gemini playlist batch: {e}")
+                break
+
     # Leftover flush
     if pending_gemini_batch:
         logger.info(f"Flushing remaining {len(pending_gemini_batch)} tracks after main loop.")
         try:
             state = download_json(file_id)
-            _flush_gemini_batch(pending_gemini_batch, state)
+            _flush_gemini_batch(pending_gemini_batch, state, final_attempt=True)
         except Exception as e:
             logger.error(f"Failed to flush leftover Gemini batch: {e}")

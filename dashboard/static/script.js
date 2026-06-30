@@ -2080,27 +2080,40 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 // Actions
                 const tdActions = document.createElement('td');
-                const knownBackfills = {
-                    'album_art': 'album_art',
-                    'albumArt': 'album_art',
-                    'durationSeconds': 'duration',
-                    'duration': 'duration',
-                    'language': 'language',
-                    'lyricsStatus': 'lyrics_status',
-                    'source': 'normalize',
-                    'addedAt': 'normalize',
-                    'updatedAt': 'normalize',
-                    'spotify_id': 'normalize'
+                const fieldBackfillActions = {
+                    'album_art': { type: 'album_art', label: 'Backfill Now' },
+                    'albumArt': { type: 'album_art', label: 'Backfill Now' },
+                    'durationSeconds': { type: 'duration', label: 'Backfill Now' },
+                    'duration': { type: 'duration', label: 'Backfill Now' },
+                    'language': { type: 'gemini', label: 'Run Gemini' },
+                    'genre': { type: 'gemini', label: 'Run Gemini' },
+                    'album': { type: 'all', label: 'Run Complete' },
+                    'lyrics': { type: 'all', label: 'Run Complete' },
+                    'syncedLyrics': { type: 'all', label: 'Run Complete' },
+                    'lyricsStatus': { type: 'lyrics_status', label: 'Backfill Now' },
+                    'source': { type: 'normalize', label: 'Normalize' },
+                    'addedAt': { type: 'normalize', label: 'Normalize' },
+                    'updatedAt': { type: 'normalize', label: 'Normalize' }
                 };
+
+                const fieldNotes = {
+                    'requestedBy': 'Optional app-import field',
+                    'spotify_id': 'Not safely recoverable',
+                    'id': 'Required identifier',
+                    'driveFileId': 'Required identifier',
+                    'url': 'Derived at runtime',
+                    'size': 'Drive metadata'
+                };
+                const action = fieldBackfillActions[field.name];
                 
-                if (field.percentage < 100 && knownBackfills[field.name]) {
+                if (field.percentage < 100 && action) {
                     const btn = document.createElement('button');
                     btn.className = 'btn btn-secondary';
                     btn.style.padding = '4px 10px';
                     btn.style.fontSize = '0.75rem';
-                    btn.textContent = 'Backfill Now';
+                    btn.textContent = action.label;
                     btn.onclick = () => {
-                        runDataHealthBackfill(knownBackfills[field.name], field.name);
+                        runDataHealthBackfill(action.type, field.name);
                     };
                     tdActions.appendChild(btn);
                 } else if (field.percentage < 100) {
@@ -2109,7 +2122,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     span.style.backgroundColor = 'transparent';
                     span.style.color = 'var(--tertiary)';
                     span.style.border = '1px dashed var(--border)';
-                    span.textContent = 'No backfill available';
+                    span.textContent = fieldNotes[field.name] || 'No automatic backfill';
+                    span.title = fieldNotes[field.name] || 'This field has no reliable automatic backfill path yet.';
                     tdActions.appendChild(span);
                 } else {
                     const span = document.createElement('span');
@@ -2171,10 +2185,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         try {
-            const response = await fetch('/api/backfill/run', {
+            const endpoint = btype === 'gemini' ? '/api/backfill/gemini' : '/api/backfill/run';
+            const payload = btype === 'gemini' ? { mode: 'auto' } : { type: btype };
+            const response = await fetch(endpoint, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ type: btype })
+                body: JSON.stringify(payload)
             });
             
             const data = await response.json();

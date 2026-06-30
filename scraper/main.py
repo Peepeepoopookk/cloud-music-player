@@ -43,7 +43,8 @@ load_dotenv(dotenv_path=os.path.join(project_root, '.env'))
 from scraper.spotify_charts import build_song_pool
 from scraper.metadata_enricher import enrich_track_metadata
 from scraper.downloader import download_track
-from scraper.drive_uploader import upload_track, update_database, get_db_file_id, fetch_album_art
+from scraper.drive_uploader import upload_track, bulk_update_database, get_db_file_id, fetch_album_art
+from scraper.gemini_import_pipeline import GEMINI_IMPORT_BATCH_SIZE, apply_gemini_to_import_batch
 from dashboard.drive_client import download_json, upload_json
 from scraper.state_manager import (
     load_config,
@@ -319,7 +320,7 @@ def run_scraper():
     # Run backfill first
     backfill_album_art()
     backfill_durations()
-    backfill_languages()
+    logger.info("Skipping legacy source-based language backfill; Gemini handles language/genre for new imports.")
     
     # 1. Load config and state
     config = load_config()
@@ -393,11 +394,93 @@ def run_scraper():
     downloaded_songs = []
     skipped_songs = []
     failed_songs = []
+    pending_gemini_batch = []
+    deferred_gemini_tracks = []
+
+    def flush_scraper_import_batch(reason, batch=None, final_attempt=False):
+        target_batch = batch if batch is not None else pending_gemini_batch
+        if not target_batch:
+            return
+
+        logger.info(
+            f"Running Gemini import metadata batch for {len(target_batch)} tracks "
+            f"before database write ({reason})."
+        )
+        state["gemini_pending"] = len(target_batch)
+        state["gemini_deferred"] = len(deferred_gemini_tracks)
+        save_state(state)
+
+        gemini_stats = apply_gemini_to_import_batch(target_batch, logger, force_fields=["language", "genre"])
+        state["gemini_last_batch"] = {
+            "submitted": gemini_stats.get("tracks_submitted", len(target_batch)),
+            "tracksUpdated": gemini_stats.get("tracks_updated", 0),
+            "fieldsUpdated": gemini_stats.get("fields_updated", 0),
+            "languageUpdates": gemini_stats.get("language_updates", 0),
+            "genreUpdates": gemini_stats.get("genre_updates", 0),
+            "errors": gemini_stats.get("errors", []),
+        }
+
+        if gemini_stats.get("ai_failed") and not final_attempt:
+            deferred_gemini_tracks.extend(target_batch)
+            logger.warning(
+                f"Gemini failed for {len(target_batch)} scraper import tracks. "
+                "Deferring database write until all downloads finish, then retrying AI."
+            )
+            target_batch.clear()
+            state["gemini_pending"] = len(pending_gemini_batch)
+            state["gemini_deferred"] = len(deferred_gemini_tracks)
+            save_state(state)
+            return
+
+        if gemini_stats.get("ai_failed") and final_attempt:
+            logger.error(
+                f"Final Gemini retry failed for {len(target_batch)} scraper import tracks. "
+                "Writing fallback metadata so downloaded songs are not lost."
+            )
+
+        if not bulk_update_database(target_batch):
+            raise RuntimeError("bulk_update_database returned False during scraper Gemini import flush")
+
+        timestamp = datetime.datetime.utcnow().isoformat() + 'Z'
+        for metadata in target_batch:
+            existing_tracks.append({
+                "id": metadata.get("id") or metadata.get("driveFileId"),
+                "driveFileId": metadata.get("driveFileId") or metadata.get("id"),
+                "title": metadata.get("title"),
+                "artist": metadata.get("artist"),
+                "album": metadata.get("album", "Single"),
+                "genre": metadata.get("genre", "Unknown"),
+                "duration": metadata.get("duration", "--:--"),
+                "durationSeconds": metadata.get("durationSeconds"),
+                "album_art": metadata.get("album_art"),
+                "language": metadata.get("language", "unknown"),
+                "source": metadata.get("source"),
+                "lyrics": metadata.get("lyrics"),
+                "syncedLyrics": metadata.get("syncedLyrics"),
+                "lyricsStatus": metadata.get("lyricsStatus", "ok"),
+                "timestamp": metadata.get("timestamp") or timestamp,
+                "spotify_id": metadata.get("spotify_id")
+            })
+
+            spotify_id = metadata.get("spotify_id")
+            if spotify_id and spotify_id != "UnknownID":
+                state.setdefault("downloaded_ids", []).append(spotify_id)
+            state.setdefault("downloaded_titles", []).append(metadata.get("title"))
+            downloaded_songs.append(f"{metadata.get('title')} by {metadata.get('artist')}")
+
+        logger.info(
+            f"Database bulk write complete for {len(target_batch)} AI-processed imports "
+            f"({gemini_stats.get('fields_updated', 0)} AI fields updated)."
+        )
+        target_batch.clear()
+        state["gemini_pending"] = len(pending_gemini_batch)
+        state["gemini_deferred"] = len(deferred_gemini_tracks)
+        save_state(state)
     
     logger.info(f"Current effective pool size: {len(effective_pool)}. Resume index: {cursor}. Quota target: {songs_per_run} songs.")
     
     # 5. Process tracks
-    while cursor < len(effective_pool) and len(downloaded_songs) < songs_per_run:
+    while cursor < len(effective_pool) and (len(downloaded_songs) + len(pending_gemini_batch) + len(deferred_gemini_tracks)) < songs_per_run:
         track = effective_pool[cursor]
         title = track.get("title")
         artist = track.get("artist")
@@ -420,6 +503,7 @@ def run_scraper():
         logger.info("-" * 50)
         
         local_file_path = None
+        cursor_advanced = False
         try:
             # Step A: Download audio via yt-dlp
             logger.info(f"Downloading audio stream for: '{title}'...")
@@ -448,48 +532,30 @@ def run_scraper():
                 "syncedLyrics": enriched.get("syncedLyrics"),
                 "lyricsStatus": enriched.get("lyricsStatus", "ok")
             }
+            metadata["id"] = drive_file_id
+            metadata["driveFileId"] = drive_file_id
             
-            logger.info("Updating central database.json index on Google Drive...")
-            update_database(drive_file_id, metadata)
-            
-            # Feed newly uploaded track back into local lookup cache
-            existing_tracks.append({
-                "id": drive_file_id,
-                "driveFileId": drive_file_id,
-                "title": title,
-                "artist": artist,
-                "album": enriched.get("album", "Single"),
-                "genre": enriched.get("genre", genre),
-                "duration": enriched.get("duration", "--:--"),
-                "durationSeconds": enriched.get("durationSeconds"),
-                "album_art": enriched.get("album_art"),
-                "language": enriched.get("language", "unknown"),
-                "source": source,
-                "lyrics": enriched.get("lyrics"),
-                "syncedLyrics": enriched.get("syncedLyrics"),
-                "lyricsStatus": enriched.get("lyricsStatus", "ok"),
-                "timestamp": datetime.datetime.utcnow().isoformat() + 'Z',
-                "spotify_id": spotify_id
-            })
-            
-            # Update state variables immediately
-            if spotify_id and spotify_id != "UnknownID":
-                state["downloaded_ids"].append(spotify_id)
-            state["downloaded_titles"].append(title)
+            pending_gemini_batch.append(metadata)
+            state["gemini_pending"] = len(pending_gemini_batch)
             
             cursor += 1
             state["cursor"] = cursor
-            downloaded_songs.append(f"{title} by {artist}")
-            logger.info(f"Successfully processed track: '{title}' by '{artist}'")
-            
-            # Save updated state after every successful download
+            cursor_advanced = True
+            logger.info(
+                f"Queued '{title}' by '{artist}' for Gemini import metadata batch "
+                f"({len(pending_gemini_batch)}/{GEMINI_IMPORT_BATCH_SIZE})."
+            )
             save_state(state)
+
+            if len(pending_gemini_batch) >= GEMINI_IMPORT_BATCH_SIZE:
+                flush_scraper_import_batch("batch reached 20 successful downloads")
             
         except Exception as track_err:
             logger.error(f"Failed to process track '{title}' by '{artist}': {track_err}", exc_info=True)
             failed_songs.append(f"{title} by {artist}")
-            cursor += 1
-            state["cursor"] = cursor
+            if not cursor_advanced:
+                cursor += 1
+                state["cursor"] = cursor
             # Save state to maintain the cursor position even on failure
             save_state(state)
             
@@ -500,7 +566,33 @@ def run_scraper():
                     logger.info(f"Cleaned up local temp file: {local_file_path}")
                 except Exception as cleanup_err:
                     logger.warning(f"Could not remove local temp file {local_file_path}: {cleanup_err}")
-                    
+
+    if deferred_gemini_tracks:
+        logger.info(f"Retrying {len(deferred_gemini_tracks)} deferred Gemini scraper import tracks after downloads finished.")
+        while deferred_gemini_tracks:
+            retry_chunk = deferred_gemini_tracks[:GEMINI_IMPORT_BATCH_SIZE]
+            retry_count = len(retry_chunk)
+            try:
+                flush_scraper_import_batch("final retry for deferred AI batch", batch=retry_chunk, final_attempt=True)
+                del deferred_gemini_tracks[:retry_count]
+                state["gemini_deferred"] = len(deferred_gemini_tracks)
+                save_state(state)
+            except Exception as flush_err:
+                logger.error(f"Failed to flush deferred Gemini import batch: {flush_err}", exc_info=True)
+                failed_songs.extend(f"{m.get('title')} by {m.get('artist')}" for m in retry_chunk)
+                break
+
+    if pending_gemini_batch:
+        try:
+            flush_scraper_import_batch("end of scraper run", final_attempt=True)
+        except Exception as flush_err:
+            logger.error(f"Failed to flush final Gemini import batch: {flush_err}", exc_info=True)
+            failed_songs.extend(f"{m.get('title')} by {m.get('artist')}" for m in pending_gemini_batch)
+            pending_gemini_batch.clear()
+            state["gemini_pending"] = 0
+            state["gemini_deferred"] = len(deferred_gemini_tracks)
+            save_state(state)
+
     # Check if pool was exhausted before meeting quota
     if cursor >= len(effective_pool) and len(downloaded_songs) < songs_per_run:
         logger.warning(f"Effective pool exhausted (processed {len(downloaded_songs)}/{songs_per_run} songs). Will refresh on next run.")
@@ -922,7 +1014,7 @@ def run_gemini_backfill(mode="auto", task_state=None, cancel_event=None):
     """
     import time
     from dashboard.drive_client import upload_json
-    from scraper.gemini_metadata_judge import GeminiJudge, is_noncanonical_genre_value, is_noncanonical_language_value, normalize_genre_value, normalize_language_value
+    from scraper.gemini_metadata_judge import GeminiJudge, build_gemini_candidates, normalize_genre_value, normalize_language_value
 
     if task_state is None or cancel_event is None:
         import sys
@@ -974,22 +1066,24 @@ def run_gemini_backfill(mode="auto", task_state=None, cancel_event=None):
         logger.info(f"Created backup before Gemini backfill: {backup_filename}")
         append_task_log("success", f"Created backup {backup_filename}.")
 
-        # 2. Identify Candidates
-        candidates = []
-        for t in tracks:
-            language_value = normalize_language_value(t.get("language"))
-            genre_value = normalize_genre_value(t.get("genre"))
-            if not language_value or language_value == "unknown" or is_noncanonical_language_value(t.get("language")) or \
-               not genre_value or is_noncanonical_genre_value(t.get("genre")) or \
-               not t.get("album") or t.get("album") == "Unknown Album":
-                candidates.append(t)
-                
+        # 2. Identify exactly which fields need AI and prioritize tracks with usable evidence.
+        candidates = build_gemini_candidates(tracks)
+
+        total_ai_candidates = len(candidates)
         if mode == "single":
             candidates = candidates[:20]
                 
-        logger.info(f"Found {len(candidates)} tracks needing Gemini metadata backfill.")
+        logger.info(f"Found {total_ai_candidates} tracks needing Gemini metadata backfill. Processing {len(candidates)} in this run.")
         task_state["total_candidates"] = len(candidates)
-        append_task_log("info", f"Found {len(candidates)} candidate tracks for Gemini analysis.")
+        append_task_log("info", f"Found {total_ai_candidates} AI candidate tracks; processing {len(candidates)} in this run.")
+        language_requests = sum(1 for c in candidates if "language" in c.get("fields_to_fill", []))
+        genre_requests = sum(1 for c in candidates if "genre" in c.get("fields_to_fill", []))
+        high_evidence = sum(1 for c in candidates if c.get("evidence_score", 0) >= 5)
+        append_task_log(
+            "info",
+            f"Candidate plan: {language_requests} language fields, {genre_requests} genre fields, "
+            f"{high_evidence} high-evidence tracks; language-needed tracks are prioritized."
+        )
         
         if not candidates:
             append_task_log("success", "No tracks require Gemini backfill.")
@@ -998,6 +1092,7 @@ def run_gemini_backfill(mode="auto", task_state=None, cancel_event=None):
         judge = GeminiJudge()
         chunk_size = 20
         total_updated = 0
+        total_fields_updated = 0
         consecutive_failures = 0
 
         # 3. Process in Chunks
@@ -1060,56 +1155,107 @@ def run_gemini_backfill(mode="auto", task_state=None, cancel_event=None):
                     fresh_tracks = fresh_db_data if isinstance(fresh_db_data, list) else fresh_db_data.get('tracks', [])
                     
                     batch_updates = 0
+                    batch_fields_updated = 0
+                    batch_stats = {
+                        "empty": 0,
+                        "low_confidence": 0,
+                        "invalid": 0,
+                        "unchanged": 0,
+                        "unknown_track": 0,
+                        "missing_from_database": 0
+                    }
+                    matched_suggestions = 0
                     
                     for suggestion in suggestions:
                         original_track = chunk_by_id.get(str(suggestion.track_id))
                         if not original_track:
                             logger.warning(f"Gemini returned suggestion for unknown track ID {suggestion.track_id}. Skipped.")
+                            batch_stats["unknown_track"] += 1
                             continue
+                        matched_suggestions += 1
                         track_id = original_track.get("id") or original_track.get("driveFileId")
                         
                         # Find the track in the fresh database
                         fresh_track_ref = next((t for t in fresh_tracks if (t.get("id") == track_id or t.get("driveFileId") == track_id)), None)
                         if not fresh_track_ref:
                             logger.warning(f"Track ID {track_id} not found in fresh database during Gemini backfill. Skipped.")
+                            batch_stats["missing_from_database"] += 1
                             continue
                             
                         # Apply suggestions with high confidence
                         applied_any = False
+                        requested_fields = set(original_track.get("fields_to_fill") or ["language", "genre"])
                         
                         def apply_change(field_name, suggestion_obj):
-                            if suggestion_obj.value and suggestion_obj.confidence > 0.6:
-                                old_val = fresh_track_ref.get(field_name)
-                                new_val = suggestion_obj.value
-                                if field_name == "language":
-                                    new_val = normalize_language_value(new_val)
-                                    if not new_val or new_val == "unknown":
-                                        return False
-                                elif field_name == "genre":
-                                    new_val = normalize_genre_value(new_val)
-                                    if not new_val:
-                                        return False
-                                if old_val != new_val:
-                                    fresh_track_ref[field_name] = new_val
-                                    task_state["changelog"].append({
-                                        "track": fresh_track_ref.get("title", "Unknown"),
-                                        "field": field_name,
-                                        "old": old_val,
-                                        "new": new_val,
-                                        "confidence": suggestion_obj.confidence
-                                    })
-                                    return True
-                            return False
+                            if not suggestion_obj or not suggestion_obj.value:
+                                return "empty"
+                            confidence = suggestion_obj.confidence or 0.0
+                            if confidence <= 0.6:
+                                return "low_confidence"
 
-                        if apply_change("language", suggestion.suggested_language): applied_any = True
-                        if apply_change("genre", suggestion.suggested_genre): applied_any = True
-                        if apply_change("title", suggestion.clean_title): applied_any = True
-                        if apply_change("artist", suggestion.clean_artist): applied_any = True
+                            old_val = fresh_track_ref.get(field_name)
+                            new_val = suggestion_obj.value
+                            if field_name == "language":
+                                new_val = normalize_language_value(new_val)
+                                if not new_val or new_val == "unknown":
+                                    return "invalid"
+                            elif field_name == "genre":
+                                new_val = normalize_genre_value(new_val)
+                                if not new_val:
+                                    return "invalid"
+
+                            if old_val == new_val:
+                                return "unchanged"
+
+                            fresh_track_ref[field_name] = new_val
+                            task_state["changelog"].append({
+                                "track": fresh_track_ref.get("title", "Unknown"),
+                                "field": field_name,
+                                "old": old_val,
+                                "new": new_val,
+                                "confidence": confidence
+                            })
+                            return "applied"
+
+                        for field_name, suggestion_obj in (
+                            ("language", suggestion.suggested_language),
+                            ("genre", suggestion.suggested_genre)
+                        ):
+                            if field_name not in requested_fields:
+                                continue
+                            change_result = apply_change(field_name, suggestion_obj)
+                            if change_result == "applied":
+                                applied_any = True
+                                batch_fields_updated += 1
+                            else:
+                                batch_stats[change_result] = batch_stats.get(change_result, 0) + 1
                             
                         if applied_any:
                             batch_updates += 1
                             logger.debug(f"Gemini updated {fresh_track_ref.get('title')}: {suggestion.reasoning}")
-                            
+
+                    missing_response_count = max(0, len(chunk) - matched_suggestions)
+                    diagnostics = []
+                    if missing_response_count:
+                        diagnostics.append(f"{missing_response_count} tracks had no response")
+                    diagnostic_labels = {
+                        "empty": "empty/null",
+                        "low_confidence": "low-confidence",
+                        "invalid": "invalid",
+                        "unchanged": "unchanged",
+                        "unknown_track": "unknown track-id",
+                        "missing_from_database": "missing from database"
+                    }
+                    for key, label in diagnostic_labels.items():
+                        if batch_stats.get(key):
+                            diagnostics.append(f"{batch_stats[key]} {label}")
+                    diagnostic_text = "; ".join(diagnostics) if diagnostics else "no rejected suggestions"
+                    append_task_log(
+                        "info",
+                        f"Batch {batch_number} analysis: {len(chunk)} tracks, {batch_updates} tracks changed, "
+                        f"{batch_fields_updated} fields updated; {diagnostic_text}."
+                    )
+
                     if batch_updates > 0:
                         # Re-upload the fresh database with our batch modifications
                         if isinstance(fresh_db_data, dict):
@@ -1119,8 +1265,9 @@ def run_gemini_backfill(mode="auto", task_state=None, cancel_event=None):
                             if not upload_result:
                                 raise Exception("upload_json returned empty or False")
                             total_updated += batch_updates
-                            logger.info(f"Batch successful. Updated {batch_updates} tracks in database.")
-                            append_task_log("success", f"Batch {batch_number} saved successfully. Updated {batch_updates} tracks.")
+                            total_fields_updated += batch_fields_updated
+                            logger.info(f"Batch successful. Updated {batch_updates} tracks and {batch_fields_updated} fields in database.")
+                            append_task_log("success", f"Batch {batch_number} saved successfully. Updated {batch_updates} tracks ({batch_fields_updated} fields).")
                         except Exception as upload_err:
                             logger.error(f"Critical Drive Upload Failure: {upload_err}")
                             append_task_log("error", f"Drive upload failed after batch {batch_number}: {str(upload_err)}")
@@ -1136,6 +1283,9 @@ def run_gemini_backfill(mode="auto", task_state=None, cancel_event=None):
                     else:
                         append_task_log("info", f"Batch {batch_number} completed with no high-confidence updates.")
                     
+                    task_state["processed"] += len(chunk)
+                else:
+                    append_task_log("warning", f"Batch {batch_number} returned no track suggestions.")
                     task_state["processed"] += len(chunk)
                         
             except Exception as batch_err:
@@ -1166,11 +1316,12 @@ def run_gemini_backfill(mode="auto", task_state=None, cancel_event=None):
             time.sleep(2.0)
 
         logger.info(f"Gemini backfill complete. Total tracks successfully updated: {total_updated}")
-        append_task_log("success", f"Gemini backfill complete. Updated {total_updated} tracks.")
+        append_task_log("success", f"Gemini backfill complete. Updated {total_updated} tracks ({total_fields_updated} fields).")
         return {
             "status": "success",
             "total_candidates": len(candidates),
-            "updated": total_updated
+            "updated": total_updated,
+            "fields_updated": total_fields_updated
         }
 
     except Exception as e:

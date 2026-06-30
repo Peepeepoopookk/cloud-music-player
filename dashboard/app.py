@@ -46,6 +46,7 @@ app = Flask(__name__,
             template_folder=os.path.join(project_root, 'dashboard', 'templates'),
             static_folder=os.path.join(project_root, 'dashboard', 'static'))
 app.config['TEMPLATES_AUTO_RELOAD'] = True
+app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
 app.jinja_env.auto_reload = True
 
 db_file_id_cache = None
@@ -182,6 +183,17 @@ def gemini_backfill_page():
         return render_template('gemini_backfill.html')
     except Exception as e:
         logger.error(f"Error rendering gemini_backfill.html: {e}", exc_info=True)
+        return f"Error loading page: {str(e)}", 500
+
+@app.route('/imported-playlists')
+def imported_playlists_page():
+    """
+    GET /imported-playlists - serves the imported playlists browser page.
+    """
+    try:
+        return render_template('imported_playlists.html')
+    except Exception as e:
+        logger.error(f"Error rendering imported_playlists.html: {e}", exc_info=True)
         return f"Error loading page: {str(e)}", 500
 
 @app.route('/api/tracks', methods=['GET'])
@@ -592,6 +604,46 @@ def get_missing_tracks(field_name):
         logger.error(f"Error getting missing tracks: {e}")
         return jsonify({"error": str(e)}), 500
 
+def _build_gemini_backfill_summary():
+    from scraper.drive_uploader import get_db_file_id
+    from scraper.gemini_metadata_judge import (
+        build_gemini_candidates
+    )
+
+    db_file_id, _ = get_db_file_id()
+    if not db_file_id:
+        return {"error": "No database found"}, 404
+
+    db_data = download_json(db_file_id)
+    tracks = db_data.get('tracks', db_data) if isinstance(db_data, dict) else db_data
+    if not isinstance(tracks, list):
+        return {"error": "Invalid database format"}, 500
+
+    candidates = build_gemini_candidates(tracks)
+    language_missing = sum(1 for track in candidates if "language" in track.get("fields_to_fill", []))
+    genre_missing = sum(1 for track in candidates if "genre" in track.get("fields_to_fill", []))
+    candidate_tracks = len(candidates)
+
+    return {
+        "total_tracks": len(tracks),
+        "candidate_tracks": candidate_tracks,
+        "field_count": language_missing + genre_missing,
+        "fields": {
+            "language": language_missing,
+            "genre": genre_missing
+        },
+        "generated_at": datetime.datetime.utcnow().isoformat() + 'Z'
+    }, 200
+
+@app.route('/api/backfill/gemini/summary', methods=['GET'])
+def get_gemini_backfill_summary():
+    try:
+        payload, status_code = _build_gemini_backfill_summary()
+        return jsonify(payload), status_code
+    except Exception as e:
+        logger.error(f"Error getting Gemini backfill summary: {e}", exc_info=True)
+        return jsonify({"error": str(e)}), 500
+
 @app.route('/api/backfill/complete', methods=['POST'])
 def complete_backfill():
     """
@@ -654,10 +706,14 @@ def gemini_backfill():
                 else:
                     background_tasks["backfill"]["status"] = "idle"
                     level = "error" if result.get("status") == "error" else "success"
+                    default_message = (
+                        f"Gemini backfill finished. Updated {result.get('updated', 0)} tracks "
+                        f"({result.get('fields_updated', 0)} fields)."
+                    )
                     background_tasks["backfill"]["logs"].append({
                         "time": datetime.datetime.utcnow().isoformat() + 'Z',
                         "level": level,
-                        "message": result.get("message") or f"Gemini backfill finished. Updated {result.get('updated', 0)} tracks."
+                        "message": result.get("message") or default_message
                     })
             except Exception as e:
                 logger.error(f"Gemini job failed: {e}", exc_info=True)
@@ -821,26 +877,26 @@ def _process_single_song(spotify_url, task_key, source, device_id=None):
         db_metadata["id"] = drive_file_id
         db_metadata["driveFileId"] = drive_file_id
         try:
-            from scraper.gemini_metadata_judge import GeminiJudge, normalize_genre_value, normalize_language_value
+            from scraper.gemini_metadata_judge import GeminiJudge, build_gemini_candidate, normalize_genre_value, normalize_language_value
             judge = GeminiJudge()
             logger.info(f"Invoking GeminiJudge for single track: {title} - {artist}")
-            gemini_response = judge.analyze_tracks_batch([db_metadata])
+            gemini_candidate = build_gemini_candidate(db_metadata, force_fields=["language", "genre"])
+            gemini_response = judge.analyze_tracks_batch([gemini_candidate] if gemini_candidate else [])
             
-            if gemini_response and gemini_response.tracks:
+            if isinstance(gemini_response, dict) and gemini_response.get("status") == "error":
+                logger.error(f"Gemini single-track analysis failed for {title}: {gemini_response.get('message')}")
+            elif gemini_response and getattr(gemini_response, "tracks", None):
                 suggestion = gemini_response.tracks[0]
+                requested_fields = set(gemini_candidate.get("fields_to_fill") or ["language", "genre"]) if gemini_candidate else set()
                 # Apply high confidence suggestions
-                if suggestion.suggested_language.value and suggestion.suggested_language.confidence > 0.6:
+                if "language" in requested_fields and suggestion.suggested_language.value and suggestion.suggested_language.confidence > 0.6:
                     normalized_language = normalize_language_value(suggestion.suggested_language.value)
                     if normalized_language and normalized_language != "unknown":
                         db_metadata["language"] = normalized_language
-                if suggestion.suggested_genre.value and suggestion.suggested_genre.confidence > 0.6:
+                if "genre" in requested_fields and suggestion.suggested_genre.value and suggestion.suggested_genre.confidence > 0.6:
                     normalized_genre = normalize_genre_value(suggestion.suggested_genre.value)
                     if normalized_genre:
                         db_metadata["genre"] = normalized_genre
-                if suggestion.clean_title.value and suggestion.clean_title.confidence > 0.6:
-                    db_metadata["title"] = suggestion.clean_title.value
-                if suggestion.clean_artist.value and suggestion.clean_artist.confidence > 0.6:
-                    db_metadata["artist"] = suggestion.clean_artist.value
                 logger.info(f"Applied Gemini suggestions: {suggestion.reasoning}")
         except Exception as gemini_err:
             logger.error(f"Gemini API interception failed for {title}: {gemini_err}. Proceeding with original metadata.")
@@ -1293,6 +1349,97 @@ def get_playlists():
         logger.error(f"Error in GET /api/playlists: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
 
+@app.route('/api/imported-playlists/details', methods=['GET'])
+def get_imported_playlists_details():
+    try:
+        from scraper.playlist_manager import get_all_playlists
+
+        playlists = get_all_playlists()
+        db_file_id = get_db_file_id()
+        all_tracks = []
+        if db_file_id:
+            db_data = get_database_cached()
+            if isinstance(db_data, list):
+                all_tracks = db_data
+            elif isinstance(db_data, dict) and 'tracks' in db_data:
+                all_tracks = db_data['tracks']
+
+        track_map = {}
+        for track in all_tracks:
+            for key in (track.get("driveFileId"), track.get("id")):
+                if key:
+                    track_map[str(key)] = track
+
+        detailed_playlists = []
+        for playlist in playlists:
+            track_ids = playlist.get("track_ids", []) or []
+            tracks = []
+            missing_track_ids = []
+
+            for track_id in track_ids:
+                track = track_map.get(str(track_id))
+                if not track:
+                    missing_track_ids.append(track_id)
+                    continue
+                tracks.append({
+                    "id": track.get("id"),
+                    "driveFileId": track.get("driveFileId") or track.get("id"),
+                    "title": track.get("title", "Unknown Title"),
+                    "artist": track.get("artist", "Unknown Artist"),
+                    "album": track.get("album", "Unknown Album"),
+                    "genre": track.get("genre", "Unknown"),
+                    "language": track.get("language", "unknown"),
+                    "duration": track.get("duration", "--:--"),
+                    "durationSeconds": track.get("durationSeconds"),
+                    "album_art": track.get("album_art"),
+                    "albumArt": track.get("albumArt") or track.get("album_art"),
+                    "source": track.get("source", "unknown"),
+                    "requestedBy": track.get("requestedBy"),
+                    "spotify_id": track.get("spotify_id"),
+                    "lyricsStatus": track.get("lyricsStatus", "ok"),
+                    "timestamp": track.get("timestamp"),
+                    "addedAt": track.get("addedAt") or track.get("timestamp")
+                })
+
+            if not tracks:
+                continue
+
+            cover_candidates = []
+            if playlist.get("cover_image"):
+                cover_candidates.append(playlist.get("cover_image"))
+            for track in tracks:
+                art = track.get("albumArt") or track.get("album_art")
+                if art and art not in cover_candidates:
+                    cover_candidates.append(art)
+                if len(cover_candidates) >= 4:
+                    break
+
+            detailed_playlists.append({
+                "id": playlist.get("id"),
+                "name": playlist.get("name", "Untitled Playlist"),
+                "source_url": playlist.get("source_url"),
+                "cover_image": cover_candidates[0] if cover_candidates else None,
+                "cover_collage": cover_candidates[:4],
+                "track_ids": track_ids,
+                "total_tracks": playlist.get("total_tracks", len(track_ids)),
+                "resolved_tracks": len(tracks),
+                "missing_track_ids": missing_track_ids,
+                "created_at": playlist.get("created_at"),
+                "imported_via": playlist.get("imported_via"),
+                "requestedBy": playlist.get("requestedBy"),
+                "tracks": tracks
+            })
+
+        detailed_playlists.sort(key=lambda p: p.get("created_at") or "", reverse=True)
+        return jsonify({
+            "playlists": detailed_playlists,
+            "total_playlists": len(detailed_playlists),
+            "total_tracks": sum(p.get("resolved_tracks", 0) for p in detailed_playlists)
+        })
+    except Exception as e:
+        logger.error(f"Error in GET /api/imported-playlists/details: {e}", exc_info=True)
+        return jsonify({"error": str(e)}), 500
+
 @app.route('/api/playlists/<playlist_id>', methods=['GET'])
 def get_single_playlist(playlist_id):
     try:
@@ -1445,11 +1592,12 @@ def run_backfill_specific():
     btype = data.get("type")
     if not btype:
         return jsonify({"error": "Missing type"}), 400
+
+    background_tasks["backfill"]["status"] = "running"
+    background_tasks["backfill"]["started_at"] = datetime.datetime.utcnow().isoformat() + 'Z'
+    background_tasks["backfill"]["type"] = btype
         
     def run_job():
-        background_tasks["backfill"]["status"] = "running"
-        background_tasks["backfill"]["started_at"] = datetime.datetime.utcnow().isoformat() + 'Z'
-        background_tasks["backfill"]["type"] = btype
         try:
             from scraper.main import backfill_album_art, backfill_durations, backfill_languages, run_complete_backfill
             if btype == "album_art":

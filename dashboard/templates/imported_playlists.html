@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Imported Playlists | Cloud Music Player</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        .playlist-page {
+            width: 100%;
+            max-width: 1440px;
+            margin: 0 auto;
+            padding: 24px;
+        }
+        .playlist-shell {
+            display: grid;
+            grid-template-columns: minmax(280px, 330px) minmax(0, 1fr);
+            gap: 18px;
+            align-items: start;
+        }
+        .playlist-list,
+        .playlist-detail {
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.035);
+            overflow: hidden;
+        }
+        .playlist-toolbar {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            padding: 14px;
+            border-bottom: 1px solid var(--border);
+        }
+        .playlist-search {
+            width: 100%;
+            min-width: 0;
+            padding: 10px 12px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: rgba(0, 0, 0, 0.2);
+            color: var(--primary);
+            font: inherit;
+        }
+        .playlist-items {
+            max-height: calc(100vh - 180px);
+            overflow-y: auto;
+        }
+        .playlist-row {
+            width: 100%;
+            display: grid;
+            grid-template-columns: 56px minmax(0, 1fr);
+            gap: 12px;
+            align-items: center;
+            padding: 12px 14px;
+            border: 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.055);
+            background: transparent;
+            color: inherit;
+            text-align: left;
+            cursor: pointer;
+        }
+        .playlist-row:hover,
+        .playlist-row.active {
+            background: rgba(255, 255, 255, 0.06);
+        }
+        .cover-box {
+            width: 56px;
+            height: 56px;
+            border-radius: 8px;
+            overflow: hidden;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid var(--border);
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: 1fr 1fr;
+        }
+        .cover-box.single {
+            display: block;
+        }
+        .cover-box img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+        .cover-fallback {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--tertiary);
+        }
+        .playlist-name {
+            font-weight: 700;
+            color: var(--primary);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .playlist-meta {
+            color: var(--tertiary);
+            font-size: 0.82rem;
+            margin-top: 2px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .detail-head {
+            display: grid;
+            grid-template-columns: 112px minmax(0, 1fr);
+            gap: 18px;
+            padding: 18px;
+            border-bottom: 1px solid var(--border);
+            align-items: center;
+        }
+        .detail-cover {
+            width: 112px;
+            height: 112px;
+            border-radius: 8px;
+        }
+        .detail-title {
+            font-size: 1.55rem;
+            color: var(--primary);
+            font-weight: 800;
+            line-height: 1.15;
+            overflow-wrap: anywhere;
+        }
+        .detail-stats {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 12px;
+        }
+        .stat-pill {
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            padding: 5px 10px;
+            color: var(--tertiary);
+            font-size: 0.8rem;
+            background: rgba(255, 255, 255, 0.03);
+        }
+        .tracks-table-wrap {
+            overflow: auto;
+            max-height: calc(100vh - 300px);
+        }
+        .tracks-table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+            min-width: 980px;
+        }
+        .tracks-table col.col-index { width: 44px; }
+        .tracks-table col.col-song { width: 31%; }
+        .tracks-table col.col-artist { width: 16%; }
+        .tracks-table col.col-genre { width: 10%; }
+        .tracks-table col.col-language { width: 10%; }
+        .tracks-table col.col-duration { width: 8%; }
+        .tracks-table col.col-source { width: 15%; }
+        .tracks-table col.col-drive { width: 10%; }
+        .tracks-table th,
+        .tracks-table td {
+            padding: 12px 12px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+            text-align: left;
+            font-size: 0.84rem;
+            vertical-align: top;
+            overflow: hidden;
+        }
+        .tracks-table th {
+            color: var(--tertiary);
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            font-weight: 700;
+            background: rgba(13, 17, 23, 0.98);
+            position: sticky;
+            top: 0;
+            z-index: 2;
+        }
+        .track-cell {
+            display: grid;
+            grid-template-columns: 38px minmax(0, 1fr);
+            gap: 10px;
+            align-items: start;
+            min-width: 0;
+        }
+        .track-art {
+            width: 38px;
+            height: 38px;
+            border-radius: 6px;
+            object-fit: cover;
+            background: rgba(255, 255, 255, 0.06);
+        }
+        .track-title {
+            display: block;
+            color: var(--primary);
+            font-weight: 650;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .track-sub {
+            display: block;
+            color: var(--tertiary);
+            font-size: 0.78rem;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .cell-main {
+            display: block;
+            color: var(--primary);
+            line-height: 1.35;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .cell-wrap {
+            display: block;
+            color: var(--primary);
+            line-height: 1.35;
+            white-space: normal;
+            overflow-wrap: anywhere;
+        }
+        .cell-muted {
+            color: var(--tertiary);
+        }
+        .drive-code {
+            display: inline-block;
+            max-width: 100%;
+            padding: 2px 5px;
+            border-radius: 5px;
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--tertiary);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            vertical-align: top;
+        }
+        .empty-state {
+            padding: 42px 18px;
+            text-align: center;
+            color: var(--tertiary);
+        }
+        .source-link {
+            color: var(--primary);
+            text-decoration: none;
+            border-bottom: 1px solid var(--border-hover);
+        }
+        .source-link:hover {
+            border-color: var(--primary);
+        }
+        @media (max-width: 900px) {
+            .playlist-page {
+                padding: 14px;
+            }
+            .playlist-shell {
+                grid-template-columns: 1fr;
+            }
+            .playlist-items {
+                max-height: 360px;
+            }
+            .detail-head {
+                grid-template-columns: 76px minmax(0, 1fr);
+            }
+            .detail-cover {
+                width: 76px;
+                height: 76px;
+            }
+            .detail-title {
+                font-size: 1.15rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="navbar" id="app-navbar">
+        <div class="nav-brand">
+            <svg class="brand-icon" viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M17.5 19C19.93 19 21.9 17.03 21.9 14.6C21.9 12.35 20.21 10.49 18 10.23C17.52 6.64 14.43 4 10.75 4C7.8 4 5.26 5.68 4.21 8.24C2.17 8.79 0.75 10.63 0.75 12.8C0.75 15.67 3.08 18 5.95 18H17.5M10 17v-6l4.5 3-4.5 3z" />
+            </svg>
+            <h1>Imported Playlists</h1>
+        </div>
+        <a href="/" class="btn btn-secondary" style="text-decoration: none;">Back to Dashboard</a>
+    </header>
+
+    <main class="playlist-page">
+        <div class="section-header" style="margin-bottom: 18px;">
+            <div class="section-title-wrap">
+                <h2>Playlist Library</h2>
+                <p class="section-desc" id="playlist-summary">Loading imported playlists...</p>
+            </div>
+            <button class="btn btn-secondary" id="btn-refresh-playlists">Refresh</button>
+        </div>
+
+        <div class="playlist-shell">
+            <section class="playlist-list">
+                <div class="playlist-toolbar">
+                    <input class="playlist-search" id="playlist-search" type="search" placeholder="Search playlists">
+                </div>
+                <div class="playlist-items" id="playlist-items">
+                    <div class="empty-state">Loading playlists...</div>
+                </div>
+            </section>
+
+            <section class="playlist-detail" id="playlist-detail">
+                <div class="empty-state">Select a playlist to view its songs.</div>
+            </section>
+        </div>
+    </main>
+
+    <script>
+        const playlistItems = document.getElementById('playlist-items');
+        const playlistDetail = document.getElementById('playlist-detail');
+        const playlistSummary = document.getElementById('playlist-summary');
+        const playlistSearch = document.getElementById('playlist-search');
+        const btnRefresh = document.getElementById('btn-refresh-playlists');
+
+        let allPlaylists = [];
+        let selectedPlaylistId = null;
+
+        function escapeHtml(value) {
+            return String(value ?? '').replace(/[&<>"']/g, char => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            }[char]));
+        }
+
+        function formatDate(value) {
+            if (!value) return 'Unknown date';
+            const parsed = new Date(value);
+            if (Number.isNaN(parsed.getTime())) return value;
+            return parsed.toLocaleString([], { year: 'numeric', month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+        }
+
+        function coverMarkup(images, sizeClass = '') {
+            const usable = Array.isArray(images) ? images.filter(Boolean).slice(0, 4) : [];
+            if (!usable.length) {
+                return `<div class="cover-box ${sizeClass}"><div class="cover-fallback">
+                    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle>
+                    </svg>
+                </div></div>`;
+            }
+            if (usable.length === 1) {
+                return `<div class="cover-box single ${sizeClass}"><img src="${escapeHtml(usable[0])}" alt=""></div>`;
+            }
+            return `<div class="cover-box ${sizeClass}">${usable.map(src => `<img src="${escapeHtml(src)}" alt="">`).join('')}</div>`;
+        }
+
+        function filteredPlaylists() {
+            const q = playlistSearch.value.trim().toLowerCase();
+            if (!q) return allPlaylists;
+            return allPlaylists.filter(pl => {
+                const haystack = `${pl.name || ''} ${pl.imported_via || ''} ${pl.source_url || ''}`.toLowerCase();
+                return haystack.includes(q);
+            });
+        }
+
+        function renderPlaylistList() {
+            const playlists = filteredPlaylists();
+            if (!playlists.length) {
+                playlistItems.innerHTML = '<div class="empty-state">No imported playlists found.</div>';
+                return;
+            }
+            playlistItems.innerHTML = playlists.map(pl => `
+                <button class="playlist-row ${pl.id === selectedPlaylistId ? 'active' : ''}" data-playlist-id="${escapeHtml(pl.id)}">
+                    ${coverMarkup(pl.cover_collage)}
+                    <span>
+                        <span class="playlist-name">${escapeHtml(pl.name)}</span>
+                        <span class="playlist-meta">${pl.resolved_tracks || 0} songs · ${escapeHtml(pl.imported_via || 'dashboard')} · ${formatDate(pl.created_at)}</span>
+                    </span>
+                </button>
+            `).join('');
+        }
+
+        function renderTrackRows(tracks) {
+            if (!tracks.length) {
+                return '<tr><td colspan="8" class="empty-state">No resolved songs found for this playlist.</td></tr>';
+            }
+            return tracks.map((track, index) => {
+                const art = track.albumArt || track.album_art || '';
+                const streamId = track.driveFileId || track.id || '';
+                const shortId = streamId.length > 14 ? `${streamId.slice(0, 8)}...${streamId.slice(-4)}` : streamId;
+                return `
+                    <tr>
+                        <td>${index + 1}</td>
+                        <td>
+                            <div class="track-cell">
+                                ${art ? `<img class="track-art" src="${escapeHtml(art)}" alt="">` : '<div class="track-art"></div>'}
+                                <span>
+                                    <span class="track-title">${escapeHtml(track.title)}</span>
+                                    <span class="track-sub">${escapeHtml(track.album || 'Unknown Album')}</span>
+                                </span>
+                            </div>
+                        </td>
+                        <td><span class="cell-wrap">${escapeHtml(track.artist)}</span></td>
+                        <td><span class="cell-main">${escapeHtml(track.genre || 'Unknown')}</span></td>
+                        <td><span class="cell-main">${escapeHtml(track.language || 'unknown')}</span></td>
+                        <td><span class="cell-main">${escapeHtml(track.duration || '--:--')}</span></td>
+                        <td><span class="cell-wrap cell-muted">${escapeHtml(track.source || 'unknown')}</span></td>
+                        <td>${streamId ? `<code class="drive-code" title="${escapeHtml(streamId)}">${escapeHtml(shortId)}</code>` : ''}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function renderPlaylistDetail() {
+            const playlist = allPlaylists.find(pl => pl.id === selectedPlaylistId);
+            if (!playlist) {
+                playlistDetail.innerHTML = '<div class="empty-state">Select a playlist to view its songs.</div>';
+                return;
+            }
+            const tracks = playlist.tracks || [];
+            const sourceLink = playlist.source_url
+                ? `<a class="source-link" href="${escapeHtml(playlist.source_url)}" target="_blank" rel="noreferrer">Open Source</a>`
+                : '';
+            playlistDetail.innerHTML = `
+                <div class="detail-head">
+                    ${coverMarkup(playlist.cover_collage, 'detail-cover')}
+                    <div>
+                        <div class="detail-title">${escapeHtml(playlist.name)}</div>
+                        <div class="detail-stats">
+                            <span class="stat-pill">${playlist.resolved_tracks || 0} resolved songs</span>
+                            <span class="stat-pill">${playlist.total_tracks || 0} total tracked</span>
+                            <span class="stat-pill">${escapeHtml(playlist.imported_via || 'dashboard')}</span>
+                            <span class="stat-pill">${formatDate(playlist.created_at)}</span>
+                            ${playlist.missing_track_ids?.length ? `<span class="stat-pill">${playlist.missing_track_ids.length} missing references</span>` : ''}
+                            ${sourceLink ? `<span class="stat-pill">${sourceLink}</span>` : ''}
+                        </div>
+                    </div>
+                </div>
+                <div class="tracks-table-wrap">
+                    <table class="tracks-table">
+                        <colgroup>
+                            <col class="col-index">
+                            <col class="col-song">
+                            <col class="col-artist">
+                            <col class="col-genre">
+                            <col class="col-language">
+                            <col class="col-duration">
+                            <col class="col-source">
+                            <col class="col-drive">
+                        </colgroup>
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Song</th>
+                                <th>Artist</th>
+                                <th>Genre</th>
+                                <th>Language</th>
+                                <th>Duration</th>
+                                <th>Source</th>
+                                <th>Drive ID</th>
+                            </tr>
+                        </thead>
+                        <tbody>${renderTrackRows(tracks)}</tbody>
+                    </table>
+                </div>
+            `;
+        }
+
+        async function loadPlaylists() {
+            playlistItems.innerHTML = '<div class="empty-state">Loading playlists...</div>';
+            playlistDetail.innerHTML = '<div class="empty-state">Loading playlist details...</div>';
+            try {
+                const response = await fetch('/api/imported-playlists/details');
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.error || 'Failed to load imported playlists');
+                allPlaylists = data.playlists || [];
+                selectedPlaylistId = allPlaylists[0]?.id || null;
+                playlistSummary.textContent = `${data.total_playlists || 0} playlists · ${data.total_tracks || 0} resolved songs`;
+                renderPlaylistList();
+                renderPlaylistDetail();
+            } catch (error) {
+                playlistSummary.textContent = 'Unable to load imported playlists.';
+                playlistItems.innerHTML = `<div class="empty-state">${escapeHtml(error.message)}</div>`;
+                playlistDetail.innerHTML = '<div class="empty-state">Playlist details unavailable.</div>';
+            }
+        }
+
+        playlistItems.addEventListener('click', event => {
+            const row = event.target.closest('.playlist-row');
+            if (!row) return;
+            selectedPlaylistId = row.dataset.playlistId;
+            renderPlaylistList();
+            renderPlaylistDetail();
+        });
+
+        playlistSearch.addEventListener('input', () => {
+            const currentVisible = filteredPlaylists();
+            if (currentVisible.length && !currentVisible.some(pl => pl.id === selectedPlaylistId)) {
+                selectedPlaylistId = currentVisible[0].id;
+                renderPlaylistDetail();
+            }
+            renderPlaylistList();
+        });
+
+        btnRefresh.addEventListener('click', loadPlaylists);
+        loadPlaylists();
+    </script>
+</body>
+</html>

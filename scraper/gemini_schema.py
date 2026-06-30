@@ -31,10 +31,10 @@ class TrackMetadataSuggestion(BaseModel):
         description="Short lowercase mood label if supported by evidence, otherwise null."
     )
     clean_title: SuggestedString = Field(
-        description="Cleaned title only when formatting cleanup is obvious; preserve stylized names."
+        description="Deprecated for live writes. Always use null; titles are context only and must not be corrected by Gemini."
     )
     clean_artist: SuggestedString = Field(
-        description="Cleaned artist only when formatting cleanup is obvious; preserve stylized names."
+        description="Deprecated for live writes. Always use null; artists are context only and must not be corrected by Gemini."
     )
     is_remix_or_live: SuggestedBoolean = Field(
         description="True only when the track is clearly a remix, live version, edit, cover, or alternate version."

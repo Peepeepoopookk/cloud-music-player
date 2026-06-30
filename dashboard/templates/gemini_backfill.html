@@ -71,6 +71,34 @@
         .live-log-level.success { color: #30d158; }
         .live-log-level.warning { color: #ffd60a; }
         .live-log-level.error { color: #ff453a; }
+        .ai-summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 12px;
+            margin-top: 20px;
+        }
+        .ai-summary-item {
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 14px;
+            background: rgba(255, 255, 255, 0.025);
+        }
+        .ai-summary-label {
+            display: block;
+            color: var(--tertiary);
+            font-size: 0.78rem;
+            text-transform: uppercase;
+            font-weight: 700;
+            letter-spacing: 0;
+            margin-bottom: 8px;
+        }
+        .ai-summary-value {
+            display: block;
+            color: var(--text);
+            font-size: 1.6rem;
+            font-weight: 800;
+            line-height: 1;
+        }
     </style>
 </head>
 <body>
@@ -113,6 +141,26 @@
                     <div class="progress-fill" id="progress-fill" style="width: 0%; transition: width 0.3s ease;"></div>
                 </div>
             </div>
+
+            <div class="ai-summary-grid">
+                <div class="ai-summary-item">
+                    <span class="ai-summary-label">AI Fields To Fill</span>
+                    <span class="ai-summary-value" id="ai-fields-count">--</span>
+                </div>
+                <div class="ai-summary-item">
+                    <span class="ai-summary-label">Tracks Needing AI</span>
+                    <span class="ai-summary-value" id="ai-tracks-count">--</span>
+                </div>
+                <div class="ai-summary-item">
+                    <span class="ai-summary-label">Language Fields</span>
+                    <span class="ai-summary-value" id="ai-language-count">--</span>
+                </div>
+                <div class="ai-summary-item">
+                    <span class="ai-summary-label">Genre Fields</span>
+                    <span class="ai-summary-value" id="ai-genre-count">--</span>
+                </div>
+            </div>
+            <div id="ai-summary-updated" style="margin-top: 10px; color: var(--tertiary); font-size: 0.84rem;">Checking current library...</div>
         </div>
 
         <div class="card" style="margin-bottom: 24px;">
@@ -161,8 +209,21 @@
         const liveLogBody = document.getElementById('live-log-body');
         const liveLogPanel = document.getElementById('live-log-panel');
         const logPollStatus = document.getElementById('log-poll-status');
+        const aiFieldsCount = document.getElementById('ai-fields-count');
+        const aiTracksCount = document.getElementById('ai-tracks-count');
+        const aiLanguageCount = document.getElementById('ai-language-count');
+        const aiGenreCount = document.getElementById('ai-genre-count');
+        const aiSummaryUpdated = document.getElementById('ai-summary-updated');
         
         let pollingInterval = null;
+        let summaryPollingInterval = null;
+        let summaryRequestInFlight = false;
+        let lastSummaryFetchAt = 0;
+        let lastBackfillStatus = null;
+        let lastBackfillProcessed = null;
+        let lastBackfillApiCallCount = null;
+        let lastChangelogLength = null;
+        const SUMMARY_MIN_REFRESH_MS = 2500;
 
         const languageDisplayMap = {
             en: 'english',
@@ -367,11 +428,63 @@
                 if (res.ok) {
                     const data = await res.json();
                     updateUI(data);
+                    const bf = data.backfill || {};
+                    const changelogLength = Array.isArray(bf.changelog) ? bf.changelog.length : 0;
+                    const statusChanged = bf.status !== lastBackfillStatus;
+                    const progressChanged = (bf.processed || 0) !== lastBackfillProcessed;
+                    const apiCallsChanged = (bf.api_call_count || 0) !== lastBackfillApiCallCount;
+                    const changelogChanged = changelogLength !== lastChangelogLength;
+                    const justFinished = lastBackfillStatus === 'running' && bf.status !== 'running';
+
+                    if (statusChanged || progressChanged || apiCallsChanged || changelogChanged || justFinished) {
+                        pollGeminiSummary(true);
+                    } else if (bf.status === 'running') {
+                        pollGeminiSummary(false);
+                    }
+
+                    lastBackfillStatus = bf.status;
+                    lastBackfillProcessed = bf.processed || 0;
+                    lastBackfillApiCallCount = bf.api_call_count || 0;
+                    lastChangelogLength = changelogLength;
                     logPollStatus.textContent = `Last update: ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`;
                 }
             } catch (err) {
                 console.error("Polling error:", err);
                 logPollStatus.textContent = 'Polling failed';
+            }
+        }
+
+        async function pollGeminiSummary(force = false) {
+            const now = Date.now();
+            if (summaryRequestInFlight) return;
+            if (!force && now - lastSummaryFetchAt < SUMMARY_MIN_REFRESH_MS) return;
+
+            summaryRequestInFlight = true;
+            try {
+                const res = await fetch(`/api/backfill/gemini/summary?ts=${Date.now()}`, {
+                    cache: 'no-store',
+                    headers: { 'Cache-Control': 'no-cache' }
+                });
+                const data = await res.json();
+                if (!res.ok || data.error) {
+                    throw new Error(data.error || 'Failed to load Gemini summary');
+                }
+
+                aiFieldsCount.textContent = data.field_count ?? 0;
+                aiTracksCount.textContent = data.candidate_tracks ?? 0;
+                aiLanguageCount.textContent = data.fields?.language ?? 0;
+                aiGenreCount.textContent = data.fields?.genre ?? 0;
+
+                if (data.generated_at) {
+                    const generatedAt = new Date(data.generated_at);
+                    aiSummaryUpdated.textContent = `Current library: ${data.total_tracks || 0} tracks. Updated ${generatedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`;
+                }
+                lastSummaryFetchAt = Date.now();
+            } catch (err) {
+                console.error("Gemini summary polling error:", err);
+                aiSummaryUpdated.textContent = `Summary unavailable: ${err.message}`;
+            } finally {
+                summaryRequestInFlight = false;
             }
         }
 
@@ -386,6 +499,7 @@
                 });
                 if (res.ok) {
                     pollStatus();
+                    pollGeminiSummary(true);
                 }
             } catch (err) {
                 alert("Failed to start single batch backfill");
@@ -405,6 +519,7 @@
                 });
                 if (res.ok) {
                     pollStatus();
+                    pollGeminiSummary(true);
                 }
             } catch (err) {
                 alert("Failed to start auto backfill");
@@ -424,7 +539,9 @@
 
         // Start polling loop
         pollStatus();
+        pollGeminiSummary(true);
         pollingInterval = setInterval(pollStatus, 1500);
+        summaryPollingInterval = setInterval(() => pollGeminiSummary(false), 5000);
     </script>
 </body>
 </html>
