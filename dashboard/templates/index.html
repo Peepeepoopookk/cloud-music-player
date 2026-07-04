@@ -5,7 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cloud Music Player Dashboard</title>
     <meta name="description" content="Manage your cloud music library, scraper jobs, storage limits, and service logs in a unified dark control center.">
+    <meta name="dashboard-write-token" content="{{ dashboard_write_token }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="{{ url_for('static', filename='auth.js') }}"></script>
 </head>
 <body>
     <!-- Top Navbar -->

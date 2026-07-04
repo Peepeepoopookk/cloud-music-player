@@ -5,6 +5,7 @@ import urllib.parse
 import difflib
 import logging
 
+from scraper.album_art_resolver import find_itunes_track_metadata, resolve_album_art
 from scraper.spotify_charts import detect_track_language
 from scraper.utils import extract_duration
 
@@ -207,62 +208,35 @@ def enrich_track_metadata(title, artist, local_file_path=None, source="unknown")
             duration_filled = True
             logger.info(f"metadata_enricher: Duration extracted via ffprobe: {d_str}")
             
-    # 2. iTunes API for album_art, genre, album, and duration fallback
-    search_term = f"{artist} {title}"
-    itunes_url = "https://itunes.apple.com/search"
-    itunes_params = {"term": search_term, "media": "music", "limit": 5}
-    
-    itunes_data = fetch_with_retry(itunes_url, params=itunes_params)
-    if itunes_data and itunes_data.get("results"):
-        # Match best result using difflib
-        results = itunes_data["results"]
-        best_match = None
-        best_score = -1.0
-        norm_title = title.lower()
-        norm_artist = artist.lower()
-        
-        for item in results:
-            res_title = (item.get("trackName") or "").lower()
-            res_artist = (item.get("artistName") or "").lower()
-            title_ratio = difflib.SequenceMatcher(None, norm_title, res_title).ratio()
-            artist_ratio = difflib.SequenceMatcher(None, norm_artist, res_artist).ratio()
-            score = title_ratio + artist_ratio
-            if score > best_score:
-                best_score = score
-                best_match = item
-                
-        if best_match:
-            # Album Art
-            artwork_url = best_match.get("artworkUrl100")
-            if artwork_url:
-                high_res_url = artwork_url.replace("100x100", "600x600")
-                # Handle newer iTunes URLs that might have 100x100bb format
-                high_res_url = high_res_url.replace("100x100bb", "600x600bb")
-                metadata["album_art"] = high_res_url
-                logger.info(f"metadata_enricher: iTunes album art found.")
-                
-            # Genre
-            genre = best_match.get("primaryGenreName")
-            if genre:
-                metadata["genre"] = genre
-                logger.info(f"metadata_enricher: iTunes genre found: {genre}")
-                
-            # Album
-            album = best_match.get("collectionName")
-            if album:
-                metadata["album"] = album
-                logger.info(f"metadata_enricher: iTunes album found: {album}")
-                
-            # Duration Fallback
-            if not duration_filled:
-                track_time_millis = best_match.get("trackTimeMillis")
-                if track_time_millis:
-                    duration_seconds = int(track_time_millis) // 1000
-                    minutes = duration_seconds // 60
-                    seconds = duration_seconds % 60
-                    metadata["duration"] = f"{minutes:02d}:{seconds:02d}"
-                    metadata["durationSeconds"] = duration_seconds
-                    logger.info(f"metadata_enricher: iTunes duration found: {metadata['duration']}")
+    # 2. iTunes API for album_art, genre, album, and duration fallback.
+    # Only accept matches above the resolver threshold to avoid wrong artwork.
+    itunes_match = find_itunes_track_metadata(title, artist)
+    if itunes_match:
+        if itunes_match.get("album_art"):
+            metadata["album_art"] = itunes_match["album_art"]
+            logger.info("metadata_enricher: iTunes album art found.")
+
+        if itunes_match.get("genre"):
+            metadata["genre"] = itunes_match["genre"]
+            logger.info(f"metadata_enricher: iTunes genre found: {metadata['genre']}")
+
+        if itunes_match.get("album"):
+            metadata["album"] = itunes_match["album"]
+            logger.info(f"metadata_enricher: iTunes album found: {metadata['album']}")
+
+        if not duration_filled and itunes_match.get("duration_ms"):
+            duration_seconds = int(itunes_match["duration_ms"]) // 1000
+            minutes = duration_seconds // 60
+            seconds = duration_seconds % 60
+            metadata["duration"] = f"{minutes:02d}:{seconds:02d}"
+            metadata["durationSeconds"] = duration_seconds
+            logger.info(f"metadata_enricher: iTunes duration found: {metadata['duration']}")
+
+    if not metadata["album_art"]:
+        fallback_art = resolve_album_art(title, artist, album=metadata.get("album"))
+        if fallback_art:
+            metadata["album_art"] = fallback_art
+            logger.info("metadata_enricher: Album art found via fallback resolver.")
 
     # 3. Lyrics API (lrclib.net)
     d_sec = metadata["durationSeconds"] or 0

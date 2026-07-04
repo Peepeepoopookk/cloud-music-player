@@ -159,13 +159,20 @@ def list_files(folder_id=None):
             query += f" and '{folder_id}' in parents"
         
         logger.info(f"Listing files with query: {query}")
-        results = service.files().list(
-            q=query,
-            fields="files(id, name, size, mimeType, createdTime)",
-            pageSize=100
-        ).execute()
-        
-        files = results.get('files', [])
+        files = []
+        page_token = None
+        while True:
+            results = service.files().list(
+                q=query,
+                fields="nextPageToken, files(id, name, size, mimeType, createdTime)",
+                pageSize=1000,
+                pageToken=page_token
+            ).execute()
+            files.extend(results.get('files', []))
+            page_token = results.get('nextPageToken')
+            if not page_token:
+                break
+
         logger.info(f"Successfully retrieved {len(files)} files.")
         return files
     except HttpError as error:
@@ -182,7 +189,8 @@ def search_file_by_name(filename, parent_id=None):
     """
     try:
         service = get_oauth_drive_service()
-        query = f"name = '{filename}' and trashed = false"
+        safe_filename = filename.replace("\\", "\\\\").replace("'", "\\'")
+        query = f"name = '{safe_filename}' and trashed = false"
         if parent_id:
             query += f" and '{parent_id}' in parents"
         
@@ -200,10 +208,10 @@ def search_file_by_name(filename, parent_id=None):
         return None
     except HttpError as error:
         logger.error(f"Google API HttpError in search_file_by_name: {error}", exc_info=True)
-        return None
+        raise
     except Exception as e:
         logger.error(f"Unexpected error in search_file_by_name: {e}", exc_info=True)
-        return None
+        raise
 
 def download_json(file_id):
     """
@@ -500,5 +508,3 @@ def refresh_and_get_access_token():
         logger.error(f"Failed to force refresh service account access token: {e}")
 
     return None
-
-

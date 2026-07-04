@@ -3,6 +3,9 @@ import sys
 import subprocess
 import logging
 import requests
+import copy
+import functools
+import secrets
 from flask import Flask, render_template, jsonify, request, stream_with_context, Response
 from dotenv import load_dotenv
 
@@ -22,6 +25,7 @@ from scraper.drive_uploader import upload_track, update_database, normalize_data
 from scraper.metadata_enricher import enrich_track_metadata
 from scraper.main import run_full_enrichment_pass, run_complete_backfill
 from scraper.playlist_importer import get_playlist_preview, start_playlist_import, get_playlist_status, run_playlist_import
+from scraper.operation_lock import library_write_lock
 import ctypes
 import threading
 import datetime
@@ -50,6 +54,47 @@ app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
 app.jinja_env.auto_reload = True
 
 db_file_id_cache = None
+
+@app.context_processor
+def inject_dashboard_write_token():
+    return {
+        "dashboard_write_token": os.environ.get("DASHBOARD_WRITE_TOKEN") or os.environ.get("API_WRITE_TOKEN") or ""
+    }
+
+def _extract_bearer_token():
+    auth_header = request.headers.get("Authorization", "")
+    if auth_header.lower().startswith("bearer "):
+        return auth_header.split(" ", 1)[1].strip()
+    return None
+
+def _request_token():
+    return (
+        request.headers.get("X-Dashboard-Token")
+        or request.headers.get("X-App-Token")
+        or request.headers.get("X-API-Key")
+        or _extract_bearer_token()
+    )
+
+def require_write_auth(app_endpoint=False):
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            if app_endpoint:
+                expected_token = (
+                    os.environ.get("APP_WRITE_TOKEN")
+                    or os.environ.get("DASHBOARD_WRITE_TOKEN")
+                    or os.environ.get("API_WRITE_TOKEN")
+                )
+            else:
+                expected_token = os.environ.get("DASHBOARD_WRITE_TOKEN") or os.environ.get("API_WRITE_TOKEN")
+            if not expected_token:
+                return func(*args, **kwargs)
+            supplied_token = _request_token()
+            if supplied_token and secrets.compare_digest(supplied_token, expected_token):
+                return func(*args, **kwargs)
+            return jsonify({"error": "Unauthorized"}), 401
+        return wrapper
+    return decorator
 
 import time
 
@@ -314,50 +359,67 @@ def get_storage():
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/delete/<file_id>', methods=['POST'])
+@require_write_auth()
 def delete_track(file_id):
     """
     POST /api/delete/<file_id> — deletes a track from Drive and updates database.json
     """
     try:
         db_file_id = get_db_file_id()
-        
-        # 1. Download database.json
-        db_data = download_json(db_file_id)
-        
-        # 2. Update database structure (assuming it's a list of tracks or a dict)
-        updated = False
-        if isinstance(db_data, list):
-            new_db_data = []
-            for track in db_data:
-                if track.get('id') == file_id or track.get('file_id') == file_id:
+
+        with library_write_lock("database"):
+            # 1. Download database.json
+            db_data = download_json(db_file_id)
+            original_db_data = copy.deepcopy(db_data)
+
+            # 2. Update database structure (assuming it's a list of tracks or a dict)
+            updated = False
+            if isinstance(db_data, list):
+                new_db_data = []
+                for track in db_data:
+                    if track.get('id') == file_id or track.get('driveFileId') == file_id or track.get('file_id') == file_id:
+                        updated = True
+                    else:
+                        new_db_data.append(track)
+                db_data = new_db_data
+            elif isinstance(db_data, dict):
+                if 'tracks' in db_data and isinstance(db_data['tracks'], list):
+                    before_count = len(db_data['tracks'])
+                    db_data['tracks'] = [
+                        t for t in db_data['tracks']
+                        if t.get('id') != file_id and t.get('driveFileId') != file_id and t.get('file_id') != file_id
+                    ]
+                    updated = len(db_data['tracks']) != before_count
+                elif file_id in db_data:
+                    del db_data[file_id]
                     updated = True
-                else:
-                    new_db_data.append(track)
-            db_data = new_db_data
-        elif isinstance(db_data, dict):
-            if 'tracks' in db_data and isinstance(db_data['tracks'], list):
-                db_data['tracks'] = [t for t in db_data['tracks'] if t.get('id') != file_id and t.get('file_id') != file_id]
-                updated = True
-            elif file_id in db_data:
-                del db_data[file_id]
-                updated = True
-        
-        # 3. Save updated database.json back to Drive
-        upload_json(db_file_id, db_data, 'database.json')
-        invalidate_db_cache()
-        
-        # 4. Delete media file from Drive
-        delete_file(file_id)
+
+            if not updated:
+                return jsonify({"error": f"Track {file_id} not found in database."}), 404
+
+            # 3. Save updated database.json back to Drive
+            upload_json(db_file_id, db_data, 'database.json')
+            invalidate_db_cache()
+
+            # 4. Delete media file from Drive; restore DB if media deletion fails.
+            try:
+                delete_file(file_id)
+            except Exception:
+                logger.error(f"Media delete failed for {file_id}; attempting database rollback.", exc_info=True)
+                try:
+                    upload_json(db_file_id, original_db_data, 'database.json')
+                    invalidate_db_cache()
+                except Exception as rollback_err:
+                    logger.error(f"Database rollback failed after delete error for {file_id}: {rollback_err}", exc_info=True)
+                raise
         
         return jsonify({"status": "success", "message": f"Track {file_id} deleted successfully."})
     except Exception as e:
         logger.error(f"Error in POST /api/delete/{file_id}: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
-    except Exception as e:
-        logger.error(f"Error in POST /api/delete/{file_id}: {e}", exc_info=True)
-        return jsonify({"error": str(e)}), 500
 
 @app.route('/api/scrape', methods=['POST'])
+@require_write_auth()
 def trigger_scrape():
     """
     POST /api/scrape — triggers the scraper in the background and saves its PID
@@ -460,6 +522,7 @@ def get_config():
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/config', methods=['POST'])
+@require_write_auth()
 def post_config():
     """
     POST /api/config — receives updated config JSON and saves it to Drive using save_config
@@ -495,6 +558,7 @@ def post_config():
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/pool/refresh', methods=['POST'])
+@require_write_auth()
 def refresh_pool():
     """
     POST /api/pool/refresh — sets pool_date to null in scraper_state.json to force a pool refresh on next scraper run
@@ -509,6 +573,7 @@ def refresh_pool():
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/library/normalize', methods=['POST'])
+@require_write_auth()
 def normalize_library():
     """
     POST /api/library/normalize — Normalizes all database tracks fields with defaults and backs up the database.
@@ -539,6 +604,35 @@ def audit_library():
         })
     except Exception as e:
         logger.error(f"Error in GET /api/library/audit: {e}", exc_info=True)
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/library/orphans', methods=['GET'])
+def get_library_orphans():
+    """
+    GET /api/library/orphans - Finds media files not referenced by database.json.
+    """
+    try:
+        from scraper.drive_uploader import find_orphan_media_files
+        return jsonify({"status": "success", "data": find_orphan_media_files()})
+    except Exception as e:
+        logger.error(f"Error in GET /api/library/orphans: {e}", exc_info=True)
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/library/orphans/cleanup', methods=['POST'])
+@require_write_auth()
+def cleanup_library_orphans():
+    """
+    POST /api/library/orphans/cleanup - Deletes orphaned media only when dry_run is false.
+    """
+    try:
+        body = request.get_json(silent=True) or {}
+        dry_run = body.get("dry_run", True)
+        if isinstance(dry_run, str):
+            dry_run = dry_run.strip().lower() not in {"false", "0", "no"}
+        from scraper.drive_uploader import cleanup_orphan_media_files
+        return jsonify({"status": "success", "data": cleanup_orphan_media_files(dry_run=bool(dry_run))})
+    except Exception as e:
+        logger.error(f"Error in POST /api/library/orphans/cleanup: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/library/field-completeness', methods=['GET'])
@@ -645,15 +739,41 @@ def get_gemini_backfill_summary():
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/backfill/complete', methods=['POST'])
+@require_write_auth()
 def complete_backfill():
     """
     POST /api/backfill/complete - Runs the complete backfill engine on all tracks in the background.
     """
     try:
+        if background_tasks["backfill"]["status"] == "running":
+            return jsonify({"status": "already_running", "type": background_tasks["backfill"].get("type")}), 409
+
         logger.info("Starting complete backfill engine in a background thread...")
         backfill_cancel_event.clear()
         background_tasks["backfill"]["status"] = "running"
-        thread = threading.Thread(target=run_complete_backfill)
+        background_tasks["backfill"]["started_at"] = datetime.datetime.utcnow().isoformat() + 'Z'
+        background_tasks["backfill"]["type"] = "complete"
+
+        def run_complete_job():
+            try:
+                result = run_complete_backfill() or {}
+                background_tasks["backfill"].setdefault("logs", []).append({
+                    "time": datetime.datetime.utcnow().isoformat() + 'Z',
+                    "level": "success" if result.get("status") != "error" else "error",
+                    "message": result.get("message", "Complete backfill finished.")
+                })
+            except Exception as e:
+                logger.error(f"Complete backfill failed: {e}", exc_info=True)
+                background_tasks["backfill"].setdefault("logs", []).append({
+                    "time": datetime.datetime.utcnow().isoformat() + 'Z',
+                    "level": "error",
+                    "message": f"Complete backfill crashed: {str(e)}"
+                })
+            finally:
+                if background_tasks["backfill"].get("status") != "cancelled":
+                    background_tasks["backfill"]["status"] = "idle"
+
+        thread = threading.Thread(target=run_complete_job)
         thread.daemon = True
         thread.start()
         
@@ -665,6 +785,7 @@ def complete_backfill():
         logger.error(f"Error starting complete backfill: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
 @app.route('/api/backfill/gemini', methods=['POST'])
+@require_write_auth()
 def gemini_backfill():
     """
     POST /api/backfill/gemini - Runs the Gemini LLM backfill engine in the background.
@@ -672,6 +793,8 @@ def gemini_backfill():
     try:
         data = request.get_json(silent=True) or {}
         mode = data.get("mode", "auto")
+        if background_tasks["backfill"]["status"] == "running":
+            return jsonify({"status": "already_running", "type": background_tasks["backfill"].get("type")}), 409
         
         from scraper.main import run_gemini_backfill
         logger.info(f"Starting Gemini backfill engine ({mode} mode) in a background thread...")
@@ -737,6 +860,7 @@ def gemini_backfill():
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/backfill/cancel', methods=['POST'])
+@require_write_auth()
 def cancel_backfill():
     """
     POST /api/backfill/cancel - Cancels the running backfill engine.
@@ -752,6 +876,7 @@ def cancel_backfill():
 
 
 @app.route('/api/library/backup', methods=['POST'])
+@require_write_auth()
 def backup_library():
     """
     POST /api/library/backup — Creates a backup of database.json in the Drive database folder.
@@ -802,6 +927,7 @@ def _process_single_song(spotify_url, task_key, source, device_id=None):
     background_tasks[task_key]["status"] = "running"
     background_tasks[task_key]["started_at"] = datetime.datetime.utcnow().isoformat() + 'Z'
     temp_file_path = None
+    drive_file_id = None
     try:
         # 1. Fetch metadata
         metadata = get_track_by_spotify_url(spotify_url)
@@ -824,7 +950,8 @@ def _process_single_song(spotify_url, task_key, source, device_id=None):
                 elif isinstance(existing_data, dict) and 'tracks' in existing_data:
                     existing_tracks = existing_data['tracks']
             except Exception as e:
-                logger.warning(f"Could not retrieve existing tracks for duplicate check: {e}")
+                logger.error(f"Could not retrieve existing tracks for duplicate check: {e}", exc_info=True)
+                raise
                 
         # Format track search object for duplicate check
         track_to_check = {
@@ -847,13 +974,9 @@ def _process_single_song(spotify_url, task_key, source, device_id=None):
         logger.info(f"Downloading track '{title}' by '{artist}' to {temp_dir}")
         temp_file_path = download_track(title, artist, temp_dir)
         
-        # 5. Upload track
-        logger.info(f"Uploading file '{temp_file_path}' to Google Drive...")
-        drive_file_id = upload_track(temp_file_path)
-        
-        # 6. Enrich metadata
+        # 5. Enrich metadata before uploading, so failures do not orphan media.
         enriched = enrich_track_metadata(title, artist, local_file_path=temp_file_path, source=source)
-        
+
         # Add to metadata dict
         db_metadata = {
             "title": title,
@@ -872,6 +995,10 @@ def _process_single_song(spotify_url, task_key, source, device_id=None):
         }
         if device_id:
             db_metadata["requestedBy"] = device_id
+
+        # 6. Upload track only after local enrichment succeeds.
+        logger.info(f"Uploading file '{temp_file_path}' to Google Drive...")
+        drive_file_id = upload_track(temp_file_path)
         
         # --- GEMINI INTERCEPTION START ---
         db_metadata["id"] = drive_file_id
@@ -902,8 +1029,24 @@ def _process_single_song(spotify_url, task_key, source, device_id=None):
             logger.error(f"Gemini API interception failed for {title}: {gemini_err}. Proceeding with original metadata.")
         # --- GEMINI INTERCEPTION END ---
         
-        # 7. Update database on Drive
-        update_database(drive_file_id, db_metadata)
+        # 7. Update database on Drive. If this fails, clean up the uploaded media.
+        try:
+            update_result = update_database(drive_file_id, db_metadata)
+        except Exception:
+            if drive_file_id:
+                try:
+                    delete_file(drive_file_id)
+                    logger.info(f"Deleted uploaded media {drive_file_id} after database update failure.")
+                except Exception as cleanup_err:
+                    logger.warning(f"Could not delete uploaded media {drive_file_id} after database update failure: {cleanup_err}")
+            raise
+
+        if isinstance(update_result, dict) and update_result.get("duplicate") and update_result.get("track_id") != drive_file_id:
+            try:
+                delete_file(drive_file_id)
+                logger.info(f"Deleted duplicate uploaded media {drive_file_id}; existing track is {update_result.get('track_id')}.")
+            except Exception as cleanup_err:
+                logger.warning(f"Could not delete duplicate uploaded media {drive_file_id}: {cleanup_err}")
         invalidate_db_cache()
         
         # Update scraper state on Drive
@@ -917,6 +1060,8 @@ def _process_single_song(spotify_url, task_key, source, device_id=None):
             logger.error(f"Failed to update scraper state: {state_err}", exc_info=True)
     except Exception as e:
         logger.error(f"Error in background _process_single_song: {e}", exc_info=True)
+        background_tasks[task_key]["status"] = "error"
+        background_tasks[task_key]["last_error"] = str(e)
     finally:
         # Cleanup temp file
         if temp_file_path and os.path.exists(temp_file_path):
@@ -925,10 +1070,12 @@ def _process_single_song(spotify_url, task_key, source, device_id=None):
                 logger.info(f"Cleaned up temp audio file: {temp_file_path}")
             except Exception as cleanup_err:
                 logger.warning(f"Could not remove local temp file {temp_file_path}: {cleanup_err}")
-        background_tasks[task_key]["status"] = "idle"
+        if background_tasks[task_key].get("status") != "error":
+            background_tasks[task_key]["status"] = "idle"
 
 
 @app.route('/api/add-song', methods=['POST'])
+@require_write_auth()
 def add_song():
     """
     POST /api/add-song
@@ -950,6 +1097,7 @@ def add_song():
 
 
 @app.route('/api/app/song/add', methods=['POST'])
+@require_write_auth(app_endpoint=True)
 def app_add_song():
     """
     POST /api/app/song/add
@@ -990,6 +1138,7 @@ def app_add_song():
 
 
 @app.route('/api/app/playlist/start', methods=['POST'])
+@require_write_auth(app_endpoint=True)
 def app_playlist_start():
     """
     POST /api/app/playlist/start
@@ -1001,13 +1150,16 @@ def app_playlist_start():
         device_id = body.get('device_id')
         if not url or not device_id:
             return jsonify({"error": "Missing 'url' or 'device_id'"}), 400
-            
-        playlist_id = start_playlist_import(url, device_id=device_id, imported_via="app")
-        
+
         task_key = f"playlist_import_{device_id}"
         if task_key not in app_import_tasks:
             app_import_tasks[task_key] = {"status": "idle"}
-            
+
+        if app_import_tasks[task_key].get("status") == "running":
+            return jsonify({"error": "A playlist import is already in progress for this device"}), 409
+
+        playlist_id = start_playlist_import(url, device_id=device_id, imported_via="app")
+
         app_import_tasks[task_key]["status"] = "running"
         app_import_tasks[task_key]["started_at"] = datetime.datetime.utcnow().isoformat() + 'Z'
         app_import_tasks[task_key]["playlist_id"] = playlist_id
@@ -1268,11 +1420,16 @@ def playlist_preview():
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/playlist/start', methods=['POST'])
+@require_write_auth()
 def playlist_start():
     try:
         url = request.json.get('url')
         if not url:
             return jsonify({"error": "Missing url"}), 400
+
+        if background_tasks["playlist_import"]["status"] == "running":
+            return jsonify({"status": "already_running", "playlist_id": background_tasks["playlist_import"].get("playlist_id")}), 409
+
         playlist_id = start_playlist_import(url, imported_via="dashboard")
         
         # Update background tasks dict
@@ -1486,6 +1643,7 @@ def get_single_artist(artist_name):
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/playlist/cancel', methods=['POST'])
+@require_write_auth()
 def playlist_cancel():
     try:
         playlist_id = request.json.get('playlist_id')
@@ -1584,6 +1742,7 @@ def download_logs():
 
 
 @app.route('/api/backfill/run', methods=['POST'])
+@require_write_auth()
 def run_backfill_specific():
     if background_tasks["backfill"]["status"] == "running":
         return jsonify({"status": "already_running"}), 400
@@ -1666,6 +1825,7 @@ def get_backfill_status():
     return jsonify(status)
 
 @app.route('/api/backfill/full-enrichment', methods=['POST'])
+@require_write_auth()
 def run_backfill_enrichment():
     if background_tasks["backfill"]["status"] == "running":
         return jsonify({"status": "already_running", "type": background_tasks["backfill"]["type"]})

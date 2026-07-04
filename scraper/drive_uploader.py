@@ -2,7 +2,6 @@ import os
 import sys
 import datetime
 import logging
-import requests
 from dotenv import load_dotenv
 
 # Configure logger
@@ -23,28 +22,32 @@ load_dotenv(dotenv_path=env_path)
 if project_root not in sys.path:
     sys.path.append(project_root)
 
-from dashboard.drive_client import upload_media, download_json, upload_json, list_files
+from dashboard.drive_client import upload_media, download_json, upload_json, list_files, delete_file
+from scraper.album_art_resolver import resolve_album_art
+from scraper.operation_lock import library_write_lock
+from scraper.track_utils import (
+    build_track_record,
+    drive_id,
+    extract_tracks,
+    find_existing_track,
+    merge_track,
+    normalize_track_schema,
+    replace_tracks,
+    utc_now_iso,
+)
+
+def upload_database_json_locked(db_file_id, db_data, parent_folder_id):
+    with library_write_lock("database"):
+        return upload_json(db_file_id, db_data, 'database.json', parent_id=parent_folder_id)
 
 
 def fetch_album_art(track_name, artist_name):
     """
-    Queries the iTunes Search API for a matching song and returns a high-resolution
-    album art URL (600x600). Returns None if no results or the request fails.
+    Resolves high-resolution album art from the shared multi-provider resolver.
+    Returns None if no confident result is found.
     """
     try:
-        query = f"{artist_name} {track_name}"
-        url = "https://itunes.apple.com/search"
-        params = {"term": query, "entity": "song", "limit": 5}
-        response = requests.get(url, params=params, timeout=10)
-        response.raise_for_status()
-        results = response.json().get("results", [])
-        if not results:
-            logger.debug(f"fetch_album_art: No iTunes results for '{query}'")
-            return None
-        artwork = results[0].get("artworkUrl100")
-        if artwork:
-            artwork = artwork.replace("100x100bb", "600x600bb")
-        return artwork
+        return resolve_album_art(track_name, artist_name)
     except Exception as e:
         logger.warning(f"fetch_album_art: Failed for '{track_name}' by '{artist_name}': {e}")
         return None
@@ -123,55 +126,46 @@ def update_database(drive_file_id, metadata):
     and uploads the updated database back to Drive.
     """
     try:
-        db_file_id, parent_folder_id = get_db_file_id()
-        
-        db_data = []
-        if db_file_id:
-            logger.info(f"Downloading existing database.json (ID: {db_file_id}) from Drive...")
-            db_data = download_json(db_file_id)
-        else:
-            logger.info("database.json not found on Drive. Creating a fresh index list.")
-
-        # Ensure database structure is a list
-        if not isinstance(db_data, list):
-            if isinstance(db_data, dict) and 'tracks' in db_data:
-                db_data = db_data['tracks']
-            else:
-                db_data = []
-                
-        # Build new track entry
-        timestamp = datetime.datetime.utcnow().isoformat() + 'Z'
+        metadata = dict(metadata)
         title = metadata.get('title', 'Unknown Title')
         artist = metadata.get('artist', 'Unknown Artist')
-        # Fetch album art from iTunes unless the caller already supplied one
-        resolved_art = metadata.get('album_art') or fetch_album_art(title, artist)
-        new_track = {
-            "id": drive_file_id,
-            "driveFileId": drive_file_id,
-            "title": title,
-            "artist": artist,
-            "album": metadata.get('album', 'Unknown Album'),
-            "genre": metadata.get('genre', 'Unknown'),
-            "duration": metadata.get('duration', '--:--'),
-            "durationSeconds": metadata.get('durationSeconds'),
-            "spotify_id": metadata.get('spotify_id'),
-            "album_art": resolved_art,
-            "albumArt": resolved_art,
-            "language": metadata.get('language', 'Unknown'),
-            "source": metadata.get('source', 'unknown'),
-            "requestedBy": metadata.get('requestedBy'),
-            "lyrics": metadata.get('lyrics'),
-            "syncedLyrics": metadata.get('syncedLyrics'),
-            "lyricsStatus": metadata.get('lyricsStatus', 'ok'),
-            "timestamp": timestamp
-        }
-        
-        db_data.append(new_track)
-        logger.info(f"Appending track '{new_track['title']}' to database.")
-        
-        result = upload_json(db_file_id, db_data, 'database.json', parent_id=parent_folder_id)
-        logger.info("Successfully updated database.json on Google Drive.")
-        return result
+        metadata["album_art"] = metadata.get("album_art") or metadata.get("albumArt") or fetch_album_art(title, artist)
+
+        with library_write_lock("database"):
+            db_file_id, parent_folder_id = get_db_file_id()
+
+            db_data = []
+            if db_file_id:
+                logger.info(f"Downloading existing database.json (ID: {db_file_id}) from Drive...")
+                db_data = download_json(db_file_id)
+            else:
+                logger.info("database.json not found on Drive. Creating a fresh index list.")
+
+            tracks, was_dict = extract_tracks(db_data)
+            now = utc_now_iso()
+            new_track = build_track_record(drive_file_id, metadata, now=now)
+
+            existing, reason = find_existing_track(tracks, new_track)
+            if existing:
+                existing_id = drive_id(existing)
+                metadata["id"] = existing_id
+                metadata["driveFileId"] = existing_id
+                changed = merge_track(existing, new_track, now=now)
+                if changed:
+                    db_data = replace_tracks(db_data, tracks, was_dict)
+                    upload_json(db_file_id, db_data, 'database.json', parent_id=parent_folder_id)
+                    logger.info(f"Merged duplicate track '{title}' by '{artist}' into existing database record ({reason}).")
+                    return {"id": db_file_id, "duplicate": True, "merged": True, "track_id": existing_id}
+                logger.info(f"Skipped duplicate track '{title}' by '{artist}' ({reason}); database already has it.")
+                return {"id": db_file_id, "duplicate": True, "merged": False, "track_id": existing_id}
+
+            tracks.append(new_track)
+            logger.info(f"Appending track '{new_track['title']}' to database.")
+
+            db_data = replace_tracks(db_data, tracks, was_dict)
+            result = upload_json(db_file_id, db_data, 'database.json', parent_id=parent_folder_id)
+            logger.info("Successfully updated database.json on Google Drive.")
+            return result
         
     except Exception as e:
         logger.error(f"Failed to update database: {e}", exc_info=True)
@@ -183,68 +177,76 @@ def bulk_update_database(new_tracks):
     and uploads the updated database back to Drive.
     """
     try:
-        db_file_id, parent_folder_id = get_db_file_id()
-        
-        db_data = []
-        if db_file_id:
-            logger.info(f"Downloading existing database.json (ID: {db_file_id}) from Drive for bulk update...")
-            db_data = download_json(db_file_id)
-        else:
-            logger.info("database.json not found on Drive. Creating a fresh index list.")
-
-        is_dict = False
-        if not isinstance(db_data, list):
-            if isinstance(db_data, dict) and 'tracks' in db_data:
-                db_tracks = db_data['tracks']
-                is_dict = True
-            else:
-                db_tracks = []
-        else:
-            db_tracks = db_data
-                
-        timestamp = datetime.datetime.utcnow().isoformat() + 'Z'
-        
+        prepared_tracks = []
         for metadata in new_tracks:
             title = metadata.get('title', 'Unknown Title')
             artist = metadata.get('artist', 'Unknown Artist')
-            resolved_art = metadata.get('album_art') or fetch_album_art(title, artist)
-            drive_file_id = metadata.get('id') or metadata.get('driveFileId')
-            
-            new_track = {
-                "id": drive_file_id,
-                "driveFileId": drive_file_id,
-                "title": title,
-                "artist": artist,
-                "album": metadata.get('album', 'Unknown Album'),
-                "genre": metadata.get('genre', 'Unknown'),
-                "duration": metadata.get('duration', '--:--'),
-                "durationSeconds": metadata.get('durationSeconds'),
-                "spotify_id": metadata.get('spotify_id'),
-                "album_art": resolved_art,
-                "albumArt": resolved_art,
-                "language": metadata.get('language', 'Unknown'),
-                "source": metadata.get('source', 'unknown'),
-                "requestedBy": metadata.get('requestedBy'),
-                "lyrics": metadata.get('lyrics'),
-                "syncedLyrics": metadata.get('syncedLyrics'),
-                "lyricsStatus": metadata.get('lyricsStatus', 'ok'),
-                "timestamp": metadata.get('timestamp') or timestamp
-            }
-            db_tracks.append(new_track)
-            logger.info(f"Appending track '{title}' to database in bulk.")
-            
-        if is_dict:
-            db_data['tracks'] = db_tracks
-        else:
-            db_data = db_tracks
-        try:
-            result = upload_json(db_file_id, db_data, 'database.json', parent_id=parent_folder_id)
-            logger.info(f"Successfully bulk updated database.json with {len(new_tracks)} tracks.")
-            return True if result else False
-        except Exception as e:
-            logger.error(f"Failed to upload bulk update to Drive: {e}", exc_info=True)
-            return False
-            
+            metadata["album_art"] = metadata.get("album_art") or metadata.get("albumArt") or fetch_album_art(title, artist)
+            prepared_tracks.append(metadata)
+
+        duplicate_media_to_delete = []
+        upload_succeeded = True
+        with library_write_lock("database"):
+            db_file_id, parent_folder_id = get_db_file_id()
+
+            db_data = []
+            if db_file_id:
+                logger.info(f"Downloading existing database.json (ID: {db_file_id}) from Drive for bulk update...")
+                db_data = download_json(db_file_id)
+            else:
+                logger.info("database.json not found on Drive. Creating a fresh index list.")
+
+            db_tracks, was_dict = extract_tracks(db_data)
+            now = utc_now_iso()
+            inserted = 0
+            merged = 0
+            changed = False
+
+            for metadata in prepared_tracks:
+                title = metadata.get('title', 'Unknown Title')
+                artist = metadata.get('artist', 'Unknown Artist')
+                record = build_track_record(metadata.get('id') or metadata.get('driveFileId'), metadata, now=now)
+
+                existing, reason = find_existing_track(db_tracks, record)
+                if existing:
+                    incoming_id = drive_id(record)
+                    existing_id = drive_id(existing)
+                    metadata["id"] = existing_id
+                    metadata["driveFileId"] = existing_id
+                    if merge_track(existing, record, now=now):
+                        changed = True
+                        merged += 1
+                    logger.info(f"Bulk update reused existing track '{title}' by '{artist}' ({reason}).")
+                    if incoming_id and existing_id and incoming_id != existing_id:
+                        duplicate_media_to_delete.append((incoming_id, existing_id))
+                    continue
+
+                db_tracks.append(record)
+                inserted += 1
+                changed = True
+                logger.info(f"Appending track '{title}' to database in bulk.")
+
+            if not changed:
+                logger.info("bulk_update_database: No database changes needed.")
+            else:
+                db_data = replace_tracks(db_data, db_tracks, was_dict)
+                try:
+                    result = upload_json(db_file_id, db_data, 'database.json', parent_id=parent_folder_id)
+                    upload_succeeded = True if result else False
+                    logger.info(f"Successfully bulk updated database.json. Inserted: {inserted}, merged: {merged}.")
+                except Exception as e:
+                    logger.error(f"Failed to upload bulk update to Drive: {e}", exc_info=True)
+                    upload_succeeded = False
+
+        for incoming_id, existing_id in duplicate_media_to_delete:
+            try:
+                delete_file(incoming_id)
+                logger.info(f"Deleted duplicate uploaded media file {incoming_id} after matching existing track {existing_id}.")
+            except Exception as cleanup_err:
+                logger.warning(f"Could not delete duplicate uploaded media file {incoming_id}: {cleanup_err}")
+
+        return upload_succeeded
+
     except Exception as e:
         logger.error(f"Failed to bulk update database: {e}", exc_info=True)
         return False
@@ -353,9 +355,9 @@ def normalize_database():
         logger.info("normalize_database: Uploading normalized database.json...")
         if is_dict:
             db_data['tracks'] = tracks
-            upload_json(db_file_id, db_data, 'database.json', parent_id=parent_folder_id)
+            upload_database_json_locked(db_file_id, db_data, parent_folder_id)
         else:
-            upload_json(db_file_id, tracks, 'database.json', parent_id=parent_folder_id)
+            upload_database_json_locked(db_file_id, tracks, parent_folder_id)
             
         logger.info(f"normalize_database: Finished. Normalized {tracks_changed} of {len(tracks)} tracks.")
         return tracks_changed, len(tracks)
@@ -405,9 +407,9 @@ def backfill_lyrics_status():
         logger.info(f"backfill_lyrics_status: Uploading updated database.json ({tracks_changed} tracks modified)...")
         if is_dict:
             db_data['tracks'] = tracks
-            upload_json(db_file_id, db_data, 'database.json', parent_id=parent_folder_id)
+            upload_database_json_locked(db_file_id, db_data, parent_folder_id)
         else:
-            upload_json(db_file_id, tracks, 'database.json', parent_id=parent_folder_id)
+            upload_database_json_locked(db_file_id, tracks, parent_folder_id)
             
         logger.info(f"backfill_lyrics_status: Finished backfilling {tracks_changed} tracks.")
         return tracks_changed
@@ -526,6 +528,59 @@ def audit_database_fields():
         logger.error(f"audit_database_fields failed: {e}", exc_info=True)
         raise
 
+def find_orphan_media_files():
+    """
+    Compares Drive media files against database.json driveFileId/id values.
+    Returns a read-only report of media files that are not referenced by the DB.
+    """
+    db_file_id, _ = get_db_file_id()
+    if not db_file_id:
+        raise ValueError("database.json file ID not found.")
+
+    media_folder_id = os.environ.get('GDRIVE_MEDIA_FOLDER_ID')
+    if not media_folder_id:
+        raise ValueError("GDRIVE_MEDIA_FOLDER_ID environment variable is not set.")
+
+    db_data = download_json(db_file_id)
+    tracks, _ = extract_tracks(db_data)
+    referenced_ids = {drive_id(track) for track in tracks if drive_id(track)}
+    media_files = list_files(media_folder_id)
+    orphans = [file_info for file_info in media_files if file_info.get("id") not in referenced_ids]
+
+    return {
+        "database_tracks": len(tracks),
+        "media_files": len(media_files),
+        "orphan_count": len(orphans),
+        "orphans": orphans,
+    }
+
+def cleanup_orphan_media_files(dry_run=True):
+    """
+    Deletes media files not referenced by database.json when dry_run is False.
+    Defaults to dry-run to prevent accidental destructive cleanup.
+    """
+    report = find_orphan_media_files()
+    if dry_run:
+        report["deleted_count"] = 0
+        report["dry_run"] = True
+        return report
+
+    deleted = []
+    errors = []
+    for file_info in report["orphans"]:
+        file_id = file_info.get("id")
+        try:
+            delete_file(file_id)
+            deleted.append(file_info)
+        except Exception as e:
+            errors.append({"id": file_id, "name": file_info.get("name"), "error": str(e)})
+
+    report["dry_run"] = False
+    report["deleted_count"] = len(deleted)
+    report["deleted"] = deleted
+    report["errors"] = errors
+    return report
+
 def list_database_backups():
     """
     Lists all database_backup_*.json files in the database folder.
@@ -564,7 +619,7 @@ def restore_database_backup(backup_file_id):
             return False
             
         logger.info(f"restore_database_backup: Uploading restored data to database.json (ID {db_file_id})...")
-        upload_json(db_file_id, backup_data, 'database.json', parent_id=parent_folder_id)
+        upload_database_json_locked(db_file_id, backup_data, parent_folder_id)
         logger.info("restore_database_backup: Successfully restored database.json from backup.")
         return True
     except Exception as e:

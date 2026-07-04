@@ -7,46 +7,31 @@ import logging
 # Add project root to sys.path to resolve imports when run directly or as a module
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from dashboard.drive_client import download_json, upload_json, search_file_by_name
+from dashboard.drive_client import download_json, upload_json, list_files
 from scraper.drive_uploader import get_db_file_id
+from scraper.operation_lock import library_write_lock
 
 logger = logging.getLogger(__name__)
 
-def load_playlists():
-    """
-    Downloads playlists.json from the Drive database folder.
-    Returns an empty list if not found.
-    """
-    db_file_id, parent_id = get_db_file_id()
-    if not parent_id:
-        logger.warning("Could not determine database folder to load playlists.json")
-        return []
-        
-    playlists_file_id = search_file_by_name("playlists.json", parent_id)
+def _find_playlists_file(parent_id):
+    for file_info in list_files(parent_id):
+        if file_info.get("name") == "playlists.json":
+            return file_info.get("id")
+    return None
+
+def _load_playlists_unlocked(parent_id):
+    playlists_file_id = _find_playlists_file(parent_id)
     if not playlists_file_id:
         return []
-        
-    try:
-        data = download_json(playlists_file_id)
-        if isinstance(data, list):
-            return data
-        return []
-    except Exception as e:
-        logger.error(f"Failed to load playlists.json: {e}")
-        return []
 
-def save_playlists(playlists):
-    """
-    Uploads playlists.json to the Drive database folder.
-    Creates a backup of the existing playlists.json first if it exists.
-    """
-    db_file_id, parent_id = get_db_file_id()
-    if not parent_id:
-        logger.error("Could not determine database folder to save playlists.json")
-        return
-        
-    playlists_file_id = search_file_by_name("playlists.json", parent_id)
-    
+    data = download_json(playlists_file_id)
+    if isinstance(data, list):
+        return data
+    return []
+
+def _save_playlists_unlocked(parent_id, playlists):
+    playlists_file_id = _find_playlists_file(parent_id)
+
     if playlists_file_id:
         # Create a backup
         try:
@@ -56,35 +41,68 @@ def save_playlists(playlists):
             upload_json(None, existing_data, backup_filename, parent_id=parent_id)
         except Exception as e:
             logger.warning(f"Failed to create backup of playlists.json: {e}")
-            
+
+    return upload_json(playlists_file_id, playlists, "playlists.json", parent_id=parent_id)
+
+def load_playlists():
+    """
+    Downloads playlists.json from the Drive database folder.
+    Returns an empty list if not found.
+    """
+    db_file_id, parent_id = get_db_file_id()
+    if not parent_id:
+        raise ValueError("Could not determine database folder to load playlists.json")
+        
     try:
-        upload_json(playlists_file_id, playlists, "playlists.json", parent_id=parent_id)
+        return _load_playlists_unlocked(parent_id)
     except Exception as e:
-        logger.error(f"Failed to save playlists.json: {e}")
+        logger.error(f"Failed to load playlists.json: {e}")
+        raise
+
+def save_playlists(playlists):
+    """
+    Uploads playlists.json to the Drive database folder.
+    Creates a backup of the existing playlists.json first if it exists.
+    """
+    db_file_id, parent_id = get_db_file_id()
+    if not parent_id:
+        raise ValueError("Could not determine database folder to save playlists.json")
+
+    with library_write_lock("playlists"):
+        try:
+            return _save_playlists_unlocked(parent_id, playlists)
+        except Exception as e:
+            logger.error(f"Failed to save playlists.json: {e}")
+            raise
 
 def add_playlist(name, source_url, cover_image, imported_via, requestedBy):
     """
     Creates a new playlist entry with empty track_ids and returns the generated playlist id.
     """
-    playlists = load_playlists()
-    
-    playlist_id = str(uuid.uuid4())
-    
-    new_playlist = {
-        "id": playlist_id,
-        "name": name,
-        "source_url": source_url,
-        "cover_image": cover_image,
-        "track_ids": [],
-        "total_tracks": 0,
-        "created_at": datetime.datetime.utcnow().isoformat() + 'Z',
-        "imported_via": imported_via,
-        "requestedBy": requestedBy
-    }
-    
-    playlists.append(new_playlist)
-    save_playlists(playlists)
-    
+    _, parent_id = get_db_file_id()
+    if not parent_id:
+        raise ValueError("Could not determine database folder to add playlist")
+
+    with library_write_lock("playlists"):
+        playlists = _load_playlists_unlocked(parent_id)
+
+        playlist_id = str(uuid.uuid4())
+
+        new_playlist = {
+            "id": playlist_id,
+            "name": name,
+            "source_url": source_url,
+            "cover_image": cover_image,
+            "track_ids": [],
+            "total_tracks": 0,
+            "created_at": datetime.datetime.utcnow().isoformat() + 'Z',
+            "imported_via": imported_via,
+            "requestedBy": requestedBy
+        }
+
+        playlists.append(new_playlist)
+        _save_playlists_unlocked(parent_id, playlists)
+
     return playlist_id
 
 def add_track_to_playlist(playlist_id, drive_file_id):
@@ -92,21 +110,26 @@ def add_track_to_playlist(playlist_id, drive_file_id):
     Appends drive_file_id to the playlist's track_ids if not already present,
     updates total_tracks, and saves.
     """
-    playlists = load_playlists()
-    updated = False
-    
-    for playlist in playlists:
-        if playlist.get("id") == playlist_id:
-            if drive_file_id not in playlist.get("track_ids", []):
-                if "track_ids" not in playlist:
-                    playlist["track_ids"] = []
-                playlist["track_ids"].append(drive_file_id)
-                playlist["total_tracks"] = len(playlist["track_ids"])
-                updated = True
-            break
-            
-    if updated:
-        save_playlists(playlists)
+    _, parent_id = get_db_file_id()
+    if not parent_id:
+        raise ValueError("Could not determine database folder to update playlist")
+
+    with library_write_lock("playlists"):
+        playlists = _load_playlists_unlocked(parent_id)
+        updated = False
+
+        for playlist in playlists:
+            if playlist.get("id") == playlist_id:
+                if drive_file_id not in playlist.get("track_ids", []):
+                    if "track_ids" not in playlist:
+                        playlist["track_ids"] = []
+                    playlist["track_ids"].append(drive_file_id)
+                    playlist["total_tracks"] = len(playlist["track_ids"])
+                    updated = True
+                break
+
+        if updated:
+            _save_playlists_unlocked(parent_id, playlists)
 
 def get_playlist(playlist_id):
     """
@@ -135,6 +158,7 @@ def get_playlist(playlist_id):
                 all_tracks = db_data['tracks']
         except Exception as e:
             logger.error(f"Failed to load database.json: {e}")
+            raise
             
     track_map = {t.get("driveFileId", t.get("id")): t for t in all_tracks}
     

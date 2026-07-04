@@ -20,6 +20,7 @@ if project_root not in sys.path:
 
 from dashboard.drive_client import download_json, upload_json, list_files
 from scraper.drive_uploader import get_db_file_id
+from scraper.operation_lock import library_write_lock
 
 # Default Configuration
 DEFAULT_CONFIG = {
@@ -51,6 +52,9 @@ def _get_file_id(filename, folder_id):
     """
     Helper function to locate a file by name inside a specific folder ID on Google Drive.
     """
+    if not folder_id:
+        raise ValueError(f"Cannot locate '{filename}' without a Drive folder ID.")
+
     logger.info(f"Searching for file '{filename}' in folder ID: {folder_id}")
     try:
         files = list_files(folder_id)
@@ -60,6 +64,7 @@ def _get_file_id(filename, folder_id):
                 return f.get('id')
     except Exception as e:
         logger.error(f"Failed to search for file '{filename}' in folder {folder_id}: {e}", exc_info=True)
+        raise
     logger.info(f"File '{filename}' not found in folder {folder_id}")
     return None
 
@@ -71,8 +76,7 @@ def load_config():
     try:
         _, db_folder_id = get_db_file_id()
         if not db_folder_id:
-            logger.warning("load_config: Database folder could not be resolved. Returning DEFAULT_CONFIG.")
-            return DEFAULT_CONFIG.copy()
+            raise ValueError("Database folder could not be resolved.")
 
         file_id = _get_file_id("scraper_config.json", db_folder_id)
         if file_id:
@@ -88,8 +92,8 @@ def load_config():
             logger.info("load_config: scraper_config.json not found on Drive. Returning DEFAULT_CONFIG.")
             return DEFAULT_CONFIG.copy()
     except Exception as e:
-        logger.error(f"load_config: Error reading config from Drive: {e}. Returning DEFAULT_CONFIG.", exc_info=True)
-        return DEFAULT_CONFIG.copy()
+        logger.error(f"load_config: Error reading config from Drive: {e}", exc_info=True)
+        raise
 
 def save_config(config):
     """
@@ -101,8 +105,9 @@ def save_config(config):
         if not db_folder_id:
             raise ValueError("Database folder could not be resolved.")
 
-        file_id = _get_file_id("scraper_config.json", db_folder_id)
-        result = upload_json(file_id, config, "scraper_config.json", parent_id=db_folder_id)
+        with library_write_lock("config"):
+            file_id = _get_file_id("scraper_config.json", db_folder_id)
+            result = upload_json(file_id, config, "scraper_config.json", parent_id=db_folder_id)
         logger.info(f"save_config: Successfully saved config. File ID: {result.get('id')}")
         return result
     except Exception as e:
@@ -117,8 +122,7 @@ def load_state():
     try:
         _, db_folder_id = get_db_file_id()
         if not db_folder_id:
-            logger.warning("load_state: Database folder could not be resolved. Returning DEFAULT_STATE.")
-            return DEFAULT_STATE.copy()
+            raise ValueError("Database folder could not be resolved.")
 
         file_id = _get_file_id("scraper_state.json", db_folder_id)
         if file_id:
@@ -134,8 +138,8 @@ def load_state():
             logger.info("load_state: scraper_state.json not found on Drive. Returning DEFAULT_STATE.")
             return DEFAULT_STATE.copy()
     except Exception as e:
-        logger.error(f"load_state: Error reading state from Drive: {e}. Returning DEFAULT_STATE.", exc_info=True)
-        return DEFAULT_STATE.copy()
+        logger.error(f"load_state: Error reading state from Drive: {e}", exc_info=True)
+        raise
 
 def save_state(state):
     """
@@ -147,8 +151,9 @@ def save_state(state):
         if not db_folder_id:
             raise ValueError("Database folder could not be resolved.")
 
-        file_id = _get_file_id("scraper_state.json", db_folder_id)
-        result = upload_json(file_id, state, "scraper_state.json", parent_id=db_folder_id)
+        with library_write_lock("state"):
+            file_id = _get_file_id("scraper_state.json", db_folder_id)
+            result = upload_json(file_id, state, "scraper_state.json", parent_id=db_folder_id)
         logger.info(f"save_state: Successfully saved state. File ID: {result.get('id')}")
         return result
     except Exception as e:
@@ -179,8 +184,8 @@ def is_pool_expired(state):
         now_datetime = datetime.datetime.utcnow()
 
         delta = now_datetime - pool_datetime
-        expired = delta.days >= 7
-        logger.info(f"is_pool_expired: Pool date is {pool_datetime}. Now is {now_datetime}. Age: {delta.days} days. Expired: {expired}")
+        expired = delta.days >= int(auto_refresh_days)
+        logger.info(f"is_pool_expired: Pool date is {pool_datetime}. Now is {now_datetime}. Age: {delta.days} days. Refresh days: {auto_refresh_days}. Expired: {expired}")
         return expired
     except Exception as e:
         logger.error(f"is_pool_expired: Error checking pool expiration: {e}. Treating as expired.", exc_info=True)

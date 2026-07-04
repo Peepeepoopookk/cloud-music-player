@@ -87,7 +87,14 @@ def get_playlist_preview(playlist_url):
 
 def start_playlist_import(playlist_url, batch_size=15, device_id=None, imported_via="dashboard"):
     preview = get_playlist_preview(playlist_url)
-    
+    tracks = scrape_spotify_embed_playlist(preview["playlist_id"])
+    if not tracks:
+        raise ValueError("No importable tracks were found for this Spotify playlist.")
+
+    db_file_id, parent_id = get_db_file_id()
+    if not parent_id:
+        raise ValueError("Could not determine database folder for playlist import state.")
+
     # Call add_playlist to create a record and get a unified UUID for this import session
     playlist_id = add_playlist(
         name=preview["playlist_name"],
@@ -96,9 +103,7 @@ def start_playlist_import(playlist_url, batch_size=15, device_id=None, imported_
         imported_via=imported_via,
         requestedBy=device_id
     )
-    
-    tracks = scrape_spotify_embed_playlist(preview["playlist_id"])
-    
+
     state = {
         "playlist_id": playlist_id,
         "playlist_url": playlist_url,
@@ -118,13 +123,11 @@ def start_playlist_import(playlist_url, batch_size=15, device_id=None, imported_
         "tracks": tracks
     }
     
-    db_file_id, parent_id = get_db_file_id()
-    if parent_id:
-        existing_file_id = search_file_by_name(f"playlist_import_state_{playlist_id}.json", parent_id)
-        if existing_file_id:
-            upload_json(existing_file_id, state, f"playlist_import_state_{playlist_id}.json", parent_id=parent_id)
-        else:
-            upload_json(None, state, f"playlist_import_state_{playlist_id}.json", parent_id=parent_id)
+    existing_file_id = search_file_by_name(f"playlist_import_state_{playlist_id}.json", parent_id)
+    if existing_file_id:
+        upload_json(existing_file_id, state, f"playlist_import_state_{playlist_id}.json", parent_id=parent_id)
+    else:
+        upload_json(None, state, f"playlist_import_state_{playlist_id}.json", parent_id=parent_id)
             
     return playlist_id
 
@@ -352,6 +355,8 @@ def run_playlist_import(playlist_id, batch_size=15, source_override=None):
                 state["skipped"] += 1
             else:
                 local_file_path = None
+                drive_file_id_upload = None
+                queued_for_database = False
                 def cancel_check():
                     st = active_imports.get(playlist_id)
                     if st and st.get("status") == "cancelled":
@@ -360,9 +365,8 @@ def run_playlist_import(playlist_id, batch_size=15, source_override=None):
                     
                 try:
                     local_file_path = download_track(title, artist, temp_dir, cancel_check_callback=cancel_check)
-                    drive_file_id_upload = upload_track(local_file_path)
-                    
                     enriched = enrich_track_metadata(title, artist, local_file_path=local_file_path, source=source)
+                    drive_file_id_upload = upload_track(local_file_path)
                     
                     metadata = {
                         "title": title,
@@ -384,6 +388,7 @@ def run_playlist_import(playlist_id, batch_size=15, source_override=None):
                     metadata["driveFileId"] = drive_file_id_upload
                     
                     pending_gemini_batch.append(metadata)
+                    queued_for_database = True
                     state["gemini_pending"] = len(pending_gemini_batch)
                     
                     if len(pending_gemini_batch) >= GEMINI_IMPORT_BATCH_SIZE:
@@ -396,6 +401,13 @@ def run_playlist_import(playlist_id, batch_size=15, source_override=None):
                     else:
                         logger.error(f"Failed to process {title}: {e}", exc_info=True)
                         state["failed"] += 1
+                    if drive_file_id_upload and not queued_for_database:
+                        try:
+                            from dashboard.drive_client import delete_file
+                            delete_file(drive_file_id_upload)
+                            logger.info(f"Deleted uploaded media {drive_file_id_upload} after playlist track failure.")
+                        except Exception as cleanup_err:
+                            logger.warning(f"Could not delete uploaded media {drive_file_id_upload} after playlist track failure: {cleanup_err}")
                 finally:
                     if local_file_path and os.path.exists(local_file_path):
                         try:

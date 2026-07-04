@@ -46,6 +46,7 @@ from scraper.downloader import download_track
 from scraper.drive_uploader import upload_track, bulk_update_database, get_db_file_id, fetch_album_art
 from scraper.gemini_import_pipeline import GEMINI_IMPORT_BATCH_SIZE, apply_gemini_to_import_batch
 from dashboard.drive_client import download_json, upload_json
+from scraper.operation_lock import library_write_lock
 from scraper.state_manager import (
     load_config,
     save_config,
@@ -55,6 +56,10 @@ from scraper.state_manager import (
     is_duplicate,
     get_effective_pool
 )
+
+def upload_database_json_locked(db_file_id, db_data, parent_id):
+    with library_write_lock("database"):
+        return upload_json(db_file_id, db_data, 'database.json', parent_id=parent_id)
 
 def determine_language_from_source(source, fallback="unknown"):
     """Legacy helper for fallback"""
@@ -105,9 +110,9 @@ def backfill_album_art():
             logger.info(f"backfill_album_art: Uploading updated database with {backfilled_count} backfilled album arts...")
             if isinstance(db_data, dict) and 'tracks' in db_data:
                 db_data['tracks'] = tracks
-                upload_json(db_file_id, db_data, 'database.json', parent_id=parent_folder_id)
+                upload_database_json_locked(db_file_id, db_data, parent_folder_id)
             else:
-                upload_json(db_file_id, tracks, 'database.json', parent_id=parent_folder_id)
+                upload_database_json_locked(db_file_id, tracks, parent_folder_id)
                 
         logger.info(f"backfill_album_art: Finished. {backfilled_count} tracks were backfilled.")
     except Exception as e:
@@ -172,9 +177,9 @@ def backfill_durations():
             logger.info(f"backfill_durations: Uploading updated database with {updated_count} duration backfills...")
             if isinstance(db_data, dict) and 'tracks' in db_data:
                 db_data['tracks'] = tracks
-                upload_json(db_file_id, db_data, 'database.json', parent_id=parent_folder_id)
+                upload_database_json_locked(db_file_id, db_data, parent_folder_id)
             else:
-                upload_json(db_file_id, tracks, 'database.json', parent_id=parent_folder_id)
+                upload_database_json_locked(db_file_id, tracks, parent_folder_id)
         else:
             logger.info("backfill_durations: All tracks have valid durations or no updates made.")
             
@@ -262,9 +267,9 @@ def backfill_languages():
             logger.info(f"backfill_languages: Uploading updated database with {updated_count} language backfills...")
             if isinstance(db_data, dict) and 'tracks' in db_data:
                 db_data['tracks'] = tracks
-                upload_json(db_file_id, db_data, 'database.json', parent_id=parent_folder_id)
+                upload_database_json_locked(db_file_id, db_data, parent_folder_id)
             else:
-                upload_json(db_file_id, tracks, 'database.json', parent_id=parent_folder_id)
+                upload_database_json_locked(db_file_id, tracks, parent_folder_id)
         else:
             logger.info("backfill_languages: All tracks have valid languages or no updates needed.")
             
@@ -479,7 +484,7 @@ def run_scraper():
     
     logger.info(f"Current effective pool size: {len(effective_pool)}. Resume index: {cursor}. Quota target: {songs_per_run} songs.")
     
-    # 5. Process tracks
+        # 5. Process tracks
     while cursor < len(effective_pool) and (len(downloaded_songs) + len(pending_gemini_batch) + len(deferred_gemini_tracks)) < songs_per_run:
         track = effective_pool[cursor]
         title = track.get("title")
@@ -503,6 +508,8 @@ def run_scraper():
         logger.info("-" * 50)
         
         local_file_path = None
+        drive_file_id = None
+        queued_for_database = False
         cursor_advanced = False
         try:
             # Step A: Download audio via yt-dlp
@@ -536,6 +543,7 @@ def run_scraper():
             metadata["driveFileId"] = drive_file_id
             
             pending_gemini_batch.append(metadata)
+            queued_for_database = True
             state["gemini_pending"] = len(pending_gemini_batch)
             
             cursor += 1
@@ -553,6 +561,13 @@ def run_scraper():
         except Exception as track_err:
             logger.error(f"Failed to process track '{title}' by '{artist}': {track_err}", exc_info=True)
             failed_songs.append(f"{title} by {artist}")
+            if drive_file_id and not queued_for_database:
+                try:
+                    from dashboard.drive_client import delete_file
+                    delete_file(drive_file_id)
+                    logger.info(f"Deleted uploaded media {drive_file_id} after scraper track failure.")
+                except Exception as cleanup_err:
+                    logger.warning(f"Could not delete uploaded media {drive_file_id} after scraper track failure: {cleanup_err}")
             if not cursor_advanced:
                 cursor += 1
                 state["cursor"] = cursor
@@ -719,7 +734,7 @@ def run_full_enrichment_pass():
         if updated:
             if isinstance(db_data, dict):
                 db_data['tracks'] = tracks
-            upload_json(db_file_id, db_data, 'database.json', parent_id=parent_id)
+            upload_database_json_locked(db_file_id, db_data, parent_id)
             logger.info("run_full_enrichment_pass: Database updated successfully.")
         else:
             logger.info("run_full_enrichment_pass: No new metadata found. Database unchanged.")
@@ -975,7 +990,7 @@ def run_complete_backfill():
             if processed_count % 15 == 0 and updated_since_last_save:
                 if isinstance(db_data, dict):
                     db_data['tracks'] = tracks
-                upload_json(db_file_id, db_data, 'database.json', parent_id=parent_id)
+                upload_database_json_locked(db_file_id, db_data, parent_id)
                 logger.info(f"Incremental save completed after processing {processed_count} tracks.")
                 updated_since_last_save = False
 
@@ -983,7 +998,7 @@ def run_complete_backfill():
         if updated_since_last_save:
             if isinstance(db_data, dict):
                 db_data['tracks'] = tracks
-            upload_json(db_file_id, db_data, 'database.json', parent_id=parent_id)
+            upload_database_json_locked(db_file_id, db_data, parent_id)
             logger.info("Final database save completed.")
 
         # Audit After
@@ -1261,7 +1276,7 @@ def run_gemini_backfill(mode="auto", task_state=None, cancel_event=None):
                         if isinstance(fresh_db_data, dict):
                             fresh_db_data['tracks'] = fresh_tracks
                         try:
-                            upload_result = upload_json(db_file_id, fresh_db_data, 'database.json', parent_id=parent_id)
+                            upload_result = upload_database_json_locked(db_file_id, fresh_db_data, parent_id)
                             if not upload_result:
                                 raise Exception("upload_json returned empty or False")
                             total_updated += batch_updates

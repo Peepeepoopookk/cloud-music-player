@@ -10,6 +10,8 @@ import requests
 import urllib.parse
 import difflib
 
+from scraper.album_art_resolver import find_itunes_track_metadata, resolve_album_art
+
 # Configure logger
 logger = logging.getLogger(__name__)
 if not logger.handlers:
@@ -409,22 +411,13 @@ def get_track_by_spotify_url(spotify_url):
     genre = "Unknown"
     album_art = ""
     try:
-        search_term = f"{artist} {title}"
-        itunes_url = "https://itunes.apple.com/search"
-        params = {"term": search_term, "media": "music", "limit": 5}
-        r = requests.get(itunes_url, params=params, headers=HEADERS, timeout=5)
-        if r.status_code == 200:
-            data = r.json()
-            results = data.get("results", [])
-            if results:
-                best_match = results[0]
-                genre = best_match.get("primaryGenreName", "Unknown")
-                artwork_url = best_match.get("artworkUrl100", "")
-                if artwork_url:
-                    album_art = artwork_url.replace("100x100", "600x600")
-                logger.info(f"get_track_by_spotify_url: iTunes API result. Genre: '{genre}', Album Art: '{album_art}'")
+        best_match = find_itunes_track_metadata(title, artist)
+        if best_match:
+            genre = best_match.get("genre") or "Unknown"
+            album_art = best_match.get("album_art") or ""
+            logger.info(f"get_track_by_spotify_url: iTunes resolver result. Genre: '{genre}', Album Art: '{album_art}'")
     except Exception as e:
-        logger.warning(f"get_track_by_spotify_url: Error querying iTunes Search API: {e}")
+        logger.warning(f"get_track_by_spotify_url: Error querying iTunes resolver: {e}")
 
     return {
         "title": title,
@@ -437,60 +430,22 @@ def get_track_by_spotify_url(spotify_url):
 
 def fetch_album_art(title, artist):
     """
-    Searches iTunes Search API and finds the best matching result using difflib.SequenceMatcher.
-    Returns the artworkUrl100 field with "100x100" replaced with "600x600" for high resolution, or None.
+    Resolves album art using the shared multi-provider album art resolver.
     """
-    import difflib
     if not title or not artist:
         return None
     
-    # Add random delay and proper error handling
     delay = random.uniform(0.5, 1.5)
     time.sleep(delay)
     
-    logger.info(f"fetch_album_art: Searching iTunes for '{title}' by '{artist}'...")
-    url = "https://itunes.apple.com/search"
-    params = {
-        "term": f"{artist} {title}",
-        "media": "music",
-        "limit": 5
-    }
+    logger.info(f"fetch_album_art: Resolving album art for '{title}' by '{artist}'...")
     try:
-        response = requests.get(url, params=params, headers=HEADERS, timeout=5)
-        response.raise_for_status()
-        results = response.json().get("results", [])
-        if not results:
-            logger.info(f"fetch_album_art: No results found for '{title}' by '{artist}'.")
-            return None
-            
-          
-        best_match = None
-        best_score = -1.0
-        
-        norm_title = title.lower()
-        norm_artist = artist.lower()
-        
-        for item in results:
-            res_title = (item.get("trackName") or "").lower()
-            res_artist = (item.get("artistName") or "").lower()
-            
-            title_ratio = difflib.SequenceMatcher(None, norm_title, res_title).ratio()
-            artist_ratio = difflib.SequenceMatcher(None, norm_artist, res_artist).ratio()
-            
-            score = title_ratio + artist_ratio
-            if score > best_score:
-                best_score = score
-                best_match = item
-                
-        if best_match:
-            artwork_url = best_match.get("artworkUrl100")
-            if artwork_url:
-                high_res_url = artwork_url.replace("100x100", "600x600")
-                logger.info(f"fetch_album_art: Found best matching artwork (score={best_score:.3f}): {high_res_url}")
-                return high_res_url
-                
+        art = resolve_album_art(title, artist)
+        if art:
+            logger.info(f"fetch_album_art: Found artwork: {art}")
+        return art
     except Exception as e:
-        logger.warning(f"fetch_album_art: Error fetching album art: {e}")
+        logger.warning(f"fetch_album_art: Error resolving album art: {e}")
         
     return None
 
