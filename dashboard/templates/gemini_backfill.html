@@ -166,6 +166,132 @@
         </div>
 
         <div class="card" style="margin-bottom: 24px;">
+            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; gap: 16px;">
+                <div>
+                    <h2>Album Art Backfill</h2>
+                    <p class="section-desc">Finds missing artwork, saves updates into database.json, and reports resolver sources live.</p>
+                </div>
+                <div style="display: flex; gap: 12px;">
+                    <button class="btn btn-secondary" id="btn-refresh-album-art">Refresh Counts</button>
+                    <button class="btn btn-primary" id="btn-run-album-art">Run Album Art Backfill</button>
+                </div>
+            </div>
+
+            <div class="ai-summary-grid">
+                <div class="ai-summary-item">
+                    <span class="ai-summary-label">Missing Art</span>
+                    <span class="ai-summary-value" id="album-art-missing-count">--</span>
+                </div>
+                <div class="ai-summary-item">
+                    <span class="ai-summary-label">Present Art</span>
+                    <span class="ai-summary-value" id="album-art-present-count">--</span>
+                </div>
+                <div class="ai-summary-item">
+                    <span class="ai-summary-label">Added This Run</span>
+                    <span class="ai-summary-value" id="album-art-added-count">--</span>
+                </div>
+                <div class="ai-summary-item">
+                    <span class="ai-summary-label">Remaining Empty</span>
+                    <span class="ai-summary-value" id="album-art-remaining-count">--</span>
+                </div>
+            </div>
+            <div id="album-art-source-counts" style="margin-top: 10px; color: var(--tertiary); font-size: 0.84rem;">Resolver sources will appear during a run.</div>
+            <div class="live-log-panel" style="max-height: 180px;">
+                <div id="album-art-log-body">
+                    <div class="live-log-line">
+                        <span class="live-log-time">--</span>
+                        <span class="live-log-level info">info</span>
+                        <span class="live-log-message">Waiting for an album art backfill run.</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card" style="margin-bottom: 24px;">
+            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; gap: 16px;">
+                <div>
+                    <h2>Duration Backfill</h2>
+                    <p class="section-desc">Fills missing durations through iTunes, Deezer, and MusicBrainz fallbacks.</p>
+                </div>
+                <div style="display: flex; gap: 12px;">
+                    <button class="btn btn-secondary" id="btn-refresh-duration">Refresh Counts</button>
+                    <button class="btn btn-primary" id="btn-run-duration">Run Duration Backfill</button>
+                </div>
+            </div>
+
+            <div class="ai-summary-grid">
+                <div class="ai-summary-item">
+                    <span class="ai-summary-label">Missing Duration</span>
+                    <span class="ai-summary-value" id="duration-missing-count">--</span>
+                </div>
+                <div class="ai-summary-item">
+                    <span class="ai-summary-label">Present Duration</span>
+                    <span class="ai-summary-value" id="duration-present-count">--</span>
+                </div>
+                <div class="ai-summary-item">
+                    <span class="ai-summary-label">Updated This Run</span>
+                    <span class="ai-summary-value" id="duration-added-count">--</span>
+                </div>
+                <div class="ai-summary-item">
+                    <span class="ai-summary-label">Remaining Empty</span>
+                    <span class="ai-summary-value" id="duration-remaining-count">--</span>
+                </div>
+            </div>
+            <div id="duration-source-counts" style="margin-top: 10px; color: var(--tertiary); font-size: 0.84rem;">Resolver sources will appear during a run.</div>
+            <div class="live-log-panel" style="max-height: 180px;">
+                <div id="duration-log-body">
+                    <div class="live-log-line">
+                        <span class="live-log-time">--</span>
+                        <span class="live-log-level info">info</span>
+                        <span class="live-log-message">Waiting for a duration backfill run.</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card" style="margin-bottom: 24px;">
+            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; gap: 16px;">
+                <div>
+                    <h2>Lyrics Backfill</h2>
+                    <p class="section-desc">Finds missing lyrics through LRCLIB and lyrics.ovh fallbacks, then saves lyricsStatus.</p>
+                </div>
+                <div style="display: flex; gap: 12px;">
+                    <button class="btn btn-secondary" id="btn-refresh-lyrics">Refresh Counts</button>
+                    <button class="btn btn-primary" id="btn-run-lyrics">Run Lyrics Backfill</button>
+                </div>
+            </div>
+
+            <div class="ai-summary-grid">
+                <div class="ai-summary-item">
+                    <span class="ai-summary-label">Missing Lyrics</span>
+                    <span class="ai-summary-value" id="lyrics-missing-count">--</span>
+                </div>
+                <div class="ai-summary-item">
+                    <span class="ai-summary-label">Present Lyrics</span>
+                    <span class="ai-summary-value" id="lyrics-present-count">--</span>
+                </div>
+                <div class="ai-summary-item">
+                    <span class="ai-summary-label">Added This Run</span>
+                    <span class="ai-summary-value" id="lyrics-added-count">--</span>
+                </div>
+                <div class="ai-summary-item">
+                    <span class="ai-summary-label">Remaining Empty</span>
+                    <span class="ai-summary-value" id="lyrics-remaining-count">--</span>
+                </div>
+            </div>
+            <div id="lyrics-source-counts" style="margin-top: 10px; color: var(--tertiary); font-size: 0.84rem;">Resolver sources will appear during a run.</div>
+            <div class="live-log-panel" style="max-height: 180px;">
+                <div id="lyrics-log-body">
+                    <div class="live-log-line">
+                        <span class="live-log-time">--</span>
+                        <span class="live-log-level info">info</span>
+                        <span class="live-log-message">Waiting for a lyrics backfill run.</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card" style="margin-bottom: 24px;">
             <div style="display: flex; align-items: center; justify-content: space-between; gap: 16px;">
                 <h3 style="margin: 0;">Live Run Log</h3>
                 <span id="log-poll-status" style="color: var(--tertiary); font-size: 0.85rem;">Polling every 1.5s</span>
@@ -216,16 +342,48 @@
         const aiLanguageCount = document.getElementById('ai-language-count');
         const aiGenreCount = document.getElementById('ai-genre-count');
         const aiSummaryUpdated = document.getElementById('ai-summary-updated');
+        const btnRunAlbumArt = document.getElementById('btn-run-album-art');
+        const btnRefreshAlbumArt = document.getElementById('btn-refresh-album-art');
+        const albumArtMissingCount = document.getElementById('album-art-missing-count');
+        const albumArtPresentCount = document.getElementById('album-art-present-count');
+        const albumArtAddedCount = document.getElementById('album-art-added-count');
+        const albumArtRemainingCount = document.getElementById('album-art-remaining-count');
+        const albumArtSourceCounts = document.getElementById('album-art-source-counts');
+        const albumArtLogBody = document.getElementById('album-art-log-body');
+        const btnRunDuration = document.getElementById('btn-run-duration');
+        const btnRefreshDuration = document.getElementById('btn-refresh-duration');
+        const durationMissingCount = document.getElementById('duration-missing-count');
+        const durationPresentCount = document.getElementById('duration-present-count');
+        const durationAddedCount = document.getElementById('duration-added-count');
+        const durationRemainingCount = document.getElementById('duration-remaining-count');
+        const durationSourceCounts = document.getElementById('duration-source-counts');
+        const durationLogBody = document.getElementById('duration-log-body');
+        const btnRunLyrics = document.getElementById('btn-run-lyrics');
+        const btnRefreshLyrics = document.getElementById('btn-refresh-lyrics');
+        const lyricsMissingCount = document.getElementById('lyrics-missing-count');
+        const lyricsPresentCount = document.getElementById('lyrics-present-count');
+        const lyricsAddedCount = document.getElementById('lyrics-added-count');
+        const lyricsRemainingCount = document.getElementById('lyrics-remaining-count');
+        const lyricsSourceCounts = document.getElementById('lyrics-source-counts');
+        const lyricsLogBody = document.getElementById('lyrics-log-body');
         
         let pollingInterval = null;
         let summaryPollingInterval = null;
         let summaryRequestInFlight = false;
+        let albumArtStatusRequestInFlight = false;
+        let durationStatusRequestInFlight = false;
+        let lyricsStatusRequestInFlight = false;
         let lastSummaryFetchAt = 0;
+        let lastAlbumArtStatusFetchAt = 0;
+        let lastDurationStatusFetchAt = 0;
+        let lastLyricsStatusFetchAt = 0;
         let lastBackfillStatus = null;
         let lastBackfillProcessed = null;
         let lastBackfillApiCallCount = null;
         let lastChangelogLength = null;
         const SUMMARY_MIN_REFRESH_MS = 2500;
+        const ALBUM_ART_STATUS_MIN_REFRESH_MS = 2500;
+        const TOOL_STATUS_MIN_REFRESH_MS = 2500;
 
         const languageDisplayMap = {
             en: 'english',
@@ -355,18 +513,247 @@
             liveLogPanel.scrollTop = liveLogPanel.scrollHeight;
         }
 
+        function renderAlbumArtLogs(logs) {
+            const visibleLogs = Array.isArray(logs) ? logs.slice(-80) : [];
+            albumArtLogBody.innerHTML = '';
+
+            if (visibleLogs.length === 0) {
+                const row = document.createElement('div');
+                row.className = 'live-log-line';
+
+                const time = document.createElement('span');
+                time.className = 'live-log-time';
+                time.textContent = '--';
+
+                const level = document.createElement('span');
+                level.className = 'live-log-level info';
+                level.textContent = 'info';
+
+                const message = document.createElement('span');
+                message.className = 'live-log-message';
+                message.textContent = 'Waiting for an album art backfill run.';
+
+                row.append(time, level, message);
+                albumArtLogBody.appendChild(row);
+                return;
+            }
+
+            visibleLogs.forEach(log => {
+                const logObject = typeof log === 'string' ? { level: 'info', message: log } : log;
+                const levelValue = String(logObject.level || 'info').toLowerCase();
+                const row = document.createElement('div');
+                row.className = 'live-log-line';
+
+                const time = document.createElement('span');
+                time.className = 'live-log-time';
+                time.textContent = formatLogTime(logObject.time);
+
+                const level = document.createElement('span');
+                level.className = `live-log-level ${levelValue}`;
+                level.textContent = levelValue;
+
+                const message = document.createElement('span');
+                message.className = 'live-log-message';
+                message.textContent = logObject.message || '';
+
+                row.append(time, level, message);
+                albumArtLogBody.appendChild(row);
+            });
+
+            const panel = albumArtLogBody.closest('.live-log-panel');
+            if (panel) panel.scrollTop = panel.scrollHeight;
+        }
+
+        async function loadAlbumArtBackfillStatus(force = false) {
+            const now = Date.now();
+            if (albumArtStatusRequestInFlight) return;
+            if (!force && now - lastAlbumArtStatusFetchAt < ALBUM_ART_STATUS_MIN_REFRESH_MS) return;
+
+            albumArtStatusRequestInFlight = true;
+            try {
+                const res = await fetch(`/api/backfill/status?ts=${Date.now()}`, {
+                    cache: 'no-store',
+                    headers: { 'Cache-Control': 'no-cache' }
+                });
+                const data = await res.json();
+                if (!res.ok || data.error) {
+                    throw new Error(data.error || 'Failed to load album art status');
+                }
+
+                const art = data.album_art || {};
+                const running = data.running || {};
+                const isAlbumArtRunning = running.status === 'running' && running.type === 'album_art';
+                const added = running.album_art_downloaded || 0;
+                const remaining = isAlbumArtRunning ? (running.album_art_remaining ?? art.missing ?? 0) : (art.missing ?? 0);
+                const sourceCounts = running.album_art_source_counts || {};
+                const sourceText = Object.keys(sourceCounts).length > 0
+                    ? Object.entries(sourceCounts).map(([source, count]) => `${source}: ${count}`).join(' | ')
+                    : 'Resolver sources will appear during a run.';
+
+                albumArtMissingCount.textContent = art.missing ?? 0;
+                albumArtPresentCount.textContent = art.present ?? 0;
+                albumArtAddedCount.textContent = added;
+                albumArtRemainingCount.textContent = remaining;
+                albumArtSourceCounts.textContent = sourceText;
+                btnRunAlbumArt.disabled = running.status === 'running';
+                btnRefreshAlbumArt.disabled = false;
+
+                if (running.type === 'album_art' && (isAlbumArtRunning || Array.isArray(running.logs))) {
+                    renderAlbumArtLogs(running.logs || []);
+                }
+
+                lastAlbumArtStatusFetchAt = Date.now();
+            } catch (err) {
+                console.error("Album art status polling error:", err);
+                albumArtSourceCounts.textContent = `Album art status unavailable: ${err.message}`;
+            } finally {
+                albumArtStatusRequestInFlight = false;
+            }
+        }
+
+        function renderMetadataToolLogs(logs, body, emptyMessage) {
+            const visibleLogs = Array.isArray(logs) ? logs.slice(-80) : [];
+            body.innerHTML = '';
+
+            if (visibleLogs.length === 0) {
+                const row = document.createElement('div');
+                row.className = 'live-log-line';
+                row.innerHTML = `
+                    <span class="live-log-time">--</span>
+                    <span class="live-log-level info">info</span>
+                    <span class="live-log-message"></span>
+                `;
+                row.querySelector('.live-log-message').textContent = emptyMessage;
+                body.appendChild(row);
+                return;
+            }
+
+            visibleLogs.forEach(log => {
+                const logObject = typeof log === 'string' ? { level: 'info', message: log } : log;
+                const levelValue = String(logObject.level || 'info').toLowerCase();
+                const row = document.createElement('div');
+                row.className = 'live-log-line';
+                row.innerHTML = `
+                    <span class="live-log-time"></span>
+                    <span class="live-log-level ${levelValue}"></span>
+                    <span class="live-log-message"></span>
+                `;
+                row.querySelector('.live-log-time').textContent = formatLogTime(logObject.time);
+                row.querySelector('.live-log-level').textContent = levelValue;
+                row.querySelector('.live-log-message').textContent = logObject.message || '';
+                body.appendChild(row);
+            });
+
+            const panel = body.closest('.live-log-panel');
+            if (panel) panel.scrollTop = panel.scrollHeight;
+        }
+
+        async function loadDurationBackfillStatus(force = false) {
+            const now = Date.now();
+            if (durationStatusRequestInFlight) return;
+            if (!force && now - lastDurationStatusFetchAt < TOOL_STATUS_MIN_REFRESH_MS) return;
+
+            durationStatusRequestInFlight = true;
+            try {
+                const res = await fetch(`/api/backfill/status?ts=${Date.now()}`, {
+                    cache: 'no-store',
+                    headers: { 'Cache-Control': 'no-cache' }
+                });
+                const data = await res.json();
+                if (!res.ok || data.error) {
+                    throw new Error(data.error || 'Failed to load duration status');
+                }
+
+                const duration = data.duration || {};
+                const running = data.running || {};
+                const isRunning = running.status === 'running' && running.type === 'duration';
+                const updated = running.duration_updated || 0;
+                const remaining = isRunning ? (running.duration_remaining ?? duration.missing ?? 0) : (duration.missing ?? 0);
+                const sourceCounts = running.duration_source_counts || {};
+                const sourceText = Object.keys(sourceCounts).length > 0
+                    ? Object.entries(sourceCounts).map(([source, count]) => `${source}: ${count}`).join(' | ')
+                    : 'Resolver sources will appear during a run.';
+
+                durationMissingCount.textContent = duration.missing ?? 0;
+                durationPresentCount.textContent = duration.present ?? 0;
+                durationAddedCount.textContent = updated;
+                durationRemainingCount.textContent = remaining;
+                durationSourceCounts.textContent = sourceText;
+                btnRunDuration.disabled = running.status === 'running';
+                btnRefreshDuration.disabled = false;
+
+                if (running.type === 'duration' && (isRunning || Array.isArray(running.logs))) {
+                    renderMetadataToolLogs(running.logs || [], durationLogBody, 'Waiting for a duration backfill run.');
+                }
+
+                lastDurationStatusFetchAt = Date.now();
+            } catch (err) {
+                console.error("Duration status polling error:", err);
+                durationSourceCounts.textContent = `Duration status unavailable: ${err.message}`;
+            } finally {
+                durationStatusRequestInFlight = false;
+            }
+        }
+
+        async function loadLyricsBackfillStatus(force = false) {
+            const now = Date.now();
+            if (lyricsStatusRequestInFlight) return;
+            if (!force && now - lastLyricsStatusFetchAt < TOOL_STATUS_MIN_REFRESH_MS) return;
+
+            lyricsStatusRequestInFlight = true;
+            try {
+                const res = await fetch(`/api/backfill/status?ts=${Date.now()}`, {
+                    cache: 'no-store',
+                    headers: { 'Cache-Control': 'no-cache' }
+                });
+                const data = await res.json();
+                if (!res.ok || data.error) {
+                    throw new Error(data.error || 'Failed to load lyrics status');
+                }
+
+                const lyrics = data.lyrics || {};
+                const running = data.running || {};
+                const isRunning = running.status === 'running' && running.type === 'lyrics';
+                const added = running.lyrics_downloaded || 0;
+                const remaining = isRunning ? (running.lyrics_remaining ?? lyrics.missing ?? 0) : (lyrics.missing ?? 0);
+                const sourceCounts = running.lyrics_source_counts || {};
+                const sourceText = Object.keys(sourceCounts).length > 0
+                    ? Object.entries(sourceCounts).map(([source, count]) => `${source}: ${count}`).join(' | ')
+                    : `Resolver sources will appear during a run. Synced lyrics present: ${lyrics.synced_present ?? 0}`;
+
+                lyricsMissingCount.textContent = lyrics.missing ?? 0;
+                lyricsPresentCount.textContent = lyrics.present ?? 0;
+                lyricsAddedCount.textContent = added;
+                lyricsRemainingCount.textContent = remaining;
+                lyricsSourceCounts.textContent = sourceText;
+                btnRunLyrics.disabled = running.status === 'running';
+                btnRefreshLyrics.disabled = false;
+
+                if (running.type === 'lyrics' && (isRunning || Array.isArray(running.logs))) {
+                    renderMetadataToolLogs(running.logs || [], lyricsLogBody, 'Waiting for a lyrics backfill run.');
+                }
+
+                lastLyricsStatusFetchAt = Date.now();
+            } catch (err) {
+                console.error("Lyrics status polling error:", err);
+                lyricsSourceCounts.textContent = `Lyrics status unavailable: ${err.message}`;
+            } finally {
+                lyricsStatusRequestInFlight = false;
+            }
+        }
+
         function updateUI(status) {
             const bf = status.backfill;
             if (!bf) return;
 
             // Status Badge
             if (bf.status === 'running') {
-                statusBadge.textContent = 'Running...';
+                statusBadge.textContent = bf.cancel_requested ? 'Cancelling...' : 'Running...';
                 statusBadge.style.background = 'rgba(48, 209, 88, 0.2)';
                 statusBadge.style.color = '#30d158';
                 btnRunSingle.disabled = true;
                 btnRunAuto.disabled = true;
-                btnCancel.disabled = false;
+                btnCancel.disabled = !!bf.cancel_requested;
             } else {
                 statusBadge.textContent = bf.status.charAt(0).toUpperCase() + bf.status.slice(1);
                 statusBadge.style.background = 'rgba(255,255,255,0.1)';
@@ -440,8 +827,14 @@
 
                     if (statusChanged || progressChanged || apiCallsChanged || changelogChanged || justFinished) {
                         pollGeminiSummary(true);
+                        loadAlbumArtBackfillStatus(true);
+                        loadDurationBackfillStatus(true);
+                        loadLyricsBackfillStatus(true);
                     } else if (bf.status === 'running') {
                         pollGeminiSummary(false);
+                        loadAlbumArtBackfillStatus(false);
+                        loadDurationBackfillStatus(false);
+                        loadLyricsBackfillStatus(false);
                     }
 
                     lastBackfillStatus = bf.status;
@@ -539,9 +932,93 @@
             }
         });
 
+        btnRunAlbumArt.addEventListener('click', async () => {
+            btnRunAlbumArt.disabled = true;
+            try {
+                const res = await fetch('/api/backfill/run', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ type: 'album_art' })
+                });
+                if (!res.ok) {
+                    const data = await res.json().catch(() => ({}));
+                    throw new Error(data.error || data.status || 'Failed to start album art backfill');
+                }
+                await loadAlbumArtBackfillStatus(true);
+                pollStatus();
+            } catch (err) {
+                alert(err.message || "Failed to start album art backfill");
+                btnRunAlbumArt.disabled = false;
+            }
+        });
+
+        btnRefreshAlbumArt.addEventListener('click', () => {
+            btnRefreshAlbumArt.disabled = true;
+            loadAlbumArtBackfillStatus(true).finally(() => {
+                btnRefreshAlbumArt.disabled = false;
+            });
+        });
+
+        btnRunDuration.addEventListener('click', async () => {
+            btnRunDuration.disabled = true;
+            try {
+                const res = await fetch('/api/backfill/run', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ type: 'duration' })
+                });
+                if (!res.ok) {
+                    const data = await res.json().catch(() => ({}));
+                    throw new Error(data.error || data.status || 'Failed to start duration backfill');
+                }
+                await loadDurationBackfillStatus(true);
+                pollStatus();
+            } catch (err) {
+                alert(err.message || "Failed to start duration backfill");
+                btnRunDuration.disabled = false;
+            }
+        });
+
+        btnRefreshDuration.addEventListener('click', () => {
+            btnRefreshDuration.disabled = true;
+            loadDurationBackfillStatus(true).finally(() => {
+                btnRefreshDuration.disabled = false;
+            });
+        });
+
+        btnRunLyrics.addEventListener('click', async () => {
+            btnRunLyrics.disabled = true;
+            try {
+                const res = await fetch('/api/backfill/run', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ type: 'lyrics' })
+                });
+                if (!res.ok) {
+                    const data = await res.json().catch(() => ({}));
+                    throw new Error(data.error || data.status || 'Failed to start lyrics backfill');
+                }
+                await loadLyricsBackfillStatus(true);
+                pollStatus();
+            } catch (err) {
+                alert(err.message || "Failed to start lyrics backfill");
+                btnRunLyrics.disabled = false;
+            }
+        });
+
+        btnRefreshLyrics.addEventListener('click', () => {
+            btnRefreshLyrics.disabled = true;
+            loadLyricsBackfillStatus(true).finally(() => {
+                btnRefreshLyrics.disabled = false;
+            });
+        });
+
         // Start polling loop
         pollStatus();
         pollGeminiSummary(true);
+        loadAlbumArtBackfillStatus(true);
+        loadDurationBackfillStatus(true);
+        loadLyricsBackfillStatus(true);
         pollingInterval = setInterval(pollStatus, 1500);
         summaryPollingInterval = setInterval(() => pollGeminiSummary(false), 5000);
     </script>

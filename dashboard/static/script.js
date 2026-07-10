@@ -1023,7 +1023,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (btnConfirmAddSong) btnConfirmAddSong.addEventListener('click', addSong);
 
     // === Playlist Importer Logic ===
-    const inputPlaylistUrl = document.getElementById('input-playlist-url');
+    const playlistUrlInputs = Array.from(document.querySelectorAll('.playlist-url-input'));
     const btnPreviewPlaylist = document.getElementById('btn-preview-playlist');
     const playlistPreviewContainer = document.getElementById('playlist-preview-container');
     const previewPlaylistName = document.getElementById('preview-playlist-name');
@@ -1041,42 +1041,252 @@ document.addEventListener('DOMContentLoaded', () => {
     const playlistStatFailed = document.getElementById('playlist-stat-failed');
     const btnCancelPlaylistImport = document.getElementById('btn-cancel-playlist-import');
     const playlistProgressFill = document.getElementById('playlist-progress-fill');
+    const playlistQueueProgress = document.getElementById('playlist-queue-progress');
     
     let currentPlaylistId = null;
-    let playlistPollInterval = null;
+    let currentPlaylistQueueId = null;
+    let playlistPreviewResults = [];
+    let playlistBoxOrderByUrl = new Map();
+    const maxPlaylistUrlBoxes = 5;
+
+    const spotifyPlaylistPattern = /(?:https?:\/\/open\.spotify\.com\/(?:intl-[a-z]{2}\/)?playlist\/[A-Za-z0-9]+[^\s<>"']*|spotify:playlist:[A-Za-z0-9]+)/gi;
+
+    function normalizePlaylistUrl(value) {
+        const cleaned = (value || '').trim().replace(/^['"(<\[{]+|['").,;>\]}]+$/g, '');
+        if (!cleaned) return null;
+        const idMatch = cleaned.match(/(?:playlist\/|spotify:playlist:)([A-Za-z0-9]+)/i);
+        if (idMatch) return `https://open.spotify.com/playlist/${idMatch[1]}`;
+        if (/^[A-Za-z0-9]{16,32}$/.test(cleaned)) return `https://open.spotify.com/playlist/${cleaned}`;
+        return null;
+    }
+
+    function parsePlaylistUrlsFromText(raw) {
+        const matches = raw.match(spotifyPlaylistPattern);
+        const candidates = matches && matches.length ? matches : raw.split(/[\s,\n\r]+/);
+        const seen = new Set();
+        const urls = [];
+
+        candidates.forEach(candidate => {
+            const normalized = normalizePlaylistUrl(candidate);
+            if (normalized && !seen.has(normalized)) {
+                seen.add(normalized);
+                urls.push(normalized);
+            }
+        });
+
+        return urls;
+    }
+
+    function getPlaylistUrlsFromInput() {
+        return getPlaylistEntriesFromInput().map(entry => entry.url);
+    }
+
+    function getPlaylistEntriesFromInput() {
+        const seen = new Set();
+        const entries = [];
+
+        playlistUrlInputs.forEach((input, index) => {
+            parsePlaylistUrlsFromText(input.value || '').forEach(url => {
+                if (!seen.has(url) && entries.length < maxPlaylistUrlBoxes) {
+                    seen.add(url);
+                    entries.push({
+                        url,
+                        boxNumber: index + 1
+                    });
+                }
+            });
+        });
+
+        return entries;
+    }
+
+    function setPlaylistInputUrls(urls) {
+        playlistUrlInputs.forEach((input, index) => {
+            input.value = urls[index] || '';
+        });
+        playlistPreviewResults = [];
+        playlistBoxOrderByUrl = new Map();
+        if (playlistPreviewContainer) playlistPreviewContainer.classList.add('hidden');
+    }
+
+    function rememberPlaylistBoxOrder(entries) {
+        playlistBoxOrderByUrl = new Map(entries.map(entry => [entry.url, entry.boxNumber]));
+    }
+
+    function handlePlaylistUrlPaste(event) {
+        const pasted = event.clipboardData?.getData('text') || '';
+        const pastedUrls = parsePlaylistUrlsFromText(pasted);
+        if (pastedUrls.length <= 1) return;
+
+        event.preventDefault();
+        const startIndex = playlistUrlInputs.indexOf(event.currentTarget);
+        const values = playlistUrlInputs.map(input => input.value.trim());
+        let cursor = startIndex >= 0 ? startIndex : 0;
+
+        pastedUrls.forEach(url => {
+            if (cursor < maxPlaylistUrlBoxes) {
+                values[cursor] = url;
+                cursor += 1;
+            }
+        });
+
+        setPlaylistInputUrls(values);
+        if (pastedUrls.length > maxPlaylistUrlBoxes - startIndex) {
+            showToast(`Only ${maxPlaylistUrlBoxes} playlist boxes are available, so extra links were ignored.`, 'info');
+        }
+    }
+
+    function playlistStatusLabel(status) {
+        const labels = {
+            queued: 'Queued',
+            starting: 'Starting',
+            running: 'Running',
+            completed: 'Completed',
+            completed_with_errors: 'Completed with errors',
+            failed: 'Failed',
+            error: 'Error',
+            cancelled: 'Cancelled'
+        };
+        return labels[status] || 'Queued';
+    }
+
+    function safePlaylistStatusClass(status) {
+        return ['queued', 'starting', 'running', 'completed', 'completed_with_errors', 'failed', 'error', 'cancelled'].includes(status) ? status : 'queued';
+    }
+
+    function renderPlaylistPreviewItems(items) {
+        if (!previewTracksList) return;
+        if (!items.length) {
+            previewTracksList.innerHTML = '<div class="playlist-preview-item"><div class="playlist-preview-item-main"><div class="playlist-preview-item-title">No valid playlist links found</div></div></div>';
+            return;
+        }
+
+        previewTracksList.innerHTML = items.map(item => {
+            const status = item.status === 'error' ? 'error' : 'queued';
+            const title = item.status === 'error' ? 'Preview failed' : (item.playlist_name || 'Spotify Playlist');
+            const boxLabel = item.boxNumber ? `Box ${item.boxNumber}` : `Link ${item.index + 1}`;
+            const tracks = item.tracks_available_for_import ?? item.total_tracks ?? 0;
+            const sampleTracks = (item.preview_tracks || []).slice(0, 3)
+                .map(track => `${escapeHtml(track.title || 'Unknown')} - ${escapeHtml(track.artist || 'Unknown')}`)
+                .join('; ');
+            const meta = item.status === 'error'
+                ? escapeHtml(item.error || 'Unable to preview this playlist')
+                : `${tracks} importable tracks | ${escapeHtml(item.estimated_size_display || '~0 MB')}${sampleTracks ? ` | ${sampleTracks}` : ''}`;
+            const source = item.url ? `<div class="playlist-preview-item-meta">${escapeHtml(item.url)}</div>` : '';
+            const warning = item.truncated && item.truncation_warning
+                ? `<div class="playlist-preview-item-meta" style="color: #ffbd2e; margin-top: 4px;">${escapeHtml(item.truncation_warning)}</div>`
+                : '';
+
+            return `
+                <div class="playlist-preview-item">
+                    <div class="playlist-preview-item-main">
+                        <div class="playlist-preview-item-title">${escapeHtml(boxLabel)}: ${escapeHtml(title)}</div>
+                        ${source}
+                        <div class="playlist-preview-item-meta">${meta}</div>
+                        ${warning}
+                    </div>
+                    <span class="playlist-queue-status ${safePlaylistStatusClass(status)}">${item.status === 'error' ? 'Error' : 'Ready'}</span>
+                </div>
+            `;
+        }).join('');
+    }
+
+    function renderPlaylistQueueProgress(queue = [], currentIndex = null, queueStatus = 'idle') {
+        if (!playlistQueueProgress) return;
+        if (!queue.length) {
+            playlistQueueProgress.innerHTML = '';
+            return;
+        }
+
+        playlistQueueProgress.innerHTML = queue.map((item, index) => {
+            const status = item.status || 'queued';
+            const activeText = queueStatus === 'running' && index === currentIndex
+                ? 'Current'
+                : playlistStatusLabel(status);
+            const title = item.playlist_name || `Playlist ${index + 1}`;
+            const boxNumber = item.boxNumber || playlistBoxOrderByUrl.get(item.url);
+            const titlePrefix = boxNumber ? `Box ${boxNumber}: ` : `${index + 1}. `;
+            const processed = item.processed || 0;
+            const total = item.total_tracks || 0;
+            const progressText = total > 0 ? `${processed} / ${total} tracks` : (status === 'queued' ? 'Waiting' : 'Preparing');
+            const counts = `Downloaded ${item.downloaded || 0} | Skipped ${item.skipped || 0} | Failed ${item.failed || 0}`;
+            const error = item.error ? `<div class="playlist-queue-item-meta" style="color: #ff453a;">${escapeHtml(item.error)}</div>` : '';
+
+            return `
+                <div class="playlist-queue-item">
+                    <div class="playlist-queue-item-main">
+                        <div class="playlist-queue-item-title">${escapeHtml(titlePrefix)}${escapeHtml(title)}</div>
+                        <div class="playlist-queue-item-meta">${escapeHtml(progressText)} | ${escapeHtml(counts)}</div>
+                        ${error}
+                    </div>
+                    <span class="playlist-queue-status ${safePlaylistStatusClass(status)}">${escapeHtml(activeText)}</span>
+                </div>
+            `;
+        }).join('');
+    }
+
+    playlistUrlInputs.forEach(input => {
+        input.addEventListener('input', () => {
+            playlistPreviewResults = [];
+            if (playlistPreviewContainer) playlistPreviewContainer.classList.add('hidden');
+        });
+        input.addEventListener('paste', handlePlaylistUrlPaste);
+        input.addEventListener('blur', () => {
+            const normalized = normalizePlaylistUrl(input.value);
+            if (normalized) input.value = normalized;
+        });
+    });
 
     if (btnPreviewPlaylist) {
         btnPreviewPlaylist.addEventListener('click', async () => {
-            const url = inputPlaylistUrl.value.trim();
-            if (!url) return showToast("Please enter a playlist URL", "error");
+            const playlistEntries = getPlaylistEntriesFromInput();
+            const urls = playlistEntries.map(entry => entry.url);
+            if (!urls.length) return showToast("Please enter at least one playlist URL", "error");
+            rememberPlaylistBoxOrder(playlistEntries);
             
             btnPreviewPlaylist.disabled = true;
             btnPreviewPlaylist.textContent = "Loading...";
             
             try {
-                const response = await fetch('/api/playlist/preview', {
+                const response = await fetch('/api/playlist/queue/preview', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({url})
+                    body: JSON.stringify({urls})
                 });
                 const data = await response.json();
-                if (!response.ok) throw new Error(data.error || "Failed to preview playlist");
+                if (!response.ok) throw new Error(data.error || "Failed to preview playlists");
                 
                 const previewPlaylistWarning = document.getElementById('playlist-preview-warning');
-                if (data.truncated) {
-                    if (previewPlaylistWarning) {
-                        previewPlaylistWarning.textContent = data.truncation_warning;
-                        previewPlaylistWarning.style.display = 'block';
-                    }
-                    previewPlaylistCount.textContent = `${data.tracks_available_for_import} Tracks (Out of ${data.total_tracks} total)`;
-                } else {
-                    if (previewPlaylistWarning) previewPlaylistWarning.style.display = 'none';
-                    previewPlaylistCount.textContent = `${data.total_tracks} Tracks`;
+                playlistPreviewResults = (data.previews || []).map((item, index) => ({
+                    ...item,
+                    boxNumber: playlistEntries[index]?.boxNumber || index + 1
+                }));
+                const readyItems = playlistPreviewResults.filter(item => item.status !== 'error');
+                const truncatedCount = readyItems.filter(item => item.truncated).length;
+                const warningParts = [];
+                if (data.error_count) warningParts.push(`${data.error_count} link${data.error_count === 1 ? '' : 's'} could not be previewed and will be skipped.`);
+                if (truncatedCount) warningParts.push(`${truncatedCount} playlist${truncatedCount === 1 ? '' : 's'} can only import the visible Spotify embed tracks.`);
+
+                if (previewPlaylistWarning && warningParts.length) {
+                    previewPlaylistWarning.textContent = warningParts.join(' ');
+                    previewPlaylistWarning.style.display = 'block';
+                } else if (previewPlaylistWarning) {
+                    previewPlaylistWarning.style.display = 'none';
                 }
-                previewPlaylistName.textContent = data.playlist_name;
-                previewPlaylistSize.textContent = data.estimated_size_display;
+
+                if (readyItems.length === 1) {
+                    const item = readyItems[0];
+                    previewPlaylistName.textContent = item.playlist_name || 'Spotify Playlist';
+                    previewPlaylistCount.textContent = `${item.tracks_available_for_import || item.total_tracks || 0} Tracks`;
+                    previewPlaylistSize.textContent = item.estimated_size_display || '~0 MB';
+                } else {
+                    previewPlaylistName.textContent = `${readyItems.length} Playlists Ready`;
+                    previewPlaylistCount.textContent = `${data.total_tracks || 0} Importable Tracks`;
+                    previewPlaylistSize.textContent = data.estimated_size_display || '~0 MB';
+                }
                 
-                previewTracksList.innerHTML = data.preview_tracks.map(t => `<div>• ${escapeHtml(t.title)} - ${escapeHtml(t.artist)}</div>`).join('') + (data.tracks_available_for_import > 5 ? `<div>...and ${data.tracks_available_for_import - 5} more</div>` : '');
+                renderPlaylistPreviewItems(playlistPreviewResults);
+                if (btnStartPlaylistImport) btnStartPlaylistImport.disabled = readyItems.length === 0;
                 
                 playlistPreviewContainer.classList.remove('hidden');
                 playlistProgressContainer.classList.add('hidden');
@@ -1084,7 +1294,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 showToast(err.message, "error");
             } finally {
                 btnPreviewPlaylist.disabled = false;
-                btnPreviewPlaylist.textContent = "Preview Playlist";
+                btnPreviewPlaylist.textContent = "Preview Playlists";
             }
         });
     }
@@ -1092,55 +1302,77 @@ document.addEventListener('DOMContentLoaded', () => {
     if (btnCancelPlaylistPreview) {
         btnCancelPlaylistPreview.addEventListener('click', () => {
             playlistPreviewContainer.classList.add('hidden');
-            inputPlaylistUrl.value = '';
+            setPlaylistInputUrls([]);
         });
     }
 
     if (btnStartPlaylistImport) {
         btnStartPlaylistImport.addEventListener('click', async () => {
-            const url = inputPlaylistUrl.value.trim();
+            const playlistEntries = getPlaylistEntriesFromInput();
+            const previewUrls = playlistPreviewResults
+                .filter(item => item.status !== 'error')
+                .map(item => item.url);
+            const urls = previewUrls.length ? previewUrls : playlistEntries.map(entry => entry.url);
+            if (!urls.length) return showToast("No valid playlist URLs are ready to import", "error");
+            rememberPlaylistBoxOrder(
+                previewUrls.length
+                    ? playlistPreviewResults.filter(item => item.status !== 'error').map(item => ({
+                        url: item.url,
+                        boxNumber: item.boxNumber
+                    }))
+                    : playlistEntries
+            );
+
             btnStartPlaylistImport.disabled = true;
             
             try {
-                const response = await fetch('/api/playlist/start', {
+                const response = await fetch('/api/playlist/queue/start', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({url})
+                    body: JSON.stringify({urls})
                 });
                 const data = await response.json();
                 if (!response.ok) throw new Error(data.error || "Failed to start import");
                 
                 currentPlaylistId = data.playlist_id;
+                currentPlaylistQueueId = data.queue_id;
                 playlistPreviewContainer.classList.add('hidden');
                 playlistProgressContainer.classList.remove('hidden');
                 
                 // reset progress
                 playlistProgressFill.style.width = '0%';
-                playlistProgressText.textContent = `Processed: 0 / 0`;
+                playlistProgressText.textContent = `Queue started: 0 / ${data.queue_total || urls.length} playlists`;
                 playlistStatDownloaded.textContent = `Downloaded: 0`;
                 playlistStatSkipped.textContent = `Skipped: 0`;
                 playlistStatFailed.textContent = `Failed: 0`;
                 playlistStatusBadge.textContent = "Running";
                 playlistStatusBadge.style.background = "rgba(255,255,255,0.1)";
+                renderPlaylistQueueProgress(data.queue || urls.map((url, index) => ({ index, url, status: 'queued' })));
                 
-                showToast("Playlist import started in the background", "success");
+                showToast(`${urls.length} playlist${urls.length === 1 ? '' : 's'} queued for import`, "success");
                 setTimeout(pollBackgroundStatus, 500);
             } catch (err) {
                 showToast(err.message, "error");
             } finally {
-                btnStartPlaylistImport.disabled = false;
+                if (!playlistPreviewResults.length || playlistPreviewResults.some(item => item.status !== 'error')) {
+                    btnStartPlaylistImport.disabled = false;
+                }
             }
         });
     }
 
     if (btnCancelPlaylistImport) {
         btnCancelPlaylistImport.addEventListener('click', async () => {
-            if (!currentPlaylistId) return;
             try {
+                btnCancelPlaylistImport.disabled = true;
                 const response = await fetch('/api/playlist/cancel', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({playlist_id: currentPlaylistId})
+                    body: JSON.stringify({
+                        playlist_id: currentPlaylistId,
+                        queue_id: currentPlaylistQueueId,
+                        cancel_queue: true
+                    })
                 });
                 if (!response.ok) {
                     const data = await response.json().catch(() => ({}));
@@ -1148,13 +1380,304 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 playlistStatusBadge.textContent = "Cancelled";
                 playlistStatusBadge.style.background = "#ff453a";
-                showToast("Import cancelled", "success");
+                showToast("Playlist queue cancellation requested", "success");
                 setTimeout(pollBackgroundStatus, 500);
             } catch (err) {
                 showToast(err.message, "error");
+                btnCancelPlaylistImport.disabled = false;
             }
         });
     }
+
+    // === Spotify Library Importer Logic ===
+    const spotifyLibraryUrlInput = document.getElementById('spotify-library-url-input');
+    const spotifyLibraryConnectionStatus = document.getElementById('spotify-library-connection-status');
+    const btnConnectSpotifyLibrary = document.getElementById('btn-connect-spotify-library');
+    const btnDiagnoseSpotifyLibrary = document.getElementById('btn-diagnose-spotify-library');
+    const btnPreviewSpotifyLibrary = document.getElementById('btn-preview-spotify-library');
+    const spotifyLibraryPreviewContainer = document.getElementById('spotify-library-preview-container');
+    const spotifyLibraryPreviewWarning = document.getElementById('spotify-library-preview-warning');
+    const spotifyLibraryPreviewName = document.getElementById('spotify-library-preview-name');
+    const spotifyLibraryPreviewCount = document.getElementById('spotify-library-preview-count');
+    const spotifyLibraryPreviewSize = document.getElementById('spotify-library-preview-size');
+    const spotifyLibraryPreviewTracksList = document.getElementById('spotify-library-preview-tracks-list');
+    const btnCancelSpotifyLibraryPreview = document.getElementById('btn-cancel-spotify-library-preview');
+    const btnStartSpotifyLibraryImport = document.getElementById('btn-start-spotify-library-import');
+    const spotifyLibraryProgressContainer = document.getElementById('spotify-library-progress-container');
+    const spotifyLibraryStatusBadge = document.getElementById('spotify-library-status-badge');
+    const spotifyLibraryProgressText = document.getElementById('spotify-library-progress-text');
+    const spotifyLibraryProgressFill = document.getElementById('spotify-library-progress-fill');
+    const spotifyLibraryStatDownloaded = document.getElementById('spotify-library-stat-downloaded');
+    const spotifyLibraryStatSkipped = document.getElementById('spotify-library-stat-skipped');
+    const spotifyLibraryStatFailed = document.getElementById('spotify-library-stat-failed');
+    const spotifyLibraryGeminiStatus = document.getElementById('spotify-library-gemini-status');
+    const btnCancelSpotifyLibraryImport = document.getElementById('btn-cancel-spotify-library-import');
+    let spotifyLibraryPreviewResult = null;
+    let currentSpotifyLibraryPlaylistId = null;
+    let currentSpotifyLibraryTaskId = null;
+    if (btnStartSpotifyLibraryImport) btnStartSpotifyLibraryImport.disabled = true;
+
+    async function readSpotifyLibraryJson(response, fallbackMessage) {
+        const contentType = response.headers.get('content-type') || '';
+        if (contentType.includes('application/json')) {
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error || fallbackMessage);
+            return data;
+        }
+
+        const text = await response.text();
+        const looksLikeMissingRoute = response.status === 404 && text.toLowerCase().includes('<!doctype');
+        if (looksLikeMissingRoute) {
+            throw new Error('Spotify Library Importer backend route is not loaded yet. Restart the Flask server and refresh this page.');
+        }
+        const cleaned = text.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+        throw new Error(cleaned || fallbackMessage);
+    }
+
+    function setSpotifyLibraryConnectionStatus(message, type = 'info') {
+        if (!spotifyLibraryConnectionStatus) return;
+        const colors = {
+            success: '#30d158',
+            error: '#ff453a',
+            warning: '#ffbd2e',
+            info: 'var(--tertiary)'
+        };
+        spotifyLibraryConnectionStatus.textContent = message;
+        spotifyLibraryConnectionStatus.style.color = colors[type] || colors.info;
+    }
+
+    async function checkSpotifyLibraryConnection() {
+        if (!spotifyLibraryConnectionStatus) return;
+        try {
+            const response = await fetch('/api/spotify-library/connection?check=1');
+            const data = await readSpotifyLibraryJson(response, 'Spotify connection check failed');
+            if (data.ready) {
+                setSpotifyLibraryConnectionStatus('Spotify API connection ready.', 'success');
+                if (btnConnectSpotifyLibrary) btnConnectSpotifyLibrary.classList.add('hidden');
+            } else {
+                setSpotifyLibraryConnectionStatus(data.error || 'Spotify API is not configured yet.', 'warning');
+                if (btnConnectSpotifyLibrary) {
+                    if (data.auth_url_available && data.missing?.includes('SPOTIFY_REFRESH_TOKEN')) {
+                        btnConnectSpotifyLibrary.classList.remove('hidden');
+                    } else {
+                        btnConnectSpotifyLibrary.classList.add('hidden');
+                    }
+                }
+            }
+        } catch (err) {
+            setSpotifyLibraryConnectionStatus(err.message, 'error');
+            if (btnConnectSpotifyLibrary) btnConnectSpotifyLibrary.classList.add('hidden');
+        }
+    }
+
+    if (btnConnectSpotifyLibrary) {
+        btnConnectSpotifyLibrary.addEventListener('click', async () => {
+            btnConnectSpotifyLibrary.disabled = true;
+            try {
+                const response = await fetch('/api/spotify-library/auth-url');
+                const data = await readSpotifyLibraryJson(response, 'Failed to create Spotify authorization URL');
+                if (!data.auth_url) throw new Error('Spotify authorization URL was not returned');
+                window.open(data.auth_url, '_blank', 'noopener,noreferrer');
+                showToast('Spotify authorization page opened. Use the callback result as SPOTIFY_REFRESH_TOKEN.', 'info');
+            } catch (err) {
+                showToast(err.message, 'error');
+            } finally {
+                btnConnectSpotifyLibrary.disabled = false;
+            }
+        });
+    }
+
+    function renderSpotifyLibraryPreview(preview) {
+        if (!spotifyLibraryPreviewTracksList || !preview) return;
+        const tracks = (preview.preview_tracks || []).slice(0, 5);
+        spotifyLibraryPreviewTracksList.innerHTML = tracks.length
+            ? tracks.map((track, index) => `
+                <div class="playlist-preview-item">
+                    <div class="playlist-preview-item-main">
+                        <div class="playlist-preview-item-title">${index + 1}. ${escapeHtml(track.title || 'Unknown Title')}</div>
+                        <div class="playlist-preview-item-meta">${escapeHtml(track.artist || 'Unknown Artist')}</div>
+                    </div>
+                    <span class="playlist-queue-status completed">API</span>
+                </div>
+            `).join('')
+            : '<div class="playlist-preview-item"><div class="playlist-preview-item-main"><div class="playlist-preview-item-title">No preview tracks returned</div></div></div>';
+    }
+
+    function summarizeSpotifyDiagnosis(data) {
+        const account = data.me?.display_name || data.me?.id || 'unknown account';
+        const metadata = data.playlist_metadata || {};
+        const tracks = data.playlist_tracks || {};
+        const userPlaylists = data.user_playlists || {};
+        const parts = [
+            `Token account: ${account}`,
+            `Playlist metadata: HTTP ${metadata.status_code || 'n/a'}${metadata.message ? ` (${metadata.message})` : ''}`,
+            `Playlist tracks: HTTP ${tracks.status_code || 'n/a'}${tracks.message ? ` (${tracks.message})` : ''}`,
+            `Visible in your first ${userPlaylists.sample_playlist_count ?? 0} library playlists: ${data.visible_in_user_playlists === true ? 'yes' : data.visible_in_user_playlists === false ? 'no' : 'unknown'}`
+        ];
+        if (metadata.name) parts.push(`Playlist name: ${metadata.name}`);
+        return parts.join(' | ');
+    }
+
+    if (spotifyLibraryUrlInput) {
+        spotifyLibraryUrlInput.addEventListener('input', () => {
+            spotifyLibraryPreviewResult = null;
+            if (spotifyLibraryPreviewContainer) spotifyLibraryPreviewContainer.classList.add('hidden');
+        });
+        spotifyLibraryUrlInput.addEventListener('blur', () => {
+            const normalized = normalizePlaylistUrl(spotifyLibraryUrlInput.value);
+            if (normalized) spotifyLibraryUrlInput.value = normalized;
+        });
+    }
+
+    if (btnPreviewSpotifyLibrary) {
+        btnPreviewSpotifyLibrary.addEventListener('click', async () => {
+            const url = normalizePlaylistUrl(spotifyLibraryUrlInput?.value);
+            if (!url) return showToast('Please enter one Spotify playlist URL', 'error');
+
+            btnPreviewSpotifyLibrary.disabled = true;
+            btnPreviewSpotifyLibrary.textContent = 'Loading...';
+            spotifyLibraryPreviewResult = null;
+            if (btnStartSpotifyLibraryImport) btnStartSpotifyLibraryImport.disabled = true;
+            try {
+                const response = await fetch('/api/spotify-library/preview', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({url})
+                });
+                const data = await readSpotifyLibraryJson(response, 'Failed to preview Spotify library playlist');
+
+                spotifyLibraryPreviewResult = data;
+                if (spotifyLibraryPreviewName) spotifyLibraryPreviewName.textContent = data.playlist_name || 'Spotify Library Playlist';
+                if (spotifyLibraryPreviewCount) spotifyLibraryPreviewCount.textContent = `${data.tracks_available_for_import || data.total_tracks || 0} Tracks`;
+                if (spotifyLibraryPreviewSize) spotifyLibraryPreviewSize.textContent = data.estimated_size_display || '~0 MB';
+                if (spotifyLibraryPreviewWarning) {
+                    spotifyLibraryPreviewWarning.style.display = 'none';
+                    spotifyLibraryPreviewWarning.textContent = '';
+                }
+                renderSpotifyLibraryPreview(data);
+                if (btnStartSpotifyLibraryImport) btnStartSpotifyLibraryImport.disabled = false;
+                if (spotifyLibraryPreviewContainer) spotifyLibraryPreviewContainer.classList.remove('hidden');
+                if (spotifyLibraryProgressContainer) spotifyLibraryProgressContainer.classList.add('hidden');
+                showToast('Spotify library playlist preview ready', 'success');
+            } catch (err) {
+                if (spotifyLibraryPreviewWarning) {
+                    spotifyLibraryPreviewWarning.textContent = err.message;
+                    spotifyLibraryPreviewWarning.style.display = 'block';
+                    if (spotifyLibraryPreviewContainer) spotifyLibraryPreviewContainer.classList.remove('hidden');
+                }
+                showToast(err.message, 'error');
+            } finally {
+                btnPreviewSpotifyLibrary.disabled = false;
+                btnPreviewSpotifyLibrary.textContent = 'Preview Library Playlist';
+            }
+        });
+    }
+
+    if (btnDiagnoseSpotifyLibrary) {
+        btnDiagnoseSpotifyLibrary.addEventListener('click', async () => {
+            const url = normalizePlaylistUrl(spotifyLibraryUrlInput?.value);
+            if (!url) return showToast('Please enter one Spotify playlist URL', 'error');
+
+            btnDiagnoseSpotifyLibrary.disabled = true;
+            btnDiagnoseSpotifyLibrary.textContent = 'Checking...';
+            try {
+                const response = await fetch('/api/spotify-library/diagnose', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({url})
+                });
+                const data = await readSpotifyLibraryJson(response, 'Failed to diagnose Spotify access');
+                const summary = summarizeSpotifyDiagnosis(data);
+                if (spotifyLibraryPreviewWarning) {
+                    spotifyLibraryPreviewWarning.textContent = summary;
+                    spotifyLibraryPreviewWarning.style.display = 'block';
+                }
+                if (spotifyLibraryPreviewContainer) spotifyLibraryPreviewContainer.classList.remove('hidden');
+                showToast('Spotify access diagnosis complete', 'info');
+            } catch (err) {
+                if (spotifyLibraryPreviewWarning) {
+                    spotifyLibraryPreviewWarning.textContent = err.message;
+                    spotifyLibraryPreviewWarning.style.display = 'block';
+                }
+                if (spotifyLibraryPreviewContainer) spotifyLibraryPreviewContainer.classList.remove('hidden');
+                showToast(err.message, 'error');
+            } finally {
+                btnDiagnoseSpotifyLibrary.disabled = false;
+                btnDiagnoseSpotifyLibrary.textContent = 'Diagnose Access';
+            }
+        });
+    }
+
+    if (btnCancelSpotifyLibraryPreview) {
+        btnCancelSpotifyLibraryPreview.addEventListener('click', () => {
+            spotifyLibraryPreviewResult = null;
+            if (spotifyLibraryUrlInput) spotifyLibraryUrlInput.value = '';
+            if (spotifyLibraryPreviewContainer) spotifyLibraryPreviewContainer.classList.add('hidden');
+        });
+    }
+
+    if (btnStartSpotifyLibraryImport) {
+        btnStartSpotifyLibraryImport.addEventListener('click', async () => {
+            const url = normalizePlaylistUrl(spotifyLibraryPreviewResult?.url || spotifyLibraryUrlInput?.value);
+            if (!url) return showToast('Please preview a Spotify library playlist first', 'error');
+
+            btnStartSpotifyLibraryImport.disabled = true;
+            try {
+                const response = await fetch('/api/spotify-library/start', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({url})
+                });
+                const data = await readSpotifyLibraryJson(response, 'Failed to start Spotify Library Importer');
+
+                currentSpotifyLibraryPlaylistId = data.playlist_id;
+                currentSpotifyLibraryTaskId = data.task_id;
+                if (spotifyLibraryPreviewContainer) spotifyLibraryPreviewContainer.classList.add('hidden');
+                if (spotifyLibraryProgressContainer) spotifyLibraryProgressContainer.classList.remove('hidden');
+                if (spotifyLibraryProgressFill) spotifyLibraryProgressFill.style.width = '0%';
+                if (spotifyLibraryProgressText) spotifyLibraryProgressText.textContent = 'Starting Spotify Library Importer...';
+                if (spotifyLibraryStatusBadge) {
+                    spotifyLibraryStatusBadge.textContent = 'Running';
+                    spotifyLibraryStatusBadge.style.background = 'rgba(255,255,255,0.1)';
+                }
+                showToast('Spotify Library Importer started', 'success');
+                setTimeout(pollBackgroundStatus, 500);
+            } catch (err) {
+                showToast(err.message, 'error');
+                btnStartSpotifyLibraryImport.disabled = false;
+            }
+        });
+    }
+
+    if (btnCancelSpotifyLibraryImport) {
+        btnCancelSpotifyLibraryImport.addEventListener('click', async () => {
+            try {
+                btnCancelSpotifyLibraryImport.disabled = true;
+                const response = await fetch('/api/spotify-library/cancel', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        playlist_id: currentSpotifyLibraryPlaylistId,
+                        task_id: currentSpotifyLibraryTaskId
+                    })
+                });
+                if (!response.ok) {
+                    await readSpotifyLibraryJson(response, 'Failed to cancel Spotify Library Importer');
+                }
+                if (spotifyLibraryStatusBadge) {
+                    spotifyLibraryStatusBadge.textContent = 'Cancelled';
+                    spotifyLibraryStatusBadge.style.background = '#ff453a';
+                }
+                showToast('Spotify Library Importer cancellation requested', 'success');
+                setTimeout(pollBackgroundStatus, 500);
+            } catch (err) {
+                showToast(err.message, 'error');
+                btnCancelSpotifyLibraryImport.disabled = false;
+            }
+        });
+    }
+
+    checkSpotifyLibraryConnection();
 
     function escapeHtml(text) {
       if (!text) return "";
@@ -1305,9 +1828,21 @@ document.addEventListener('DOMContentLoaded', () => {
             if (response.ok) {
                 const data = await response.json();
                 if (data.album_art) {
-                    backfillArtText.textContent = `${data.album_art.missing} missing out of ${data.album_art.total} total`;
-                    backfillDurText.textContent = `${data.duration.missing} missing out of ${data.duration.total} total`;
-                    backfillLangText.textContent = `${data.language.missing} missing / unknown out of ${data.language.total} total`;
+                    const running = data.running || {};
+                    const art = data.album_art;
+                    const duration = data.duration || {};
+                    const language = data.language || {};
+
+                    if (running.status === 'running' && running.type === 'album_art') {
+                        const added = running.album_art_downloaded || 0;
+                        const remaining = running.album_art_remaining ?? art.missing;
+                        backfillArtText.textContent = `${remaining} missing, ${art.present} present / ${art.total} total | added ${added} this run`;
+                    } else {
+                        backfillArtText.textContent = `${art.missing} missing, ${art.present} present / ${art.total} total`;
+                    }
+
+                    backfillDurText.textContent = `${duration.missing || 0} missing, ${duration.present || 0} present / ${duration.total || 0} total`;
+                    backfillLangText.textContent = `${language.missing || 0} missing / unknown, ${language.present || 0} present / ${language.total || 0} total`;
                 }
             }
         } catch (err) {
@@ -1325,7 +1860,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 logs.forEach(line => {
                     const lineDiv = document.createElement('div');
                     lineDiv.style.marginBottom = '2px';
-                    lineDiv.textContent = line;
+                    if (typeof line === 'string') {
+                        lineDiv.textContent = line;
+                    } else {
+                        const level = String(line.level || 'info').toUpperCase();
+                        const message = line.message || '';
+                        lineDiv.textContent = `[${level}] ${message}`;
+                        if (line.level === 'success') lineDiv.style.color = '#30d158';
+                        if (line.level === 'warning') lineDiv.style.color = '#ffd60a';
+                        if (line.level === 'error') lineDiv.style.color = '#ff453a';
+                    }
                     backfillLogsOutput.appendChild(lineDiv);
                 });
                 backfillLogsOutput.scrollTop = backfillLogsOutput.scrollHeight;
@@ -1439,16 +1983,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (playlistDot) {
             const pl = status.playlist_import;
-            const isRunning = pl.status === 'running';
+            const libraryImport = status.spotify_library_import || {};
+            const isRunning = pl.status === 'running' || libraryImport.status === 'running';
             playlistDot.className = `task-indicator-dot ${isRunning ? 'active' : 'idle'}`;
             
             let text = 'Playlist Import: Idle';
-            if (pl.status === 'running') {
+            if (libraryImport.status === 'running') {
+                const processed = libraryImport.processed || 0;
+                const total = libraryImport.tracks_available_for_import || libraryImport.total_tracks || 0;
+                text = `Spotify Library Importer: Running (${processed}/${total} tracks)`;
+            } else if (pl.status === 'running') {
+                const queueTotal = pl.queue_total || 1;
+                const currentNumber = typeof pl.current_index === 'number' ? pl.current_index + 1 : 1;
                 const processed = pl.processed || 0;
                 const total = pl.total_tracks || 0;
-                text = `Playlist Import: Running (${processed}/${total} tracks processed)`;
+                text = `Playlist Import: Running playlist ${currentNumber}/${queueTotal} (${processed}/${total} tracks)`;
             } else if (pl.status === 'completed') {
                 text = 'Playlist Import: Completed';
+                playlistDot.className = 'task-indicator-dot active';
+            } else if (pl.status === 'completed_with_errors') {
+                text = 'Playlist Import: Completed with errors';
                 playlistDot.className = 'task-indicator-dot active';
             } else if (pl.status === 'cancelled') {
                 text = 'Playlist Import: Cancelled';
@@ -1491,8 +2045,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // 2. Playlist Importer Card Sync
         const pl = status.playlist_import;
-        if (pl.status === 'running' || pl.status === 'completed' || pl.status === 'cancelled') {
+        const playlistStatusIsVisible = ['running', 'completed', 'completed_with_errors', 'cancelled', 'failed'].includes(pl.status);
+        if (playlistStatusIsVisible) {
             currentPlaylistId = pl.playlist_id;
+            currentPlaylistQueueId = pl.queue_id;
             
             // Show progress block and hide preview block
             if (playlistProgressContainer) playlistProgressContainer.classList.remove('hidden');
@@ -1500,13 +2056,33 @@ document.addEventListener('DOMContentLoaded', () => {
             
             const processed = pl.processed || 0;
             const total = pl.total_tracks || 0;
-            const pct = total > 0 ? (processed / total) * 100 : 0;
+            const queue = pl.queue || [];
+            const queueTotal = pl.queue_total || queue.length || 1;
+            const currentNumber = typeof pl.current_index === 'number' ? pl.current_index + 1 : 1;
+            const finishedPlaylists = (pl.queue_completed || 0) + (pl.queue_failed || 0) + (pl.queue_cancelled || 0);
+            const trackTotal = pl.queue_total_tracks || 0;
+            const trackProcessed = pl.queue_processed_tracks || 0;
+            const pct = trackTotal > 0 ? (trackProcessed / trackTotal) * 100 : (finishedPlaylists / queueTotal) * 100;
             
             if (playlistProgressFill) playlistProgressFill.style.width = `${pct}%`;
-            if (playlistProgressText) playlistProgressText.textContent = `Processed: ${processed} / ${total}`;
+            if (playlistProgressText) {
+                if (pl.status === 'running') {
+                    const name = pl.current_playlist_name ? `${pl.current_playlist_name} - ` : '';
+                    playlistProgressText.textContent = `Playlist ${currentNumber} / ${queueTotal}: ${name}${processed} / ${total} tracks`;
+                } else if (pl.status === 'completed') {
+                    playlistProgressText.textContent = `Queue finished: ${pl.queue_completed || queueTotal} / ${queueTotal} playlists`;
+                } else if (pl.status === 'completed_with_errors') {
+                    playlistProgressText.textContent = `Queue finished with ${pl.queue_failed || 0} failed playlist${(pl.queue_failed || 0) === 1 ? '' : 's'}`;
+                } else if (pl.status === 'cancelled') {
+                    playlistProgressText.textContent = `Queue cancelled after ${finishedPlaylists} / ${queueTotal} playlists`;
+                } else if (pl.status === 'failed') {
+                    playlistProgressText.textContent = `Playlist queue failed`;
+                }
+            }
             if (playlistStatDownloaded) playlistStatDownloaded.textContent = `Downloaded: ${pl.downloaded || 0}`;
             if (playlistStatSkipped) playlistStatSkipped.textContent = `Skipped: ${pl.skipped || 0}`;
             if (playlistStatFailed) playlistStatFailed.textContent = `Failed: ${pl.failed || 0}`;
+            renderPlaylistQueueProgress(queue, pl.current_index, pl.status);
             
             const geminiPendingBadge = document.getElementById('gemini-pending-status');
             if (geminiPendingBadge) {
@@ -1519,18 +2095,37 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             
             if (playlistStatusBadge) {
-                playlistStatusBadge.textContent = pl.status.charAt(0).toUpperCase() + pl.status.slice(1);
+                playlistStatusBadge.textContent = playlistStatusLabel(pl.status);
                 if (pl.status === 'running') {
                     playlistStatusBadge.style.background = "rgba(255,255,255,0.1)";
-                    if (btnCancelPlaylistImport) btnCancelPlaylistImport.disabled = false;
+                    if (btnCancelPlaylistImport) {
+                        btnCancelPlaylistImport.disabled = false;
+                        btnCancelPlaylistImport.style.display = '';
+                    }
                 } else if (pl.status === 'completed') {
                     playlistStatusBadge.style.background = "#30d158";
-                    if (btnCancelPlaylistImport) btnCancelPlaylistImport.disabled = true;
-                    if (playlistProgressText) playlistProgressText.textContent = `Import finished: ${pl.downloaded || 0} songs added`;
-
+                    if (btnCancelPlaylistImport) {
+                        btnCancelPlaylistImport.disabled = true;
+                        btnCancelPlaylistImport.style.display = 'none';
+                    }
+                } else if (pl.status === 'completed_with_errors') {
+                    playlistStatusBadge.style.background = "#ffbd2e";
+                    if (btnCancelPlaylistImport) {
+                        btnCancelPlaylistImport.disabled = true;
+                        btnCancelPlaylistImport.style.display = 'none';
+                    }
                 } else if (pl.status === 'cancelled') {
                     playlistStatusBadge.style.background = "#ff453a";
-                    if (btnCancelPlaylistImport) btnCancelPlaylistImport.disabled = true;
+                    if (btnCancelPlaylistImport) {
+                        btnCancelPlaylistImport.disabled = true;
+                        btnCancelPlaylistImport.style.display = 'none';
+                    }
+                } else if (pl.status === 'failed') {
+                    playlistStatusBadge.style.background = "#ff453a";
+                    if (btnCancelPlaylistImport) {
+                        btnCancelPlaylistImport.disabled = true;
+                        btnCancelPlaylistImport.style.display = 'none';
+                    }
                 }
             }
         } else {
@@ -1538,6 +2133,64 @@ document.addEventListener('DOMContentLoaded', () => {
             if (playlistProgressContainer && !playlistProgressContainer.classList.contains('hidden') && pl.status === 'idle') {
                 playlistProgressContainer.classList.add('hidden');
             }
+            renderPlaylistQueueProgress([]);
+        }
+
+        const sli = status.spotify_library_import || {};
+        const spotifyLibraryVisible = ['running', 'completed', 'cancelled', 'failed'].includes(sli.status);
+        if (spotifyLibraryVisible) {
+            currentSpotifyLibraryPlaylistId = sli.playlist_id;
+            currentSpotifyLibraryTaskId = sli.task_id;
+            if (spotifyLibraryProgressContainer) spotifyLibraryProgressContainer.classList.remove('hidden');
+            if (spotifyLibraryPreviewContainer) spotifyLibraryPreviewContainer.classList.add('hidden');
+
+            const processed = sli.processed || 0;
+            const total = sli.tracks_available_for_import || sli.total_tracks || 0;
+            const pct = total > 0 ? Math.min(100, (processed / total) * 100) : 0;
+            if (spotifyLibraryProgressFill) spotifyLibraryProgressFill.style.width = `${pct}%`;
+            if (spotifyLibraryProgressText) {
+                const name = sli.current_playlist_name ? `${sli.current_playlist_name} - ` : '';
+                if (sli.status === 'running') {
+                    spotifyLibraryProgressText.textContent = `${name}${processed} / ${total} tracks`;
+                } else if (sli.status === 'completed') {
+                    spotifyLibraryProgressText.textContent = `${name}completed: ${processed} / ${total} tracks`;
+                } else if (sli.status === 'cancelled') {
+                    spotifyLibraryProgressText.textContent = `${name}cancelled at ${processed} / ${total} tracks`;
+                } else if (sli.status === 'failed') {
+                    spotifyLibraryProgressText.textContent = sli.last_error || 'Spotify Library Importer failed';
+                }
+            }
+            if (spotifyLibraryStatDownloaded) spotifyLibraryStatDownloaded.textContent = `Downloaded: ${sli.downloaded || 0}`;
+            if (spotifyLibraryStatSkipped) spotifyLibraryStatSkipped.textContent = `Skipped: ${sli.skipped || 0}`;
+            if (spotifyLibraryStatFailed) spotifyLibraryStatFailed.textContent = `Failed: ${sli.failed || 0}`;
+            if (spotifyLibraryGeminiStatus) {
+                if ((sli.gemini_pending || 0) > 0) {
+                    spotifyLibraryGeminiStatus.textContent = `${sli.gemini_pending} tracks awaiting AI analysis`;
+                    spotifyLibraryGeminiStatus.style.display = 'inline-block';
+                } else if ((sli.gemini_deferred || 0) > 0) {
+                    spotifyLibraryGeminiStatus.textContent = `${sli.gemini_deferred} tracks deferred for AI retry`;
+                    spotifyLibraryGeminiStatus.style.display = 'inline-block';
+                } else {
+                    spotifyLibraryGeminiStatus.style.display = 'none';
+                }
+            }
+            if (spotifyLibraryStatusBadge) {
+                spotifyLibraryStatusBadge.textContent = playlistStatusLabel(sli.status);
+                if (sli.status === 'running') {
+                    spotifyLibraryStatusBadge.style.background = 'rgba(255,255,255,0.1)';
+                    if (btnCancelSpotifyLibraryImport) btnCancelSpotifyLibraryImport.disabled = false;
+                } else if (sli.status === 'completed') {
+                    spotifyLibraryStatusBadge.style.background = '#30d158';
+                    if (btnCancelSpotifyLibraryImport) btnCancelSpotifyLibraryImport.disabled = true;
+                    if (btnStartSpotifyLibraryImport) btnStartSpotifyLibraryImport.disabled = false;
+                } else if (sli.status === 'cancelled' || sli.status === 'failed') {
+                    spotifyLibraryStatusBadge.style.background = '#ff453a';
+                    if (btnCancelSpotifyLibraryImport) btnCancelSpotifyLibraryImport.disabled = true;
+                    if (btnStartSpotifyLibraryImport) btnStartSpotifyLibraryImport.disabled = false;
+                }
+            }
+        } else if (spotifyLibraryProgressContainer && sli.status === 'idle') {
+            spotifyLibraryProgressContainer.classList.add('hidden');
         }
 
         // 3. Backfill Engine Sync
@@ -1547,12 +2200,15 @@ document.addEventListener('DOMContentLoaded', () => {
         if (bf.status === 'running') {
             backfillRunning = true;
             if (backfillStatusBadge) {
-                backfillStatusBadge.textContent = 'Running';
+                backfillStatusBadge.textContent = bf.cancel_requested ? 'Cancelling' : 'Running';
                 backfillStatusBadge.style.backgroundColor = 'rgba(48, 209, 88, 0.2)';
                 backfillStatusBadge.style.color = '#30d158';
             }
             if (btnRunAllBackfill) btnRunAllBackfill.disabled = true;
-            if (btnCancelBackfill) btnCancelBackfill.disabled = false;
+            if (btnCancelBackfill) {
+                btnCancelBackfill.disabled = !!bf.cancel_requested;
+                btnCancelBackfill.innerText = bf.cancel_requested ? 'Cancelling...' : 'Cancel Run';
+            }
             if (btnRunBackfillList) {
                 btnRunBackfillList.forEach(btn => btn.disabled = true);
             }
@@ -1573,7 +2229,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 backfillStatusBadge.style.color = 'var(--tertiary)';
             }
             if (btnRunAllBackfill) btnRunAllBackfill.disabled = false;
-            if (btnCancelBackfill) btnCancelBackfill.disabled = true;
+            if (btnCancelBackfill) {
+                btnCancelBackfill.disabled = true;
+                btnCancelBackfill.innerText = 'Cancel Run';
+            }
             if (btnRunBackfillList) {
                 btnRunBackfillList.forEach(btn => btn.disabled = false);
             }

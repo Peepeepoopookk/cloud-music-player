@@ -216,15 +216,33 @@ def run_playlist_import(playlist_id, batch_size=15, source_override=None):
             return True
         return False
         
-    def _flush_gemini_batch(batch, state, final_attempt=False):
-        if cancel_check() or not batch:
+    def _flush_gemini_batch(batch, state, final_attempt=False, force=False, skip_ai=False):
+        if (cancel_check() and not force) or not batch:
             return
              
         logger.info(f"Flushing batch of {len(batch)} tracks to Gemini Judge and Database...")
         deferred_for_retry = False
         try:
-            from scraper.gemini_import_pipeline import apply_gemini_to_import_batch
             from scraper.drive_uploader import bulk_update_database
+
+            if skip_ai:
+                state["gemini_status"] = "fallback"
+                state["gemini_pending"] = len(batch)
+                state["gemini_deferred"] = len(deferred_gemini_tracks)
+                active_imports[playlist_id] = state
+                try:
+                    upload_json(file_id, state, state_filename, parent_id=parent_id)
+                except Exception as e:
+                    logger.warning(f"Could not persist fallback flush state before database write: {e}")
+
+                if not bulk_update_database(batch):
+                    raise RuntimeError("bulk_update_database returned False during playlist fallback batch flush")
+                for t in batch:
+                    existing_tracks.append(t)
+                    add_track_to_playlist(playlist_id, t["id"])
+                return
+
+            from scraper.gemini_import_pipeline import apply_gemini_to_import_batch
 
             state["gemini_status"] = "processing"
             state["gemini_pending"] = len(batch)
@@ -330,7 +348,7 @@ def run_playlist_import(playlist_id, batch_size=15, source_override=None):
             title = t.get("title")
             artist = t.get("artist")
             spotify_id = t.get("spotify_id")
-            source = source_override if source_override else f"Playlist Import ({state.get('playlist_name')})"
+            source = source_override or state.get("source_label") or f"Playlist Import ({state.get('playlist_name')})"
             device_id = state.get("device_id")
             
             logger.info(f"Processing playlist track: {title} by {artist}")
@@ -431,8 +449,34 @@ def run_playlist_import(playlist_id, batch_size=15, source_override=None):
             except Exception as e:
                 mark_failed_and_raise(e)
 
+    try:
+        final_state = download_json(file_id) if file_id else {}
+    except Exception as e:
+        logger.warning(f"Could not load final playlist state before batch cleanup: {e}")
+        final_state = active_imports.get(playlist_id, {})
+
+    was_cancelled = final_state.get("status") == "cancelled"
+
+    if was_cancelled and deferred_gemini_tracks:
+        logger.info(
+            f"Writing {len(deferred_gemini_tracks)} deferred playlist tracks with fallback metadata after cancellation."
+        )
+        try:
+            _flush_gemini_batch(deferred_gemini_tracks, final_state, force=True, skip_ai=True)
+        except Exception as e:
+            logger.error(f"Failed to write deferred tracks after cancellation: {e}", exc_info=True)
+
+    if was_cancelled and pending_gemini_batch:
+        logger.info(
+            f"Writing {len(pending_gemini_batch)} pending playlist tracks with fallback metadata after cancellation."
+        )
+        try:
+            _flush_gemini_batch(pending_gemini_batch, final_state, force=True, skip_ai=True)
+        except Exception as e:
+            logger.error(f"Failed to write pending tracks after cancellation: {e}", exc_info=True)
+
     # Retry any batches whose Gemini call failed earlier, then flush leftovers.
-    if deferred_gemini_tracks:
+    if deferred_gemini_tracks and not was_cancelled:
         logger.info(f"Retrying {len(deferred_gemini_tracks)} deferred Gemini playlist import tracks after downloads finished.")
         while deferred_gemini_tracks:
             retry_chunk = deferred_gemini_tracks[:GEMINI_IMPORT_BATCH_SIZE]
@@ -446,7 +490,7 @@ def run_playlist_import(playlist_id, batch_size=15, source_override=None):
                 break
 
     # Leftover flush
-    if pending_gemini_batch:
+    if pending_gemini_batch and not was_cancelled:
         logger.info(f"Flushing remaining {len(pending_gemini_batch)} tracks after main loop.")
         try:
             state = download_json(file_id)

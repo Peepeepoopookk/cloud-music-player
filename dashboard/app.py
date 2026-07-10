@@ -6,6 +6,8 @@ import requests
 import copy
 import functools
 import secrets
+import re
+import uuid
 from flask import Flask, render_template, jsonify, request, stream_with_context, Response
 from dotenv import load_dotenv
 
@@ -25,6 +27,14 @@ from scraper.drive_uploader import upload_track, update_database, normalize_data
 from scraper.metadata_enricher import enrich_track_metadata
 from scraper.main import run_full_enrichment_pass, run_complete_backfill
 from scraper.playlist_importer import get_playlist_preview, start_playlist_import, get_playlist_status, run_playlist_import
+from scraper.spotify_library_importer import (
+    build_spotify_authorize_url,
+    diagnose_spotify_library_playlist,
+    exchange_spotify_code_for_refresh_token,
+    get_spotify_library_connection_status,
+    get_spotify_library_playlist_preview,
+    start_spotify_library_import,
+)
 from scraper.operation_lock import library_write_lock
 import ctypes
 import threading
@@ -122,7 +132,53 @@ def invalidate_db_cache():
 # Global background tasks state tracking
 background_tasks = {
     "scraper": {"status": "idle", "started_at": None},
-    "playlist_import": {"status": "idle", "started_at": None, "playlist_id": None},
+    "playlist_import": {
+        "status": "idle",
+        "started_at": None,
+        "finished_at": None,
+        "queue_id": None,
+        "playlist_id": None,
+        "current_index": None,
+        "current_url": None,
+        "current_playlist_name": None,
+        "queue": [],
+        "queue_total": 0,
+        "queue_completed": 0,
+        "queue_failed": 0,
+        "queue_cancelled": 0,
+        "queue_processed_tracks": 0,
+        "queue_total_tracks": 0,
+        "cancel_requested": False,
+        "processed": 0,
+        "total_tracks": 0,
+        "downloaded": 0,
+        "skipped": 0,
+        "failed": 0,
+        "gemini_pending": 0,
+        "gemini_deferred": 0,
+        "gemini_status": "idle",
+        "last_error": None
+    },
+    "spotify_library_import": {
+        "status": "idle",
+        "started_at": None,
+        "finished_at": None,
+        "task_id": None,
+        "playlist_id": None,
+        "current_url": None,
+        "current_playlist_name": None,
+        "cancel_requested": False,
+        "processed": 0,
+        "total_tracks": 0,
+        "tracks_available_for_import": 0,
+        "downloaded": 0,
+        "skipped": 0,
+        "failed": 0,
+        "gemini_pending": 0,
+        "gemini_deferred": 0,
+        "gemini_status": "idle",
+        "last_error": None
+    },
     "backfill": {
         "status": "idle",
         "started_at": None,
@@ -137,11 +193,496 @@ background_tasks = {
 }
 
 backfill_cancel_event = threading.Event()
+playlist_queue_lock = threading.Lock()
+spotify_library_import_lock = threading.Lock()
 
 app_import_tasks = {}
 
 def is_scraper_running():
     return background_tasks["scraper"]["status"] == "running"
+
+SPOTIFY_PLAYLIST_ID_PATTERN = re.compile(r'(?:playlist/|spotify:playlist:)([A-Za-z0-9]+)', re.IGNORECASE)
+SPOTIFY_PLAYLIST_URL_PATTERN = re.compile(
+    r'(?:https?://open\.spotify\.com/(?:intl-[a-z]{2}/)?playlist/[A-Za-z0-9]+[^\s<>"\']*|spotify:playlist:[A-Za-z0-9]+)',
+    re.IGNORECASE
+)
+PLAYLIST_QUEUE_TERMINAL_STATUSES = {"completed", "failed", "cancelled"}
+MAX_DASHBOARD_PLAYLIST_QUEUE_SIZE = 5
+
+def _utc_now_iso():
+    return datetime.datetime.utcnow().isoformat() + 'Z'
+
+def _normalize_spotify_playlist_url(raw_url):
+    value = str(raw_url or "").strip().strip("'\"()[]{}<>")
+    value = value.rstrip(".,;")
+    if not value:
+        return None
+
+    id_match = SPOTIFY_PLAYLIST_ID_PATTERN.search(value)
+    if id_match:
+        return f"https://open.spotify.com/playlist/{id_match.group(1)}"
+
+    if re.fullmatch(r"[A-Za-z0-9]{16,32}", value):
+        return f"https://open.spotify.com/playlist/{value}"
+
+    return None
+
+def _parse_playlist_urls_payload(body):
+    body = body or {}
+    candidates = []
+
+    urls = body.get("urls")
+    if isinstance(urls, list):
+        candidates.extend(urls)
+
+    for key in ("url", "text", "playlist_urls", "playlistUrls"):
+        value = body.get(key)
+        if isinstance(value, str):
+            matches = SPOTIFY_PLAYLIST_URL_PATTERN.findall(value)
+            if matches:
+                candidates.extend(matches)
+            else:
+                candidates.extend(re.split(r"[\s,\n\r]+", value))
+
+    normalized_urls = []
+    seen = set()
+    for candidate in candidates:
+        normalized = _normalize_spotify_playlist_url(candidate)
+        if normalized and normalized not in seen:
+            normalized_urls.append(normalized)
+            seen.add(normalized)
+
+    return normalized_urls
+
+def _make_playlist_queue_item(index, url):
+    return {
+        "index": index,
+        "url": url,
+        "playlist_id": None,
+        "playlist_name": "Queued playlist",
+        "status": "queued",
+        "processed": 0,
+        "total_tracks": 0,
+        "downloaded": 0,
+        "skipped": 0,
+        "failed": 0,
+        "error": None,
+        "started_at": None,
+        "finished_at": None
+    }
+
+def _copy_playlist_task_state_unlocked():
+    clean_state = {k: v for k, v in background_tasks["playlist_import"].items() if k != "thread"}
+    return copy.deepcopy(clean_state)
+
+def _playlist_queue_is_running_unlocked():
+    pl_state = background_tasks["playlist_import"]
+    thread = pl_state.get("thread")
+    return pl_state.get("status") == "running" and (thread is None or thread.is_alive())
+
+def _build_playlist_import_task_state(queue_id, urls):
+    return {
+        "status": "running",
+        "started_at": _utc_now_iso(),
+        "finished_at": None,
+        "queue_id": queue_id,
+        "playlist_id": None,
+        "current_index": None,
+        "current_url": None,
+        "current_playlist_name": None,
+        "queue": [_make_playlist_queue_item(index, url) for index, url in enumerate(urls)],
+        "queue_total": len(urls),
+        "queue_completed": 0,
+        "queue_failed": 0,
+        "queue_cancelled": 0,
+        "queue_processed_tracks": 0,
+        "queue_total_tracks": 0,
+        "cancel_requested": False,
+        "processed": 0,
+        "total_tracks": 0,
+        "downloaded": 0,
+        "skipped": 0,
+        "failed": 0,
+        "gemini_pending": 0,
+        "gemini_deferred": 0,
+        "gemini_status": "idle",
+        "last_error": None
+    }
+
+def _start_dashboard_playlist_queue(urls):
+    queue_id = str(uuid.uuid4())
+
+    with playlist_queue_lock:
+        if _playlist_queue_is_running_unlocked():
+            return None, _copy_playlist_task_state_unlocked()
+
+        background_tasks["playlist_import"].clear()
+        background_tasks["playlist_import"].update(_build_playlist_import_task_state(queue_id, urls))
+
+    thread = threading.Thread(target=_run_dashboard_playlist_queue, args=(queue_id,))
+    thread.daemon = True
+    with playlist_queue_lock:
+        background_tasks["playlist_import"]["thread"] = thread
+        snapshot = _copy_playlist_task_state_unlocked()
+    thread.start()
+
+    return snapshot, None
+
+def _recalculate_playlist_queue_counts_unlocked(pl_state):
+    queue = pl_state.get("queue") or []
+    pl_state["queue_total"] = len(queue)
+    pl_state["queue_completed"] = sum(1 for item in queue if item.get("status") == "completed")
+    pl_state["queue_failed"] = sum(1 for item in queue if item.get("status") == "failed")
+    pl_state["queue_cancelled"] = sum(1 for item in queue if item.get("status") == "cancelled")
+    pl_state["downloaded"] = sum(int(item.get("downloaded") or 0) for item in queue)
+    pl_state["skipped"] = sum(int(item.get("skipped") or 0) for item in queue)
+    pl_state["failed"] = sum(int(item.get("failed") or 0) for item in queue)
+    pl_state["queue_processed_tracks"] = sum(int(item.get("processed") or 0) for item in queue)
+    pl_state["queue_total_tracks"] = sum(int(item.get("total_tracks") or 0) for item in queue)
+
+def _apply_playlist_import_state_to_queue_item_unlocked(pl_state, import_state):
+    if not import_state:
+        return
+
+    current_index = pl_state.get("current_index")
+    queue = pl_state.get("queue") or []
+    if current_index is None or current_index < 0 or current_index >= len(queue):
+        return
+
+    current_item = queue[current_index]
+    current_item["playlist_id"] = import_state.get("playlist_id") or current_item.get("playlist_id")
+    current_item["playlist_name"] = import_state.get("playlist_name") or current_item.get("playlist_name")
+    current_item["processed"] = import_state.get("processed", 0)
+    current_item["total_tracks"] = import_state.get("total_tracks", 0)
+    current_item["downloaded"] = import_state.get("downloaded", 0)
+    current_item["skipped"] = import_state.get("skipped", 0)
+    current_item["failed"] = import_state.get("failed", 0)
+    current_item["error"] = import_state.get("error") or current_item.get("error")
+    pl_state["gemini_pending"] = import_state.get("gemini_pending", 0)
+    pl_state["gemini_deferred"] = import_state.get("gemini_deferred", 0)
+    pl_state["gemini_status"] = import_state.get("gemini_status", "idle")
+
+    import_status = import_state.get("status")
+    if import_status in PLAYLIST_QUEUE_TERMINAL_STATUSES:
+        current_item["status"] = import_status
+        current_item["finished_at"] = current_item.get("finished_at") or _utc_now_iso()
+    elif current_item.get("status") not in PLAYLIST_QUEUE_TERMINAL_STATUSES:
+        current_item["status"] = "running"
+
+    pl_state["playlist_id"] = current_item.get("playlist_id")
+    pl_state["current_url"] = current_item.get("url")
+    pl_state["current_playlist_name"] = current_item.get("playlist_name")
+    pl_state["processed"] = current_item.get("processed", 0)
+    pl_state["total_tracks"] = current_item.get("total_tracks", 0)
+    _recalculate_playlist_queue_counts_unlocked(pl_state)
+
+def _mark_playlist_import_state(playlist_id, status, error=None):
+    if not playlist_id:
+        return
+
+    from scraper.playlist_importer import active_imports
+    from scraper.drive_uploader import get_db_file_id as get_uploader_db_file_id
+    from dashboard.drive_client import search_file_by_name
+
+    state_filename = f"playlist_import_state_{playlist_id}.json"
+    state = active_imports.get(playlist_id, {}).copy()
+    state["playlist_id"] = playlist_id
+    state["status"] = status
+    if error:
+        state["error"] = str(error)
+    active_imports[playlist_id] = state
+
+    try:
+        _, parent_id = get_uploader_db_file_id()
+        if not parent_id:
+            return
+        file_id = search_file_by_name(state_filename, parent_id)
+        if file_id:
+            persisted = download_json(file_id) or {}
+            persisted.update(state)
+            upload_json(file_id, persisted, state_filename, parent_id=parent_id)
+            active_imports[playlist_id] = persisted
+    except Exception as e:
+        logger.warning(f"Could not mark playlist import {playlist_id} as {status}: {e}")
+
+def _cancel_dashboard_playlist_queue(playlist_id=None):
+    with playlist_queue_lock:
+        pl_state = background_tasks["playlist_import"]
+        pl_state["cancel_requested"] = True
+        target_playlist_id = playlist_id or pl_state.get("playlist_id")
+        for item in pl_state.get("queue", []):
+            if item.get("status") == "queued":
+                item["status"] = "cancelled"
+                item["finished_at"] = _utc_now_iso()
+        _recalculate_playlist_queue_counts_unlocked(pl_state)
+
+    if target_playlist_id:
+        _mark_playlist_import_state(target_playlist_id, "cancelled")
+
+    return target_playlist_id
+
+def _finish_dashboard_playlist_task_unlocked(pl_state):
+    if pl_state.get("cancel_requested"):
+        pl_state["status"] = "cancelled"
+    elif pl_state.get("queue_failed"):
+        pl_state["status"] = "completed_with_errors"
+    else:
+        pl_state["status"] = "completed"
+
+    pl_state["finished_at"] = _utc_now_iso()
+    pl_state.pop("thread", None)
+
+def _run_dashboard_playlist_queue(queue_id):
+    logger.info(f"Starting dashboard playlist import queue {queue_id}")
+    try:
+        log_path = os.path.join(project_root, 'scraper.log')
+        with open(log_path, "a", encoding="utf-8") as f:
+            f.write(f"\n============================================================\nNEW PLAYLIST QUEUE SESSION ({queue_id})\n============================================================\n")
+    except Exception as log_err:
+        logger.warning(f"Could not append playlist queue marker to scraper.log: {log_err}")
+
+    while True:
+        with playlist_queue_lock:
+            pl_state = background_tasks["playlist_import"]
+            if pl_state.get("queue_id") != queue_id:
+                return
+            if pl_state.get("cancel_requested"):
+                for item in pl_state.get("queue", []):
+                    if item.get("status") == "queued":
+                        item["status"] = "cancelled"
+                        item["finished_at"] = _utc_now_iso()
+                _recalculate_playlist_queue_counts_unlocked(pl_state)
+                _finish_dashboard_playlist_task_unlocked(pl_state)
+                return
+
+            next_index = None
+            for idx, item in enumerate(pl_state.get("queue", [])):
+                if item.get("status") == "queued":
+                    next_index = idx
+                    break
+
+            if next_index is None:
+                _recalculate_playlist_queue_counts_unlocked(pl_state)
+                _finish_dashboard_playlist_task_unlocked(pl_state)
+                return
+
+            item = pl_state["queue"][next_index]
+            item["status"] = "starting"
+            item["started_at"] = _utc_now_iso()
+            item["error"] = None
+            pl_state["status"] = "running"
+            pl_state["current_index"] = next_index
+            pl_state["current_url"] = item.get("url")
+            pl_state["current_playlist_name"] = item.get("playlist_name")
+            pl_state["playlist_id"] = item.get("playlist_id")
+            pl_state["processed"] = 0
+            pl_state["total_tracks"] = item.get("total_tracks", 0)
+            _recalculate_playlist_queue_counts_unlocked(pl_state)
+
+        playlist_id = None
+        try:
+            url = item.get("url")
+            playlist_id = start_playlist_import(url, imported_via="dashboard")
+            import_state = get_playlist_status(playlist_id)
+
+            with playlist_queue_lock:
+                pl_state = background_tasks["playlist_import"]
+                if pl_state.get("queue_id") != queue_id:
+                    return
+                current_item = pl_state["queue"][next_index]
+                current_item["playlist_id"] = playlist_id
+                current_item["playlist_name"] = import_state.get("playlist_name") or current_item.get("playlist_name")
+                current_item["total_tracks"] = import_state.get("total_tracks", 0)
+                current_item["status"] = "running"
+                pl_state["playlist_id"] = playlist_id
+                pl_state["current_playlist_name"] = current_item["playlist_name"]
+                pl_state["total_tracks"] = current_item["total_tracks"]
+
+            if background_tasks["playlist_import"].get("cancel_requested"):
+                _mark_playlist_import_state(playlist_id, "cancelled")
+
+            run_playlist_import(playlist_id)
+            import_state = get_playlist_status(playlist_id)
+            final_status = import_state.get("status") or "completed"
+            if final_status not in PLAYLIST_QUEUE_TERMINAL_STATUSES:
+                final_status = "completed"
+
+            with playlist_queue_lock:
+                pl_state = background_tasks["playlist_import"]
+                if pl_state.get("queue_id") != queue_id:
+                    return
+                _apply_playlist_import_state_to_queue_item_unlocked(pl_state, import_state)
+                current_item = pl_state["queue"][next_index]
+                current_item["status"] = final_status
+                current_item["finished_at"] = _utc_now_iso()
+                if final_status == "failed":
+                    current_item["error"] = import_state.get("error") or "Playlist import failed"
+                _recalculate_playlist_queue_counts_unlocked(pl_state)
+        except Exception as e:
+            logger.error(f"Dashboard playlist queue item failed: {e}", exc_info=True)
+            if playlist_id:
+                _mark_playlist_import_state(playlist_id, "failed", error=e)
+            with playlist_queue_lock:
+                pl_state = background_tasks["playlist_import"]
+                if pl_state.get("queue_id") != queue_id:
+                    return
+                current_item = pl_state["queue"][next_index]
+                current_item["playlist_id"] = playlist_id
+                current_item["status"] = "failed"
+                current_item["error"] = str(e)
+                current_item["finished_at"] = _utc_now_iso()
+                pl_state["last_error"] = str(e)
+                _recalculate_playlist_queue_counts_unlocked(pl_state)
+
+        with playlist_queue_lock:
+            pl_state = background_tasks["playlist_import"]
+            if pl_state.get("queue_id") != queue_id:
+                return
+            if pl_state.get("cancel_requested"):
+                for queued_item in pl_state.get("queue", []):
+                    if queued_item.get("status") == "queued":
+                        queued_item["status"] = "cancelled"
+                        queued_item["finished_at"] = _utc_now_iso()
+                _recalculate_playlist_queue_counts_unlocked(pl_state)
+                _finish_dashboard_playlist_task_unlocked(pl_state)
+                return
+
+def _copy_spotify_library_task_state_unlocked():
+    clean_state = {k: v for k, v in background_tasks["spotify_library_import"].items() if k != "thread"}
+    return copy.deepcopy(clean_state)
+
+def _spotify_library_import_is_running_unlocked():
+    task_state = background_tasks["spotify_library_import"]
+    thread = task_state.get("thread")
+    return task_state.get("status") == "running" and (thread is None or thread.is_alive())
+
+def _apply_spotify_library_import_state_unlocked(task_state, import_state):
+    if not import_state:
+        return
+
+    task_state["playlist_id"] = import_state.get("playlist_id") or task_state.get("playlist_id")
+    task_state["current_playlist_name"] = import_state.get("playlist_name") or task_state.get("current_playlist_name")
+    task_state["processed"] = int(import_state.get("processed") or 0)
+    task_state["total_tracks"] = int(import_state.get("total_tracks") or 0)
+    task_state["tracks_available_for_import"] = int(import_state.get("tracks_available_for_import") or 0)
+    task_state["downloaded"] = int(import_state.get("downloaded") or 0)
+    task_state["skipped"] = int(import_state.get("skipped") or 0)
+    task_state["failed"] = int(import_state.get("failed") or 0)
+    task_state["gemini_pending"] = int(import_state.get("gemini_pending") or 0)
+    task_state["gemini_deferred"] = int(import_state.get("gemini_deferred") or 0)
+    task_state["gemini_status"] = import_state.get("gemini_status") or "idle"
+    task_state["last_error"] = import_state.get("error") or task_state.get("last_error")
+
+def _finish_spotify_library_import_task_unlocked(task_state, status=None):
+    if status:
+        task_state["status"] = status
+    elif task_state.get("cancel_requested"):
+        task_state["status"] = "cancelled"
+    elif task_state.get("last_error"):
+        task_state["status"] = "failed"
+    else:
+        task_state["status"] = "completed"
+    task_state["finished_at"] = _utc_now_iso()
+    task_state.pop("thread", None)
+
+def _start_spotify_library_dashboard_import(url):
+    task_id = str(uuid.uuid4())
+    with spotify_library_import_lock:
+        if _spotify_library_import_is_running_unlocked():
+            return None, _copy_spotify_library_task_state_unlocked()
+
+        task_state = background_tasks["spotify_library_import"]
+        task_state.clear()
+        task_state.update({
+            "status": "running",
+            "started_at": _utc_now_iso(),
+            "finished_at": None,
+            "task_id": task_id,
+            "playlist_id": None,
+            "current_url": url,
+            "current_playlist_name": None,
+            "cancel_requested": False,
+            "processed": 0,
+            "total_tracks": 0,
+            "tracks_available_for_import": 0,
+            "downloaded": 0,
+            "skipped": 0,
+            "failed": 0,
+            "gemini_pending": 0,
+            "gemini_deferred": 0,
+            "gemini_status": "idle",
+            "last_error": None
+        })
+
+    thread = threading.Thread(target=_run_spotify_library_dashboard_import, args=(task_id, url))
+    thread.daemon = True
+    with spotify_library_import_lock:
+        background_tasks["spotify_library_import"]["thread"] = thread
+        snapshot = _copy_spotify_library_task_state_unlocked()
+    thread.start()
+    return snapshot, None
+
+def _cancel_spotify_library_dashboard_import(playlist_id=None):
+    with spotify_library_import_lock:
+        task_state = background_tasks["spotify_library_import"]
+        task_state["cancel_requested"] = True
+        target_playlist_id = playlist_id or task_state.get("playlist_id")
+        if task_state.get("status") == "idle":
+            task_state["status"] = "cancelled"
+            task_state["finished_at"] = _utc_now_iso()
+
+    if target_playlist_id:
+        _mark_playlist_import_state(target_playlist_id, "cancelled")
+
+    return target_playlist_id
+
+def _run_spotify_library_dashboard_import(task_id, url):
+    logger.info(f"Starting Spotify Library Importer task {task_id}")
+    try:
+        log_path = os.path.join(project_root, 'scraper.log')
+        with open(log_path, "a", encoding="utf-8") as f:
+            f.write(f"\n============================================================\nNEW SPOTIFY LIBRARY IMPORT SESSION ({task_id})\n============================================================\n")
+    except Exception as log_err:
+        logger.warning(f"Could not append Spotify library import marker to scraper.log: {log_err}")
+
+    playlist_id = None
+    try:
+        playlist_id = start_spotify_library_import(url)
+        import_state = get_playlist_status(playlist_id)
+        with spotify_library_import_lock:
+            task_state = background_tasks["spotify_library_import"]
+            if task_state.get("task_id") != task_id:
+                return
+            _apply_spotify_library_import_state_unlocked(task_state, import_state)
+            task_state["playlist_id"] = playlist_id
+
+        with spotify_library_import_lock:
+            cancel_requested = background_tasks["spotify_library_import"].get("cancel_requested")
+        if cancel_requested:
+            _mark_playlist_import_state(playlist_id, "cancelled")
+
+        run_playlist_import(playlist_id)
+        final_state = get_playlist_status(playlist_id)
+        final_status = final_state.get("status") or "completed"
+        if final_status not in PLAYLIST_QUEUE_TERMINAL_STATUSES:
+            final_status = "completed"
+
+        with spotify_library_import_lock:
+            task_state = background_tasks["spotify_library_import"]
+            if task_state.get("task_id") != task_id:
+                return
+            _apply_spotify_library_import_state_unlocked(task_state, final_state)
+            _finish_spotify_library_import_task_unlocked(task_state, final_status)
+    except Exception as e:
+        logger.error(f"Spotify Library Importer task failed: {e}", exc_info=True)
+        if playlist_id:
+            _mark_playlist_import_state(playlist_id, "failed", error=e)
+        with spotify_library_import_lock:
+            task_state = background_tasks["spotify_library_import"]
+            if task_state.get("task_id") != task_id:
+                return
+            task_state["last_error"] = str(e)
+            _finish_spotify_library_import_task_unlocked(task_state, "failed")
 
 def get_db_file_id():
     """
@@ -487,7 +1028,13 @@ def get_logs():
         header_idx = -1
         for i, line in enumerate(cleaned_lines):
             line_upper = line.upper()
-            if "NEW SESSION" in line_upper or "NEW SCRAPER SESSION" in line_upper or "NEW PLAYLIST IMPORT SESSION" in line_upper:
+            if (
+                "NEW SESSION" in line_upper
+                or "NEW SCRAPER SESSION" in line_upper
+                or "NEW PLAYLIST IMPORT SESSION" in line_upper
+                or "NEW PLAYLIST QUEUE SESSION" in line_upper
+                or "NEW SPOTIFY LIBRARY IMPORT SESSION" in line_upper
+            ):
                 header_idx = i
                 
         if header_idx != -1:
@@ -866,7 +1413,10 @@ def cancel_backfill():
     POST /api/backfill/cancel - Cancels the running backfill engine.
     """
     backfill_cancel_event.set()
-    background_tasks["backfill"]["status"] = "cancelled"
+    if background_tasks["backfill"].get("status") == "running":
+        background_tasks["backfill"]["cancel_requested"] = True
+    else:
+        background_tasks["backfill"]["status"] = "cancelled"
     background_tasks["backfill"].setdefault("logs", []).append({
         "time": datetime.datetime.utcnow().isoformat() + 'Z',
         "level": "warning",
@@ -1410,7 +1960,7 @@ def stream_track(drive_file_id):
 @app.route('/api/playlist/preview', methods=['POST'])
 def playlist_preview():
     try:
-        url = request.json.get('url')
+        url = (request.json or {}).get('url')
         if not url:
             return jsonify({"error": "Missing url"}), 400
         preview = get_playlist_preview(url)
@@ -1419,69 +1969,230 @@ def playlist_preview():
         logger.error(f"Error in preview: {e}")
         return jsonify({"error": str(e)}), 500
 
+@app.route('/api/playlist/queue/preview', methods=['POST'])
+def playlist_queue_preview():
+    try:
+        urls = _parse_playlist_urls_payload(request.json)
+        if not urls:
+            return jsonify({"error": "No valid Spotify playlist URLs found."}), 400
+        if len(urls) > MAX_DASHBOARD_PLAYLIST_QUEUE_SIZE:
+            return jsonify({"error": f"Only up to {MAX_DASHBOARD_PLAYLIST_QUEUE_SIZE} playlists can be queued at once."}), 400
+
+        previews = []
+        ready_count = 0
+        total_tracks = 0
+        estimated_size_mb = 0
+
+        for index, url in enumerate(urls):
+            item = {
+                "index": index,
+                "url": url,
+                "status": "ready",
+                "error": None
+            }
+            try:
+                preview = get_playlist_preview(url)
+                item.update(preview)
+                item["url"] = url
+                ready_count += 1
+                total_tracks += int(preview.get("tracks_available_for_import") or preview.get("total_tracks") or 0)
+                estimated_size_mb += int(preview.get("estimated_size_mb") or 0)
+            except Exception as preview_err:
+                logger.warning(f"Playlist queue preview failed for {url}: {preview_err}")
+                item["status"] = "error"
+                item["error"] = str(preview_err)
+            previews.append(item)
+
+        return jsonify({
+            "status": "success",
+            "total": len(previews),
+            "ready_count": ready_count,
+            "error_count": len(previews) - ready_count,
+            "total_tracks": total_tracks,
+            "estimated_size_mb": estimated_size_mb,
+            "estimated_size_display": f"~{estimated_size_mb} MB",
+            "previews": previews
+        })
+    except Exception as e:
+        logger.error(f"Error in queue preview: {e}", exc_info=True)
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/playlist/queue/start', methods=['POST'])
+@require_write_auth()
+def playlist_queue_start():
+    try:
+        urls = _parse_playlist_urls_payload(request.json)
+        if not urls:
+            return jsonify({"error": "No valid Spotify playlist URLs found."}), 400
+        if len(urls) > MAX_DASHBOARD_PLAYLIST_QUEUE_SIZE:
+            return jsonify({"error": f"Only up to {MAX_DASHBOARD_PLAYLIST_QUEUE_SIZE} playlists can be queued at once."}), 400
+
+        snapshot, running_state = _start_dashboard_playlist_queue(urls)
+        if running_state is not None:
+            return jsonify({
+                "status": "already_running",
+                "queue_id": running_state.get("queue_id"),
+                "playlist_id": running_state.get("playlist_id"),
+                "queue": running_state.get("queue", [])
+            }), 409
+
+        return jsonify({
+            "status": "success",
+            "queue_id": snapshot.get("queue_id"),
+            "playlist_id": snapshot.get("playlist_id"),
+            "queue_total": snapshot.get("queue_total"),
+            "queue": snapshot.get("queue", [])
+        })
+    except Exception as e:
+        logger.error(f"Error starting playlist queue: {e}", exc_info=True)
+        return jsonify({"error": str(e)}), 500
+
 @app.route('/api/playlist/start', methods=['POST'])
 @require_write_auth()
 def playlist_start():
     try:
-        url = request.json.get('url')
+        url = (request.json or {}).get('url')
         if not url:
             return jsonify({"error": "Missing url"}), 400
 
-        if background_tasks["playlist_import"]["status"] == "running":
-            return jsonify({"status": "already_running", "playlist_id": background_tasks["playlist_import"].get("playlist_id")}), 409
+        normalized_url = _normalize_spotify_playlist_url(url)
+        if not normalized_url:
+            return jsonify({"error": "Invalid Spotify playlist URL"}), 400
 
-        playlist_id = start_playlist_import(url, imported_via="dashboard")
-        
-        # Update background tasks dict
-        background_tasks["playlist_import"]["status"] = "running"
-        background_tasks["playlist_import"]["started_at"] = datetime.datetime.utcnow().isoformat() + 'Z'
-        background_tasks["playlist_import"]["playlist_id"] = playlist_id
-        
-        # Start background thread with a wrapper to capture exit status
-        def run_playlist_import_wrapper():
-            try:
-                run_playlist_import(playlist_id)
-            except Exception as e:
-                logger.error(f"Error in background playlist import: {e}", exc_info=True)
-                from scraper.playlist_importer import active_imports, get_db_file_id
-                from dashboard.drive_client import upload_json, search_file_by_name
-                state = active_imports.get(playlist_id, {})
-                if state.get("status") not in ("cancelled", "completed"):
-                    state["status"] = "failed"
-                    active_imports[playlist_id] = state
-                    db_file_id, parent_id = get_db_file_id()
-                    if parent_id:
-                        state_filename = f"playlist_import_state_{playlist_id}.json"
-                        file_id = search_file_by_name(state_filename, parent_id)
-                        if file_id:
-                            upload_json(file_id, state, state_filename, parent_id=parent_id)
-            finally:
-                from scraper.playlist_importer import active_imports
-                state = active_imports.get(playlist_id)
-                if state and state.get("status") == "cancelled":
-                    background_tasks["playlist_import"]["status"] = "cancelled"
-                elif state and state.get("status") == "failed":
-                    background_tasks["playlist_import"]["status"] = "failed"
-                else:
-                    background_tasks["playlist_import"]["status"] = "completed"
-                background_tasks["playlist_import"].pop("thread", None)
+        snapshot, running_state = _start_dashboard_playlist_queue([normalized_url])
+        if running_state is not None:
+            return jsonify({
+                "status": "already_running",
+                "queue_id": running_state.get("queue_id"),
+                "playlist_id": running_state.get("playlist_id")
+            }), 409
 
-        thread = threading.Thread(target=run_playlist_import_wrapper)
-        thread.daemon = True
-        background_tasks["playlist_import"]["thread"] = thread
-        thread.start()
-        
-        # Append clear session marker to scraper.log
-        log_path = os.path.join(project_root, 'scraper.log')
-        try:
-            with open(log_path, "a", encoding="utf-8") as f:
-                f.write(f"\n============================================================\nNEW SESSION: PLAYLIST IMPORT STARTED ({playlist_id})\n============================================================\n")
-        except Exception as log_err:
-            logger.warning(f"Could not append session marker to scraper.log: {log_err}")
-            
-        return jsonify({"status": "success", "playlist_id": playlist_id})
+        return jsonify({
+            "status": "success",
+            "queue_id": snapshot.get("queue_id"),
+            "playlist_id": snapshot.get("playlist_id"),
+            "queue_total": snapshot.get("queue_total"),
+            "queue": snapshot.get("queue", [])
+        })
     except Exception as e:
         logger.error(f"Error in start: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/spotify-library/connection', methods=['GET'])
+def spotify_library_connection():
+    try:
+        check_token = request.args.get("check") in ("1", "true", "yes")
+        return jsonify(get_spotify_library_connection_status(check_token=check_token))
+    except Exception as e:
+        logger.error(f"Error checking Spotify library connection: {e}", exc_info=True)
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/spotify-library/auth-url', methods=['GET'])
+def spotify_library_auth_url():
+    try:
+        redirect_uri = (
+            request.args.get("redirect_uri")
+            or os.environ.get("SPOTIFY_REDIRECT_URI")
+            or f"{request.url_root.rstrip('/')}/api/spotify-library/callback"
+        )
+        return jsonify({
+            "auth_url": build_spotify_authorize_url(redirect_uri),
+            "redirect_uri": redirect_uri,
+            "scopes": ["playlist-read-private", "playlist-read-collaborative", "user-library-read"]
+        })
+    except Exception as e:
+        logger.error(f"Error building Spotify library auth URL: {e}", exc_info=True)
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/spotify-library/callback', methods=['GET'])
+def spotify_library_callback():
+    try:
+        error = request.args.get("error")
+        if error:
+            return jsonify({"error": error}), 400
+        code = request.args.get("code")
+        redirect_uri = os.environ.get("SPOTIFY_REDIRECT_URI") or f"{request.url_root.rstrip('/')}/api/spotify-library/callback"
+        token_payload = exchange_spotify_code_for_refresh_token(code, redirect_uri)
+        refresh_token = token_payload.get("refresh_token")
+        if not refresh_token:
+            return jsonify({
+                "error": "Spotify did not return a refresh token. Reopen the auth URL with show_dialog=true and try again."
+            }), 400
+        return jsonify({
+            "status": "success",
+            "message": "Set this value as SPOTIFY_REFRESH_TOKEN in Render/local environment, then restart the service.",
+            "refresh_token": refresh_token
+        })
+    except Exception as e:
+        logger.error(f"Error in Spotify library callback: {e}", exc_info=True)
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/spotify-library/preview', methods=['POST'])
+def spotify_library_preview():
+    try:
+        url = (request.json or {}).get('url')
+        normalized_url = _normalize_spotify_playlist_url(url)
+        if not normalized_url:
+            return jsonify({"error": "Invalid Spotify playlist URL"}), 400
+        preview = get_spotify_library_playlist_preview(normalized_url)
+        preview["url"] = normalized_url
+        return jsonify(preview)
+    except Exception as e:
+        logger.error(f"Error in Spotify Library Importer preview: {e}", exc_info=True)
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/spotify-library/diagnose', methods=['POST'])
+def spotify_library_diagnose():
+    try:
+        url = (request.json or {}).get('url')
+        normalized_url = _normalize_spotify_playlist_url(url)
+        if not normalized_url:
+            return jsonify({"error": "Invalid Spotify playlist URL"}), 400
+        return jsonify(diagnose_spotify_library_playlist(normalized_url))
+    except Exception as e:
+        logger.error(f"Error diagnosing Spotify Library Importer access: {e}", exc_info=True)
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/spotify-library/start', methods=['POST'])
+@require_write_auth()
+def spotify_library_start():
+    try:
+        url = (request.json or {}).get('url')
+        normalized_url = _normalize_spotify_playlist_url(url)
+        if not normalized_url:
+            return jsonify({"error": "Invalid Spotify playlist URL"}), 400
+
+        snapshot, running_state = _start_spotify_library_dashboard_import(normalized_url)
+        if running_state is not None:
+            return jsonify({
+                "status": "already_running",
+                "task_id": running_state.get("task_id"),
+                "playlist_id": running_state.get("playlist_id")
+            }), 409
+
+        return jsonify({
+            "status": "success",
+            "task_id": snapshot.get("task_id"),
+            "playlist_id": snapshot.get("playlist_id")
+        })
+    except Exception as e:
+        logger.error(f"Error starting Spotify Library Importer: {e}", exc_info=True)
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/spotify-library/cancel', methods=['POST'])
+@require_write_auth()
+def spotify_library_cancel():
+    try:
+        body = request.json or {}
+        playlist_id = body.get('playlist_id')
+        cancelled_playlist_id = _cancel_spotify_library_dashboard_import(playlist_id)
+        return jsonify({
+            "status": "success",
+            "playlist_id": cancelled_playlist_id,
+            "message": "Spotify Library Importer cancellation requested."
+        })
+    except Exception as e:
+        logger.error(f"Error cancelling Spotify Library Importer: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/playlist/status', methods=['GET'])
@@ -1646,28 +2357,17 @@ def get_single_artist(artist_name):
 @require_write_auth()
 def playlist_cancel():
     try:
-        playlist_id = request.json.get('playlist_id')
-        if not playlist_id:
-            return jsonify({"error": "Missing playlist_id"}), 400
-            
-        from dashboard.drive_client import search_file_by_name
-        from scraper.drive_uploader import get_db_file_id
-        db_file_id, parent_id = get_db_file_id()
-        file_id = search_file_by_name(f"playlist_import_state_{playlist_id}.json", parent_id)
-        if file_id:
-            state = download_json(file_id)
-            state["status"] = "cancelled"
-            upload_json(file_id, state, f"playlist_import_state_{playlist_id}.json", parent_id=parent_id)
-            
-            # Update active_imports and background_tasks immediately
-            from scraper.playlist_importer import active_imports
-            if playlist_id in active_imports:
-                active_imports[playlist_id]["status"] = "cancelled"
-            background_tasks["playlist_import"]["status"] = "cancelled"
-            
-        return jsonify({"status": "success"})
+        body = request.json or {}
+        playlist_id = body.get('playlist_id')
+
+        cancelled_playlist_id = _cancel_dashboard_playlist_queue(playlist_id)
+        return jsonify({
+            "status": "success",
+            "playlist_id": cancelled_playlist_id,
+            "message": "Playlist import cancellation requested."
+        })
     except Exception as e:
-        logger.error(f"Error in cancel: {e}")
+        logger.error(f"Error in cancel: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/playlist/logs', methods=['GET'])
@@ -1752,36 +2452,85 @@ def run_backfill_specific():
     if not btype:
         return jsonify({"error": "Missing type"}), 400
 
-    background_tasks["backfill"]["status"] = "running"
-    background_tasks["backfill"]["started_at"] = datetime.datetime.utcnow().isoformat() + 'Z'
-    background_tasks["backfill"]["type"] = btype
+    backfill_cancel_event.clear()
+    background_tasks["backfill"].clear()
+    background_tasks["backfill"].update({
+        "status": "running",
+        "started_at": datetime.datetime.utcnow().isoformat() + 'Z',
+        "finished_at": None,
+        "type": btype,
+        "logs": [{
+            "time": datetime.datetime.utcnow().isoformat() + "Z",
+            "level": "info",
+            "message": f"Starting {btype} backfill."
+        }],
+        "changelog": [],
+        "processed": 0,
+        "total_candidates": 0,
+        "api_call_count": 0,
+        "cancel_requested": False,
+        "last_result": None,
+        "last_error": None
+    })
         
     def run_job():
         try:
-            from scraper.main import backfill_album_art, backfill_durations, backfill_languages, run_complete_backfill
+            from scraper.main import backfill_album_art, backfill_durations, backfill_languages, backfill_lyrics, run_complete_backfill
             if btype == "album_art":
-                backfill_album_art()
+                result = backfill_album_art(
+                    task_state=background_tasks["backfill"],
+                    cancel_event=backfill_cancel_event
+                )
             elif btype == "duration":
-                backfill_durations()
+                result = backfill_durations(
+                    task_state=background_tasks["backfill"],
+                    cancel_event=backfill_cancel_event
+                )
             elif btype == "language":
-                backfill_languages()
+                result = backfill_languages(
+                    task_state=background_tasks["backfill"],
+                    cancel_event=backfill_cancel_event
+                )
+            elif btype == "lyrics":
+                result = backfill_lyrics(
+                    task_state=background_tasks["backfill"],
+                    cancel_event=backfill_cancel_event
+                )
             elif btype == "all":
-                run_complete_backfill()
+                result = run_complete_backfill()
             elif btype == "lyrics_status":
                 from scraper.drive_uploader import backfill_lyrics_status
-                backfill_lyrics_status()
+                result = backfill_lyrics_status()
             elif btype == "normalize":
                 from scraper.drive_uploader import normalize_database
-                normalize_database()
+                result = normalize_database()
             else:
                 logger.warning(f"Unknown backfill type: {btype}")
+                result = {"status": "error", "message": f"Unknown backfill type: {btype}"}
+            background_tasks["backfill"]["last_result"] = result
+            if isinstance(result, dict) and result.get("status") == "error":
+                level = "error"
+            elif isinstance(result, dict) and result.get("status") == "cancelled":
+                level = "warning"
+            else:
+                level = "success"
+            background_tasks["backfill"].setdefault("logs", []).append({
+                "time": datetime.datetime.utcnow().isoformat() + "Z",
+                "level": level,
+                "message": (result or {}).get("message") if isinstance(result, dict) and result.get("message") else f"{btype} backfill finished."
+            })
         except Exception as e:
             logger.error(f"Backfill job {btype} failed: {e}")
+            background_tasks["backfill"]["last_error"] = str(e)
+            background_tasks["backfill"].setdefault("logs", []).append({
+                "time": datetime.datetime.utcnow().isoformat() + "Z",
+                "level": "error",
+                "message": f"Backfill job failed: {e}"
+            })
         finally:
-            background_tasks["backfill"]["status"] = "idle"
+            background_tasks["backfill"]["status"] = "cancelled" if backfill_cancel_event.is_set() else "idle"
+            background_tasks["backfill"]["finished_at"] = datetime.datetime.utcnow().isoformat() + 'Z'
             
-    import threading
-    import datetime
     thread = threading.Thread(target=run_job)
     thread.daemon = True
     thread.start()
@@ -1805,22 +2554,37 @@ def get_backfill_status():
 
     status = {
         "success": True,
-        "album_art": {"missing": 0, "total": len(tracks)},
-        "duration": {"missing": 0, "total": len(tracks)},
-        "language": {"missing": 0, "total": len(tracks)}
+        "album_art": {"missing": 0, "present": 0, "total": len(tracks)},
+        "duration": {"missing": 0, "present": 0, "total": len(tracks)},
+        "lyrics": {"missing": 0, "present": 0, "synced_present": 0, "total": len(tracks)},
+        "language": {"missing": 0, "present": 0, "total": len(tracks)},
+        "running": background_tasks["backfill"].copy()
     }
     
     for track in tracks:
-        art = track.get("album_art")
+        art = track.get("album_art") or track.get("albumArt")
         if art is None or art == "":
             status["album_art"]["missing"] += 1
+        else:
+            status["album_art"]["present"] += 1
             
-        if track.get("durationSeconds") is None:
+        if track.get("durationSeconds") is None or track.get("duration") == "--:--":
             status["duration"]["missing"] += 1
+        else:
+            status["duration"]["present"] += 1
+
+        if track.get("lyrics") or track.get("syncedLyrics"):
+            status["lyrics"]["present"] += 1
+        else:
+            status["lyrics"]["missing"] += 1
+        if track.get("syncedLyrics"):
+            status["lyrics"]["synced_present"] += 1
             
         lang = track.get("language")
         if lang is None or lang == "Unknown" or lang == "unknown" or lang == "":
             status["language"]["missing"] += 1
+        else:
+            status["language"]["present"] += 1
             
     return jsonify(status)
 
@@ -1849,6 +2613,10 @@ def run_backfill_enrichment():
 @app.route('/api/backfill/logs', methods=['GET'])
 def get_backfill_logs():
     try:
+        task_logs = background_tasks.get("backfill", {}).get("logs") or []
+        if task_logs:
+            return jsonify(task_logs[-100:])
+
         log_path = os.path.join(project_root, 'scraper.log')
         if not os.path.exists(log_path):
             return jsonify([])
@@ -1866,37 +2634,57 @@ def get_backfill_logs():
 
 @app.route('/api/background/status', methods=['GET'])
 def get_background_status():
-    pl_state = background_tasks["playlist_import"]
-    if pl_state.get("playlist_id"):
-        from scraper.playlist_importer import active_imports
-        state = active_imports.get(pl_state["playlist_id"])
-        if state:
-            pl_state["processed"] = state.get("processed", 0)
-            pl_state["total_tracks"] = state.get("total_tracks", 0)
-            pl_state["downloaded"] = state.get("downloaded", 0)
-            pl_state["skipped"] = state.get("skipped", 0)
-            pl_state["failed"] = state.get("failed", 0)
-            if state.get("status") in ("completed", "cancelled"):
-                pl_state["status"] = state.get("status")
-        else:
-            try:
-                st = get_playlist_status(pl_state["playlist_id"])
-                if st and st.get("status") != "not_found":
-                    pl_state["processed"] = st.get("processed", 0)
-                    pl_state["total_tracks"] = st.get("total_tracks", 0)
-                    pl_state["downloaded"] = st.get("downloaded", 0)
-                    pl_state["skipped"] = st.get("skipped", 0)
-                    pl_state["failed"] = st.get("failed", 0)
-                    if st.get("status") in ("completed", "cancelled"):
-                        pl_state["status"] = st.get("status")
-            except Exception as e:
-                logger.warning(f"Failed to fetch playlist status from Drive: {e}")
+    with playlist_queue_lock:
+        playlist_id = background_tasks["playlist_import"].get("playlist_id")
+    with spotify_library_import_lock:
+        spotify_library_playlist_id = background_tasks["spotify_library_import"].get("playlist_id")
+
+    if playlist_id:
+        try:
+            from scraper.playlist_importer import active_imports
+            state = active_imports.get(playlist_id)
+            if not state:
+                state = get_playlist_status(playlist_id)
+            if state and state.get("status") != "not_found":
+                with playlist_queue_lock:
+                    pl_state = background_tasks["playlist_import"]
+                    if pl_state.get("playlist_id") == playlist_id:
+                        _apply_playlist_import_state_to_queue_item_unlocked(pl_state, state)
+        except Exception as e:
+            logger.warning(f"Failed to fetch playlist status from Drive: {e}")
+
+    if spotify_library_playlist_id:
+        try:
+            from scraper.playlist_importer import active_imports
+            state = active_imports.get(spotify_library_playlist_id)
+            if not state:
+                state = get_playlist_status(spotify_library_playlist_id)
+            if state and state.get("status") != "not_found":
+                with spotify_library_import_lock:
+                    task_state = background_tasks["spotify_library_import"]
+                    if task_state.get("playlist_id") == spotify_library_playlist_id:
+                        _apply_spotify_library_import_state_unlocked(task_state, state)
+        except Exception as e:
+            logger.warning(f"Failed to fetch Spotify library import status from Drive: {e}")
                 
     clean_tasks = {}
     for task_name, state_dict in background_tasks.items():
-        clean_state = {k: v for k, v in state_dict.items() if k != "thread"}
-        if "thread" in state_dict:
-            clean_state["is_alive"] = state_dict["thread"].is_alive()
+        if task_name == "playlist_import":
+            with playlist_queue_lock:
+                clean_state = _copy_playlist_task_state_unlocked()
+                thread = background_tasks["playlist_import"].get("thread")
+                if thread:
+                    clean_state["is_alive"] = thread.is_alive()
+        elif task_name == "spotify_library_import":
+            with spotify_library_import_lock:
+                clean_state = _copy_spotify_library_task_state_unlocked()
+                thread = background_tasks["spotify_library_import"].get("thread")
+                if thread:
+                    clean_state["is_alive"] = thread.is_alive()
+        else:
+            clean_state = {k: v for k, v in state_dict.items() if k != "thread"}
+            if "thread" in state_dict:
+                clean_state["is_alive"] = state_dict["thread"].is_alive()
         clean_tasks[task_name] = clean_state
         
     return jsonify(clean_tasks)

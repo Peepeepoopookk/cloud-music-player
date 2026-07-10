@@ -1359,6 +1359,104 @@ h1, h2, h3, .gradient-heading {
     flex-direction: column;
 }
 
+.playlist-url-entry {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 12px;
+    align-items: start;
+    margin-bottom: 20px;
+}
+
+.playlist-url-boxes {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 10px;
+}
+
+.playlist-url-input,
+.spotify-library-url-input {
+    width: 100%;
+    padding: 12px 16px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background-color: var(--bg-base);
+    color: var(--primary);
+    line-height: 1.2;
+    box-sizing: border-box;
+}
+
+.playlist-queue-progress {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 20px;
+}
+
+.playlist-queue-item,
+.playlist-preview-item {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 12px;
+    align-items: center;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.025);
+}
+
+.playlist-queue-item-main,
+.playlist-preview-item-main {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.playlist-preview-item-title,
+.playlist-queue-item-title {
+    color: #fff;
+    font-weight: 600;
+    font-size: 0.95rem;
+    margin-bottom: 4px;
+}
+
+.playlist-preview-item-meta,
+.playlist-queue-item-meta {
+    color: var(--tertiary);
+    font-size: 0.82rem;
+}
+
+.playlist-queue-status {
+    justify-self: end;
+    padding: 3px 8px;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--tertiary);
+}
+
+.playlist-queue-status.running,
+.playlist-queue-status.starting {
+    background: rgba(10, 132, 255, 0.18);
+    color: #66b2ff;
+}
+
+.playlist-queue-status.completed {
+    background: rgba(48, 209, 88, 0.16);
+    color: #30d158;
+}
+
+.playlist-queue-status.completed_with_errors {
+    background: rgba(255, 189, 46, 0.16);
+    color: #ffbd2e;
+}
+
+.playlist-queue-status.failed,
+.playlist-queue-status.error,
+.playlist-queue-status.cancelled {
+    background: rgba(255, 69, 58, 0.14);
+    color: #ff453a;
+}
+
 .playlist-preview-container {
     background: rgba(255, 255, 255, 0.02);
     border: 1px solid var(--border);
@@ -1413,6 +1511,16 @@ h1, h2, h3, .gradient-heading {
 
 /* Mobile-specific adjustments for max-width: 480px */
 @media (max-width: 480px) {
+    .playlist-url-entry,
+    .playlist-queue-item,
+    .playlist-preview-item {
+        grid-template-columns: 1fr;
+    }
+
+    .playlist-queue-status {
+        justify-self: start;
+    }
+
     /* Navbar collapse */
     .navbar {
         padding: 0 16px;

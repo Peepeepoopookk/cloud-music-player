@@ -302,10 +302,16 @@
                 <!-- Playlist Importer Card -->
                 <div class="card playlist-importer-card" style="margin-top: 24px;">
                     <h3>Spotify Playlist Importer</h3>
-                    <p class="section-desc" style="margin-bottom: 16px;">Paste a public Spotify playlist link to download all tracks inside.</p>
-                    <div style="display: flex; gap: 12px; margin-bottom: 24px;">
-                        <input type="text" id="input-playlist-url" class="settings-text-input" placeholder="https://open.spotify.com/playlist/..." style="flex: 1; padding: 10px 16px; border-radius: 20px; border: 1px solid var(--border); background-color: var(--bg-base); color: var(--primary);">
-                        <button class="btn btn-secondary" id="btn-preview-playlist">Preview Playlist</button>
+                    <p class="section-desc" style="margin-bottom: 16px;">Paste one or more public Spotify playlist links to download them in order.</p>
+                    <div class="playlist-url-entry">
+                        <div class="playlist-url-boxes" id="playlist-url-boxes">
+                            <input type="text" class="settings-text-input playlist-url-input" data-playlist-url-index="0" placeholder="Playlist 1 URL">
+                            <input type="text" class="settings-text-input playlist-url-input" data-playlist-url-index="1" placeholder="Playlist 2 URL">
+                            <input type="text" class="settings-text-input playlist-url-input" data-playlist-url-index="2" placeholder="Playlist 3 URL">
+                            <input type="text" class="settings-text-input playlist-url-input" data-playlist-url-index="3" placeholder="Playlist 4 URL">
+                            <input type="text" class="settings-text-input playlist-url-input" data-playlist-url-index="4" placeholder="Playlist 5 URL">
+                        </div>
+                        <button class="btn btn-secondary" id="btn-preview-playlist">Preview Playlists</button>
                     </div>
 
                     <!-- Playlist Preview Container -->
@@ -346,6 +352,59 @@
                         </div>
                         <div class="progress-bar-container">
                             <div class="progress-bar-fill" id="playlist-progress-fill" style="width: 0%"></div>
+                        </div>
+                        <div class="playlist-queue-progress" id="playlist-queue-progress"></div>
+                    </div>
+                </div>
+
+                <!-- Spotify Library Importer Card -->
+                <div class="card spotify-library-importer-card" style="margin-top: 24px;">
+                    <h3>Spotify Library Importer</h3>
+                    <p class="section-desc" style="margin-bottom: 16px;">Use Spotify API metadata for one playlist already accessible in your Spotify library.</p>
+                    <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 12px;">
+                        <div id="spotify-library-connection-status" class="playlist-preview-item-meta">Spotify API connection not checked.</div>
+                        <button class="btn btn-secondary hidden" id="btn-connect-spotify-library" style="padding: 6px 12px; font-size: 0.85rem;">Connect Spotify</button>
+                    </div>
+                    <div class="playlist-url-entry">
+                        <input type="text" class="settings-text-input spotify-library-url-input" id="spotify-library-url-input" placeholder="Spotify playlist URL from your library">
+                        <div style="display: flex; gap: 8px; align-items: center;">
+                            <button class="btn btn-secondary" id="btn-diagnose-spotify-library">Diagnose Access</button>
+                            <button class="btn btn-secondary" id="btn-preview-spotify-library">Preview Library Playlist</button>
+                        </div>
+                    </div>
+
+                    <div class="playlist-preview-container hidden" id="spotify-library-preview-container">
+                        <div id="spotify-library-preview-warning" style="display: none; background: rgba(255, 193, 7, 0.1); border-left: 4px solid #ffc107; padding: 12px; margin-bottom: 16px; border-radius: 4px; color: #ffc107; font-size: 0.9rem;"></div>
+                        <div class="playlist-preview-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid var(--border);">
+                            <div>
+                                <h4 id="spotify-library-preview-name" style="font-size: 1.2rem; color: #fff; margin-bottom: 4px;">Playlist Name</h4>
+                                <span class="badge badge-genre" id="spotify-library-preview-count" style="margin-right: 8px; padding: 2px 8px; border-radius: 12px; background: rgba(255,255,255,0.1); font-size: 0.8rem;">0 Tracks</span>
+                                <span class="badge" id="spotify-library-preview-size" style="background-color: rgba(255, 255, 255, 0.05); color: var(--tertiary); padding: 2px 8px; border-radius: 12px; font-size: 0.8rem;">~0 MB</span>
+                            </div>
+                            <div style="display: flex; gap: 8px;">
+                                <button class="btn btn-secondary" id="btn-cancel-spotify-library-preview">Cancel</button>
+                                <button class="btn btn-primary" id="btn-start-spotify-library-import" disabled>Start Import</button>
+                            </div>
+                        </div>
+                        <div id="spotify-library-preview-tracks-list" style="color: var(--tertiary); font-size: 0.9rem; margin-bottom: 8px; line-height: 1.8;"></div>
+                    </div>
+
+                    <div class="playlist-progress-container hidden" id="spotify-library-progress-container">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                            <div>
+                                <span class="badge badge-language" id="spotify-library-status-badge" style="padding: 2px 8px; border-radius: 12px; background: rgba(255,255,255,0.1); font-size: 0.8rem;">Running</span>
+                                <span style="font-weight: 600; color: #fff; margin-left: 12px;" id="spotify-library-progress-text">Processed: 0 / 0</span>
+                                <span id="spotify-library-gemini-status" style="display: none; padding: 2px 8px; border-radius: 12px; background: rgba(0, 123, 255, 0.2); color: #66b2ff; font-size: 0.8rem; margin-left: 12px;" class="badge text-bg-info"></span>
+                            </div>
+                            <div style="display: flex; gap: 12px; align-items: center; font-size: 0.85rem; color: var(--tertiary);">
+                                <span style="color: #30d158;" id="spotify-library-stat-downloaded">Downloaded: 0</span>
+                                <span style="color: #ffbd2e;" id="spotify-library-stat-skipped">Skipped: 0</span>
+                                <span style="color: #ff453a;" id="spotify-library-stat-failed">Failed: 0</span>
+                                <button class="btn btn-danger" id="btn-cancel-spotify-library-import" style="margin-left: 12px; padding: 4px 10px; font-size: 0.75rem;">Cancel</button>
+                            </div>
+                        </div>
+                        <div class="progress-bar-container">
+                            <div class="progress-bar-fill" id="spotify-library-progress-fill" style="width: 0%"></div>
                         </div>
                     </div>
                 </div>

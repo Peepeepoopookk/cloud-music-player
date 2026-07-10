@@ -40,11 +40,15 @@ from dotenv import load_dotenv
 # Load env variables
 load_dotenv(dotenv_path=os.path.join(project_root, '.env'))
 
-from scraper.spotify_charts import build_song_pool
+from scraper.spotify_charts import build_song_pool, detect_track_language
 from scraper.metadata_enricher import enrich_track_metadata
 from scraper.downloader import download_track
 from scraper.drive_uploader import upload_track, bulk_update_database, get_db_file_id, fetch_album_art
+from scraper.album_art_resolver import resolve_album_art_with_details
+from scraper.duration_resolver import resolve_duration_with_details
 from scraper.gemini_import_pipeline import GEMINI_IMPORT_BATCH_SIZE, apply_gemini_to_import_batch
+from scraper.lyrics_resolver import resolve_lyrics_with_details
+from scraper.metadata_enricher import detect_script_mixing
 from dashboard.drive_client import download_json, upload_json
 from scraper.operation_lock import library_write_lock
 from scraper.state_manager import (
@@ -68,69 +72,193 @@ def determine_language_from_source(source, fallback="unknown"):
     return fallback
 
 
-def backfill_album_art():
+def _append_backfill_task_log(task_state, level, message):
+    if task_state is None:
+        return
+    task_state.setdefault("logs", []).append({
+        "time": datetime.datetime.utcnow().isoformat() + "Z",
+        "level": level,
+        "message": message
+    })
+    task_state["logs"] = task_state["logs"][-200:]
+
+
+def _album_art_missing(track):
+    return not (track.get("album_art") or track.get("albumArt"))
+
+
+def _duration_missing(track):
+    return track.get("durationSeconds") is None or not track.get("duration") or track.get("duration") == "--:--"
+
+
+def _lyrics_missing(track):
+    return not (track.get("lyrics") or track.get("syncedLyrics"))
+
+
+def backfill_album_art(task_state=None, cancel_event=None, save_every=10):
     """
-    Loads all tracks from database.json on Drive, and backfills missing or null album_art.
+    Loads all tracks from database.json on Drive, backfills missing album_art, and
+    reports progress/source diagnostics when a dashboard task_state is provided.
     """
     logger.info("Starting album art backfill task...")
+    _append_backfill_task_log(task_state, "info", "Album art backfill started.")
     db_file_id, parent_folder_id = get_db_file_id()
     if not db_file_id:
         logger.info("backfill_album_art: No database.json file ID resolved. Skipping backfill.")
-        return
+        _append_backfill_task_log(task_state, "error", "database.json could not be resolved.")
+        return {"status": "error", "message": "database.json file ID not found."}
         
     try:
         db_data = download_json(db_file_id)
         if not db_data:
             logger.info("backfill_album_art: Database is empty. Skipping backfill.")
-            return
+            _append_backfill_task_log(task_state, "warning", "database.json is empty.")
+            return {"status": "error", "message": "Database is empty."}
             
-        tracks = []
         if isinstance(db_data, list):
             tracks = db_data
+            was_dict = False
         elif isinstance(db_data, dict) and 'tracks' in db_data:
             tracks = db_data['tracks']
+            was_dict = True
         else:
             logger.warning("backfill_album_art: Invalid database format. Skipping backfill.")
-            return
-            
+            _append_backfill_task_log(task_state, "error", "database.json format is not supported.")
+            return {"status": "error", "message": "Invalid database format."}
+
+        missing_tracks = [track for track in tracks if _album_art_missing(track)]
+        total_missing = len(missing_tracks)
+        source_counts = {}
         backfilled_count = 0
-        for track in tracks:
-            if not track.get("album_art"):
-                title = track.get("title")
-                artist = track.get("artist")
-                if title and artist:
-                    logger.info(f"backfill_album_art: Backfilling album art for '{title}' by '{artist}'...")
-                    art = fetch_album_art(title, artist)
-                    if art:
-                        track["album_art"] = art
-                        track["albumArt"] = art
-                        backfilled_count += 1
-                        
-        if backfilled_count > 0:
-            logger.info(f"backfill_album_art: Uploading updated database with {backfilled_count} backfilled album arts...")
-            if isinstance(db_data, dict) and 'tracks' in db_data:
+        failed_count = 0
+        pending_save = False
+
+        if task_state is not None:
+            task_state["processed"] = 0
+            task_state["total_candidates"] = total_missing
+            task_state["album_art_initial_missing"] = total_missing
+            task_state["album_art_downloaded"] = 0
+            task_state["album_art_remaining"] = total_missing
+            task_state["album_art_failed"] = 0
+            task_state["album_art_source_counts"] = {}
+
+        logger.info(f"backfill_album_art: Found {total_missing} tracks missing album art.")
+        _append_backfill_task_log(task_state, "info", f"Found {total_missing} tracks missing album art.")
+
+        for index, track in enumerate(missing_tracks, start=1):
+            if cancel_event and cancel_event.is_set():
+                logger.info("backfill_album_art: Cancel requested. Saving progress before stopping.")
+                _append_backfill_task_log(task_state, "warning", "Cancel requested; saving resolved artwork before stopping.")
+                break
+
+            title = track.get("title")
+            artist = track.get("artist")
+            album = track.get("album")
+            if not title or not artist:
+                failed_count += 1
+                _append_backfill_task_log(task_state, "warning", f"Skipped track {index}/{total_missing}: missing title or artist.")
+                continue
+
+            if task_state is not None:
+                task_state["current_track"] = f"{title} - {artist}"
+
+            logger.info(f"backfill_album_art [{index}/{total_missing}]: Resolving '{title}' by '{artist}'...")
+            try:
+                result = resolve_album_art_with_details(title, artist, album=album)
+                art = result.get("url")
+                if art:
+                    source = result.get("source") or "unknown"
+                    track["album_art"] = art
+                    track["albumArt"] = art
+                    track["updatedAt"] = datetime.datetime.utcnow().isoformat() + "Z"
+                    if result.get("metadata", {}).get("album") and (not album or album == "Unknown Album"):
+                        track["album"] = result["metadata"]["album"]
+                    if result.get("metadata", {}).get("genre") and (not track.get("genre") or track.get("genre") == "Unknown"):
+                        track["genre"] = result["metadata"]["genre"]
+
+                    backfilled_count += 1
+                    source_counts[source] = source_counts.get(source, 0) + 1
+                    pending_save = True
+                    logger.info(f"backfill_album_art: Found artwork via {source} for '{title}' by '{artist}'.")
+                    _append_backfill_task_log(task_state, "success", f"{index}/{total_missing}: {title} - {artist} -> {source}")
+                else:
+                    failed_count += 1
+                    attempt_summary = ", ".join(f"{a.get('source')}:{a.get('status')}" for a in result.get("attempts", []))
+                    logger.info(f"backfill_album_art: No artwork found for '{title}' by '{artist}'. Attempts: {attempt_summary}")
+                    _append_backfill_task_log(task_state, "warning", f"{index}/{total_missing}: no art found for {title} - {artist}")
+            except Exception as e:
+                failed_count += 1
+                logger.warning(f"backfill_album_art: Resolver failed for '{title}' by '{artist}': {e}")
+                _append_backfill_task_log(task_state, "error", f"{index}/{total_missing}: resolver failed for {title} - {artist}: {e}")
+
+            if task_state is not None:
+                task_state["processed"] = index
+                task_state["album_art_downloaded"] = backfilled_count
+                task_state["album_art_failed"] = failed_count
+                task_state["album_art_remaining"] = sum(1 for t in tracks if _album_art_missing(t))
+                task_state["album_art_source_counts"] = dict(source_counts)
+
+            if pending_save and (backfilled_count % save_every == 0):
+                if was_dict:
+                    db_data['tracks'] = tracks
+                    upload_database_json_locked(db_file_id, db_data, parent_folder_id)
+                else:
+                    upload_database_json_locked(db_file_id, tracks, parent_folder_id)
+                logger.info(f"backfill_album_art: Incremental save after {backfilled_count} artwork updates.")
+                _append_backfill_task_log(task_state, "info", f"Saved {backfilled_count} artwork updates to database.json.")
+                pending_save = False
+            time.sleep(0.1)
+
+        if pending_save:
+            if was_dict:
                 db_data['tracks'] = tracks
                 upload_database_json_locked(db_file_id, db_data, parent_folder_id)
             else:
                 upload_database_json_locked(db_file_id, tracks, parent_folder_id)
-                
-        logger.info(f"backfill_album_art: Finished. {backfilled_count} tracks were backfilled.")
+            logger.info("backfill_album_art: Final database save completed.")
+            _append_backfill_task_log(task_state, "info", "Final artwork updates saved to database.json.")
+
+        remaining_missing = sum(1 for track in tracks if _album_art_missing(track))
+        if task_state is not None:
+            task_state["album_art_downloaded"] = backfilled_count
+            task_state["album_art_remaining"] = remaining_missing
+            task_state["album_art_failed"] = failed_count
+            task_state["album_art_source_counts"] = dict(source_counts)
+
+        result = {
+            "status": "cancelled" if cancel_event and cancel_event.is_set() else "success",
+            "total_tracks": len(tracks),
+            "initial_missing": total_missing,
+            "downloaded": backfilled_count,
+            "failed": failed_count,
+            "remaining_missing": remaining_missing,
+            "source_counts": source_counts,
+        }
+        logger.info(f"backfill_album_art: Finished. {result}")
+        level = "warning" if result["status"] == "cancelled" else "success"
+        _append_backfill_task_log(task_state, level, f"Album art backfill finished: {backfilled_count} added, {remaining_missing} still missing.")
+        return result
     except Exception as e:
         logger.error(f"backfill_album_art: Error during backfilling: {e}", exc_info=True)
+        _append_backfill_task_log(task_state, "error", f"Album art backfill failed: {e}")
+        return {"status": "error", "message": str(e)}
 
-def backfill_durations():
+def backfill_durations(task_state=None, cancel_event=None):
     """
     Checks database for tracks missing duration backfill, and uses iTunes API to backfill them.
     """
     logger.info("Starting duration backfill check task...")
+    _append_backfill_task_log(task_state, "info", "Duration backfill started.")
     db_file_id, parent_folder_id = get_db_file_id()
     if not db_file_id:
-        return
+        _append_backfill_task_log(task_state, "error", "database.json could not be resolved.")
+        return {"status": "error", "message": "database.json file ID not found."}
         
     try:
         db_data = download_json(db_file_id)
         if not db_data:
-            return
+            _append_backfill_task_log(task_state, "warning", "database.json is empty.")
+            return {"status": "error", "message": "Database is empty."}
             
         tracks = []
         if isinstance(db_data, list):
@@ -138,40 +266,64 @@ def backfill_durations():
         elif isinstance(db_data, dict) and 'tracks' in db_data:
             tracks = db_data['tracks']
         else:
-            return
+            _append_backfill_task_log(task_state, "error", "database.json format is not supported.")
+            return {"status": "error", "message": "Invalid database format."}
             
+        missing_tracks = [track for track in tracks if _duration_missing(track)]
         updated_count = 0
-        import requests
-        for track in tracks:
-            if track.get("durationSeconds") is None or track.get("duration") == "--:--":
-                title = track.get("title")
-                artist = track.get("artist")
-                logger.info(f"backfill_durations: Backfilling duration for '{title}' by '{artist}'...")
-                
-                try:
-                    search_term = f"{artist} {title}"
-                    itunes_url = "https://itunes.apple.com/search"
-                    params = {"term": search_term, "media": "music", "limit": 5}
-                    r = requests.get(itunes_url, params=params, timeout=5)
-                    if r.status_code == 200:
-                        data = r.json()
-                        results = data.get("results", [])
-                        if results:
-                            best_match = results[0]
-                            track_time_millis = best_match.get("trackTimeMillis")
-                            if track_time_millis:
-                                duration_seconds = int(track_time_millis) // 1000
-                                minutes = duration_seconds // 60
-                                seconds = duration_seconds % 60
-                                track["duration"] = f"{minutes:02d}:{seconds:02d}"
-                                track["durationSeconds"] = duration_seconds
-                                updated_count += 1
-                                logger.info(f"backfill_durations: Updated duration to {track['duration']}")
-                                continue
-                except Exception as e:
-                    logger.warning(f"backfill_durations: Failed iTunes search for '{title}': {e}")
-                    
-                track["duration"] = "--:--"
+        failed_count = 0
+        source_counts = {}
+
+        if task_state is not None:
+            task_state["processed"] = 0
+            task_state["total_candidates"] = len(missing_tracks)
+            task_state["duration_initial_missing"] = len(missing_tracks)
+            task_state["duration_updated"] = 0
+            task_state["duration_remaining"] = len(missing_tracks)
+            task_state["duration_failed"] = 0
+            task_state["duration_source_counts"] = {}
+
+        for index, track in enumerate(missing_tracks, start=1):
+            if cancel_event and cancel_event.is_set():
+                _append_backfill_task_log(task_state, "warning", "Cancel requested; saving duration updates before stopping.")
+                break
+
+            title = track.get("title")
+            artist = track.get("artist")
+            if not title or not artist:
+                failed_count += 1
+                _append_backfill_task_log(task_state, "warning", f"Skipped track {index}/{len(missing_tracks)}: missing title or artist.")
+                continue
+
+            logger.info(f"backfill_durations: Backfilling duration for '{title}' by '{artist}'...")
+
+            try:
+                result = resolve_duration_with_details(title, artist)
+                if result.get("durationSeconds"):
+                    source = result.get("source") or "unknown"
+                    track["duration"] = result["duration"]
+                    track["durationSeconds"] = result["durationSeconds"]
+                    track["updatedAt"] = datetime.datetime.utcnow().isoformat() + "Z"
+                    updated_count += 1
+                    source_counts[source] = source_counts.get(source, 0) + 1
+                    logger.info(f"backfill_durations: Updated duration to {track['duration']} via {source}")
+                    _append_backfill_task_log(task_state, "success", f"{index}/{len(missing_tracks)}: {title} - {artist} -> {track['duration']} ({source})")
+                else:
+                    failed_count += 1
+                    attempt_summary = ", ".join(f"{a.get('source')}:{a.get('status')}" for a in result.get("attempts", []))
+                    logger.info(f"backfill_durations: No duration found for '{title}' by '{artist}'. Attempts: {attempt_summary}")
+                    _append_backfill_task_log(task_state, "warning", f"{index}/{len(missing_tracks)}: no duration found for {title} - {artist}")
+            except Exception as e:
+                failed_count += 1
+                logger.warning(f"backfill_durations: Failed lookup for '{title}': {e}")
+                _append_backfill_task_log(task_state, "warning", f"{index}/{len(missing_tracks)}: duration lookup failed for {title} - {artist}: {e}")
+
+            if task_state is not None:
+                task_state["processed"] = index
+                task_state["duration_updated"] = updated_count
+                task_state["duration_failed"] = failed_count
+                task_state["duration_remaining"] = sum(1 for t in tracks if _duration_missing(t))
+                task_state["duration_source_counts"] = dict(source_counts)
                 
         if updated_count > 0:
             logger.info(f"backfill_durations: Uploading updated database with {updated_count} duration backfills...")
@@ -182,9 +334,176 @@ def backfill_durations():
                 upload_database_json_locked(db_file_id, tracks, parent_folder_id)
         else:
             logger.info("backfill_durations: All tracks have valid durations or no updates made.")
-            
+
+        remaining_missing = sum(1 for track in tracks if _duration_missing(track))
+        if task_state is not None:
+            task_state["duration_updated"] = updated_count
+            task_state["duration_remaining"] = remaining_missing
+            task_state["duration_failed"] = failed_count
+            task_state["duration_source_counts"] = dict(source_counts)
+        result = {
+            "status": "cancelled" if cancel_event and cancel_event.is_set() else "success",
+            "total_tracks": len(tracks),
+            "initial_missing": len(missing_tracks),
+            "updated": updated_count,
+            "failed": failed_count,
+            "remaining_missing": remaining_missing,
+            "source_counts": source_counts,
+        }
+        level = "warning" if result["status"] == "cancelled" else "success"
+        _append_backfill_task_log(task_state, level, f"Duration backfill finished: {updated_count} updated, {remaining_missing} still missing.")
+        return result
     except Exception as e:
         logger.error(f"backfill_durations: Error during backfilling check: {e}", exc_info=True)
+        _append_backfill_task_log(task_state, "error", f"Duration backfill failed: {e}")
+        return {"status": "error", "message": str(e)}
+
+
+def backfill_lyrics(task_state=None, cancel_event=None, save_every=10):
+    """
+    Backfills missing plain/synced lyrics through API fallbacks and saves progress
+    incrementally so long runs do not lose successful matches.
+    """
+    logger.info("Starting lyrics backfill task...")
+    _append_backfill_task_log(task_state, "info", "Lyrics backfill started.")
+    db_file_id, parent_folder_id = get_db_file_id()
+    if not db_file_id:
+        _append_backfill_task_log(task_state, "error", "database.json could not be resolved.")
+        return {"status": "error", "message": "database.json file ID not found."}
+
+    try:
+        db_data = download_json(db_file_id)
+        if not db_data:
+            _append_backfill_task_log(task_state, "warning", "database.json is empty.")
+            return {"status": "error", "message": "Database is empty."}
+
+        if isinstance(db_data, list):
+            tracks = db_data
+            was_dict = False
+        elif isinstance(db_data, dict) and 'tracks' in db_data:
+            tracks = db_data['tracks']
+            was_dict = True
+        else:
+            _append_backfill_task_log(task_state, "error", "database.json format is not supported.")
+            return {"status": "error", "message": "Invalid database format."}
+
+        missing_tracks = [track for track in tracks if _lyrics_missing(track)]
+        downloaded_count = 0
+        failed_count = 0
+        source_counts = {}
+        pending_save = False
+
+        if task_state is not None:
+            task_state["processed"] = 0
+            task_state["total_candidates"] = len(missing_tracks)
+            task_state["lyrics_initial_missing"] = len(missing_tracks)
+            task_state["lyrics_downloaded"] = 0
+            task_state["lyrics_remaining"] = len(missing_tracks)
+            task_state["lyrics_failed"] = 0
+            task_state["lyrics_source_counts"] = {}
+
+        logger.info(f"backfill_lyrics: Found {len(missing_tracks)} tracks missing lyrics.")
+        _append_backfill_task_log(task_state, "info", f"Found {len(missing_tracks)} tracks missing lyrics.")
+
+        for index, track in enumerate(missing_tracks, start=1):
+            if cancel_event and cancel_event.is_set():
+                logger.info("backfill_lyrics: Cancel requested. Saving progress before stopping.")
+                _append_backfill_task_log(task_state, "warning", "Cancel requested; saving resolved lyrics before stopping.")
+                break
+
+            title = track.get("title")
+            artist = track.get("artist")
+            album = track.get("album")
+            duration_seconds = track.get("durationSeconds")
+            if not title or not artist:
+                failed_count += 1
+                _append_backfill_task_log(task_state, "warning", f"Skipped track {index}/{len(missing_tracks)}: missing title or artist.")
+                continue
+
+            if task_state is not None:
+                task_state["current_track"] = f"{title} - {artist}"
+
+            logger.info(f"backfill_lyrics [{index}/{len(missing_tracks)}]: Resolving '{title}' by '{artist}'...")
+            try:
+                result = resolve_lyrics_with_details(title, artist, album=album, duration_seconds=duration_seconds)
+                lyrics = result.get("lyrics")
+                synced_lyrics = result.get("syncedLyrics")
+                if lyrics or synced_lyrics:
+                    source = result.get("source") or "unknown"
+                    if lyrics:
+                        track["lyrics"] = lyrics
+                    if synced_lyrics:
+                        track["syncedLyrics"] = synced_lyrics
+                    lyrics_for_status = lyrics or synced_lyrics or ""
+                    track["lyricsStatus"] = "needs_review" if detect_script_mixing(lyrics_for_status) else "ok"
+                    track["updatedAt"] = datetime.datetime.utcnow().isoformat() + "Z"
+                    downloaded_count += 1
+                    source_counts[source] = source_counts.get(source, 0) + 1
+                    pending_save = True
+                    logger.info(f"backfill_lyrics: Found lyrics via {source} for '{title}' by '{artist}'.")
+                    _append_backfill_task_log(task_state, "success", f"{index}/{len(missing_tracks)}: {title} - {artist} -> {source}")
+                else:
+                    failed_count += 1
+                    attempt_summary = ", ".join(f"{a.get('source')}:{a.get('status')}" for a in result.get("attempts", []))
+                    logger.info(f"backfill_lyrics: No lyrics found for '{title}' by '{artist}'. Attempts: {attempt_summary}")
+                    _append_backfill_task_log(task_state, "warning", f"{index}/{len(missing_tracks)}: no lyrics found for {title} - {artist}")
+            except Exception as e:
+                failed_count += 1
+                logger.warning(f"backfill_lyrics: Resolver failed for '{title}' by '{artist}': {e}")
+                _append_backfill_task_log(task_state, "error", f"{index}/{len(missing_tracks)}: lyrics lookup failed for {title} - {artist}: {e}")
+
+            if task_state is not None:
+                task_state["processed"] = index
+                task_state["lyrics_downloaded"] = downloaded_count
+                task_state["lyrics_failed"] = failed_count
+                task_state["lyrics_remaining"] = sum(1 for t in tracks if _lyrics_missing(t))
+                task_state["lyrics_source_counts"] = dict(source_counts)
+
+            if pending_save and (downloaded_count % save_every == 0):
+                if was_dict:
+                    db_data['tracks'] = tracks
+                    upload_database_json_locked(db_file_id, db_data, parent_folder_id)
+                else:
+                    upload_database_json_locked(db_file_id, tracks, parent_folder_id)
+                logger.info(f"backfill_lyrics: Incremental save after {downloaded_count} lyrics updates.")
+                _append_backfill_task_log(task_state, "info", f"Saved {downloaded_count} lyrics updates to database.json.")
+                pending_save = False
+            time.sleep(0.1)
+
+        if pending_save:
+            if was_dict:
+                db_data['tracks'] = tracks
+                upload_database_json_locked(db_file_id, db_data, parent_folder_id)
+            else:
+                upload_database_json_locked(db_file_id, tracks, parent_folder_id)
+            logger.info("backfill_lyrics: Final database save completed.")
+            _append_backfill_task_log(task_state, "info", "Final lyrics updates saved to database.json.")
+
+        remaining_missing = sum(1 for track in tracks if _lyrics_missing(track))
+        if task_state is not None:
+            task_state["lyrics_downloaded"] = downloaded_count
+            task_state["lyrics_remaining"] = remaining_missing
+            task_state["lyrics_failed"] = failed_count
+            task_state["lyrics_source_counts"] = dict(source_counts)
+
+        result = {
+            "status": "cancelled" if cancel_event and cancel_event.is_set() else "success",
+            "total_tracks": len(tracks),
+            "initial_missing": len(missing_tracks),
+            "downloaded": downloaded_count,
+            "failed": failed_count,
+            "remaining_missing": remaining_missing,
+            "source_counts": source_counts,
+        }
+        logger.info(f"backfill_lyrics: Finished. {result}")
+        level = "warning" if result["status"] == "cancelled" else "success"
+        _append_backfill_task_log(task_state, level, f"Lyrics backfill finished: {downloaded_count} added, {remaining_missing} still missing.")
+        return result
+    except Exception as e:
+        logger.error(f"backfill_lyrics: Error during backfilling: {e}", exc_info=True)
+        _append_backfill_task_log(task_state, "error", f"Lyrics backfill failed: {e}")
+        return {"status": "error", "message": str(e)}
+
 
 def determine_language_from_source(source, current_language="unknown"):
     source_lower = (source or "").lower()
@@ -199,19 +518,22 @@ def determine_language_from_source(source, current_language="unknown"):
         return "english"
     return current_language if current_language else "unknown"
 
-def backfill_languages():
+def backfill_languages(task_state=None, cancel_event=None):
     """
     Checks database for tracks missing language or labeled 'unknown', and backfills them.
     """
     logger.info("Starting language backfill check task...")
+    _append_backfill_task_log(task_state, "info", "Language backfill started.")
     db_file_id, parent_folder_id = get_db_file_id()
     if not db_file_id:
-        return
+        _append_backfill_task_log(task_state, "error", "database.json could not be resolved.")
+        return {"status": "error", "message": "database.json file ID not found."}
         
     try:
         db_data = download_json(db_file_id)
         if not db_data:
-            return
+            _append_backfill_task_log(task_state, "warning", "database.json is empty.")
+            return {"status": "error", "message": "Database is empty."}
             
         tracks = []
         if isinstance(db_data, list):
@@ -219,17 +541,29 @@ def backfill_languages():
         elif isinstance(db_data, dict) and 'tracks' in db_data:
             tracks = db_data['tracks']
         else:
-            return
+            _append_backfill_task_log(task_state, "error", "database.json format is not supported.")
+            return {"status": "error", "message": "Invalid database format."}
             
         updated_count = 0
-        import requests
-        
+        candidate_tracks = []
         for track in tracks:
             lang = track.get("language", "unknown")
             if not lang:
                 lang = "unknown"
             lang = lang.lower()
-                
+            if lang in ("unknown", "", "none"):
+                candidate_tracks.append(track)
+
+        if task_state is not None:
+            task_state["processed"] = 0
+            task_state["total_candidates"] = len(candidate_tracks)
+
+        for index, track in enumerate(candidate_tracks, start=1):
+            if cancel_event and cancel_event.is_set():
+                _append_backfill_task_log(task_state, "warning", "Cancel requested; saving language updates before stopping.")
+                break
+
+            lang = (track.get("language") or "unknown").lower()
             if lang in ("unknown", "", "none"):
                 new_lang = "unknown"
                 source = track.get("source", "")
@@ -262,6 +596,10 @@ def backfill_languages():
                     track["language"] = new_lang
                     updated_count += 1
                     logger.info(f"Set '{track.get('title')}' language to '{new_lang}' because source='{source}'")
+                    _append_backfill_task_log(task_state, "success", f"{index}/{len(candidate_tracks)}: {track.get('title')} -> {new_lang}")
+
+            if task_state is not None:
+                task_state["processed"] = index
                     
         if updated_count > 0:
             logger.info(f"backfill_languages: Uploading updated database with {updated_count} language backfills...")
@@ -272,9 +610,25 @@ def backfill_languages():
                 upload_database_json_locked(db_file_id, tracks, parent_folder_id)
         else:
             logger.info("backfill_languages: All tracks have valid languages or no updates needed.")
-            
+
+        remaining_missing = sum(
+            1 for track in tracks
+            if (track.get("language") is None or str(track.get("language")).lower() in ("unknown", "", "none"))
+        )
+        result = {
+            "status": "cancelled" if cancel_event and cancel_event.is_set() else "success",
+            "total_tracks": len(tracks),
+            "initial_missing": len(candidate_tracks),
+            "updated": updated_count,
+            "remaining_missing": remaining_missing,
+        }
+        level = "warning" if result["status"] == "cancelled" else "success"
+        _append_backfill_task_log(task_state, level, f"Language backfill finished: {updated_count} updated, {remaining_missing} still missing.")
+        return result
     except Exception as e:
         logger.error(f"backfill_languages: Error during language backfilling: {e}", exc_info=True)
+        _append_backfill_task_log(task_state, "error", f"Language backfill failed: {e}")
+        return {"status": "error", "message": str(e)}
 
 def run_scraper():
     """
