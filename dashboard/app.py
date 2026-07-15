@@ -36,6 +36,14 @@ from scraper.spotify_library_importer import (
     start_spotify_library_import,
 )
 from scraper.operation_lock import library_write_lock
+from dashboard.import_queue import (
+    ImportJobConflict,
+    ImportJobNotFound,
+    claim_next_import_job,
+    create_import_job,
+    get_import_job,
+    set_import_job_result,
+)
 import ctypes
 import threading
 import datetime
@@ -105,6 +113,20 @@ def require_write_auth(app_endpoint=False):
             return jsonify({"error": "Unauthorized"}), 401
         return wrapper
     return decorator
+
+
+def require_worker_auth(func):
+    """Fail-closed authentication for the private home-worker API."""
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        expected_token = os.environ.get("WAVIFY_WORKER_TOKEN")
+        supplied_token = _extract_bearer_token()
+        if not expected_token or not supplied_token:
+            return jsonify({"error": "Unauthorized"}), 401
+        if not secrets.compare_digest(supplied_token, expected_token):
+            return jsonify({"error": "Unauthorized"}), 401
+        return func(*args, **kwargs)
+    return wrapper
 
 import time
 
@@ -2688,6 +2710,98 @@ def get_background_status():
         clean_tasks[task_name] = clean_state
         
     return jsonify(clean_tasks)
+
+
+SPOTIFY_IMPORT_PATTERNS = {
+    "song": re.compile(
+        r"^(?:https?://open\.spotify\.com/(?:intl-[a-z]{2}/)?track/|spotify:track:)([A-Za-z0-9]+)",
+        re.IGNORECASE,
+    ),
+    "playlist": re.compile(
+        r"^(?:https?://open\.spotify\.com/(?:intl-[a-z]{2}/)?playlist/|spotify:playlist:)([A-Za-z0-9]+)",
+        re.IGNORECASE,
+    ),
+}
+
+
+def _canonical_import_url(raw_url, job_type):
+    pattern = SPOTIFY_IMPORT_PATTERNS.get(job_type)
+    match = pattern.match(str(raw_url or "").strip()) if pattern else None
+    if not match:
+        return None
+    resource = "track" if job_type == "song" else "playlist"
+    return f"https://open.spotify.com/{resource}/{match.group(1)}"
+
+
+@app.route('/api/import/request', methods=['POST'])
+@require_write_auth(app_endpoint=True)
+def request_import_job():
+    body = request.json or {}
+    job_type = str(body.get("type") or "").strip().lower()
+    canonical_url = _canonical_import_url(body.get("url"), job_type)
+    if job_type not in ("song", "playlist"):
+        return jsonify({"error": "type must be 'song' or 'playlist'"}), 400
+    if not canonical_url:
+        return jsonify({"error": f"Invalid Spotify {job_type} URL"}), 400
+
+    try:
+        job = create_import_job(
+            canonical_url,
+            job_type,
+            requested_by=body.get("requested_by"),
+        )
+        return jsonify({"job_id": job["job_id"], "status": job["status"]}), 201
+    except Exception as e:
+        logger.error(f"Could not create import job: {e}", exc_info=True)
+        return jsonify({"error": "Could not persist import job"}), 500
+
+
+@app.route('/api/import/status/<job_id>', methods=['GET'])
+def import_job_status(job_id):
+    try:
+        return jsonify(get_import_job(job_id))
+    except ImportJobNotFound:
+        return jsonify({"error": "Import job not found"}), 404
+    except Exception as e:
+        logger.error(f"Could not read import job {job_id}: {e}", exc_info=True)
+        return jsonify({"error": "Could not read import job"}), 500
+
+
+@app.route('/api/worker/next', methods=['GET'])
+@require_worker_auth
+def worker_next_import_job():
+    try:
+        return jsonify({"job": claim_next_import_job()})
+    except Exception as e:
+        logger.error(f"Could not claim the next import job: {e}", exc_info=True)
+        return jsonify({"error": "Could not claim import job"}), 500
+
+
+@app.route('/api/worker/result', methods=['POST'])
+@require_worker_auth
+def worker_import_result():
+    body = request.json or {}
+    job_id = str(body.get("job_id") or "").strip()
+    status = str(body.get("status") or "").strip().lower()
+    result = body.get("result")
+    error = body.get("error")
+    if not job_id:
+        return jsonify({"error": "Missing job_id"}), 400
+    if status not in ("completed", "failed"):
+        return jsonify({"error": "status must be 'completed' or 'failed'"}), 400
+    if result is not None and not isinstance(result, dict):
+        return jsonify({"error": "result must be an object or null"}), 400
+
+    try:
+        job = set_import_job_result(job_id, status, result=result, error=error)
+        return jsonify({"job_id": job_id, "status": job["status"]})
+    except ImportJobNotFound:
+        return jsonify({"error": "Import job not found"}), 404
+    except ImportJobConflict as e:
+        return jsonify({"error": str(e)}), 409
+    except Exception as e:
+        logger.error(f"Could not update import job {job_id}: {e}", exc_info=True)
+        return jsonify({"error": "Could not update import job"}), 500
 
 @app.route('/ping', methods=['GET'])
 def ping():
