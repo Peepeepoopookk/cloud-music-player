@@ -555,6 +555,7 @@
                 </svg>
             </div>
             <span class="brand-name">Wavify</span>
+            <span class="badge-pill badge-version" style="padding: 2px 8px; font-size: 0.75rem; margin-left: 4px;">{{ release.tag_name }}</span>
         </div>
 
         <div class="nav-actions">
@@ -575,14 +576,14 @@
                 <div class="app-badge-row">
                     <span class="badge-pill badge-version">
                         <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><circle cx="12" cy="12" r="10"/></svg>
-                        {{ release.tag_name }}
+                        Version {{ release.tag_name }}
                     </span>
                     <span class="badge-pill badge-size">{{ release.apk_size_mb }}</span>
                     <span class="badge-pill badge-os">Android 8.0+</span>
                     <span class="badge-pill badge-free">Free &amp; Open Source</span>
                 </div>
 
-                <h1 class="hero-title">Wavify for Android</h1>
+                <h1 class="hero-title">Wavify for Android <span style="display: inline-block; font-size: 1.15rem; color: var(--primary-color); font-weight: 700; vertical-align: middle; background: var(--primary-light); padding: 4px 14px; border-radius: var(--radius-pill); border: 1px solid rgba(193, 68, 14, 0.25); margin-left: 6px;">{{ release.tag_name }}</span></h1>
                 <div class="hero-tagline">Your personal cloud music, offline &amp; streamed.</div>
                 <p class="hero-description">
                     Stream high-fidelity audio straight from your Google Drive cloud archive, save albums for offline flights, and view real-time synchronized lyrics in a distraction-free interface.
@@ -598,6 +599,8 @@
                     <div class="download-meta">
                         <span>📦 {{ release.apk_name }}</span>
                         <span>•</span>
+                        <span>Version <strong>{{ release.tag_name }}</strong></span>
+                        <span>•</span>
                         <span>Updated {{ release.published_at }}</span>
                     </div>
                 </div>
@@ -610,7 +613,7 @@
                         <img id="qr-code-img" src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data={{ request.host_url }}download/latest.apk" alt="Scan QR Code to Download APK on Android" loading="lazy">
                     </div>
                     <div class="qr-title">Scan on your Phone</div>
-                    <div class="qr-desc">Point your phone camera to download the APK installer directly to Android.</div>
+                    <div class="qr-desc">Point your phone camera to download Wavify <strong>{{ release.tag_name }}</strong> directly to Android.</div>
                 </div>
             </div>
         </section>
@@ -718,7 +721,7 @@
             <a href="{{ release.repo_url }}" target="_blank" rel="noopener noreferrer">GitHub Repository</a>
             <a href="{{ release.releases_url }}" target="_blank" rel="noopener noreferrer">All Releases</a>
         </div>
-        <p>&copy; 2026 Wavify • Cloud Music Player • Android Client</p>
+        <p>&copy; 2026 Wavify • Cloud Music Player • Android App ({{ release.tag_name }})</p>
     </footer>
 
     <script>
