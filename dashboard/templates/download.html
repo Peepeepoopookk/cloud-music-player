@@ -548,25 +548,16 @@
 
     <!-- Header Navigation -->
     <header class="header-nav">
-        <a href="/" class="brand-link">
+        <div class="brand-link">
             <div class="brand-icon-wrap">
                 <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M2 10v4M6 6v12M10 3v18M14 8v8M18 5v14M22 10v4"/>
                 </svg>
             </div>
             <span class="brand-name">Wavify</span>
-        </a>
+        </div>
 
         <div class="nav-actions">
-            <a href="/" class="nav-btn nav-btn-secondary">
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
-                    <rect x="3" y="3" width="7" height="7"/>
-                    <rect x="14" y="3" width="7" height="7"/>
-                    <rect x="14" y="14" width="7" height="7"/>
-                    <rect x="3" y="14" width="7" height="7"/>
-                </svg>
-                <span>Web Dashboard</span>
-            </a>
             <a href="{{ release.repo_url }}" target="_blank" rel="noopener noreferrer" class="nav-btn nav-btn-secondary" title="View Source on GitHub">
                 <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
                     <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
@@ -724,10 +715,8 @@
     <!-- Footer -->
     <footer class="footer">
         <div class="footer-links">
-            <a href="/">Dashboard</a>
             <a href="{{ release.repo_url }}" target="_blank" rel="noopener noreferrer">GitHub Repository</a>
             <a href="{{ release.releases_url }}" target="_blank" rel="noopener noreferrer">All Releases</a>
-            <a href="/api/app/release" target="_blank">Release JSON API</a>
         </div>
         <p>&copy; 2026 Wavify • Cloud Music Player • Android Client</p>
     </footer>

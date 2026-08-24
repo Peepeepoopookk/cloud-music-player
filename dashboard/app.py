@@ -9,7 +9,7 @@ import secrets
 import re
 import uuid
 import time
-from flask import Flask, render_template, jsonify, request, stream_with_context, Response, redirect
+from flask import Flask, render_template, jsonify, request, stream_with_context, Response, redirect, session
 from dotenv import load_dotenv
 
 # Load env variables from .env in project root
@@ -65,9 +65,14 @@ if youtube_cookies and youtube_cookies.strip():
     except Exception as e:
         logger.error(f"Failed to write {cookies_path} from environment variable: {e}")
 
+def get_dashboard_access_key():
+    """Returns the configured dashboard secret key or default 'admin'."""
+    return os.environ.get("DASHBOARD_ACCESS_KEY") or os.environ.get("ADMIN_SECRET") or "admin"
+
 app = Flask(__name__, 
             template_folder=os.path.join(project_root, 'dashboard', 'templates'),
             static_folder=os.path.join(project_root, 'dashboard', 'static'))
+app.secret_key = os.environ.get("FLASK_SECRET_KEY") or get_dashboard_access_key() or "wavify-dashboard-secret-key-change-in-production"
 app.config['TEMPLATES_AUTO_RELOAD'] = True
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
 app.jinja_env.auto_reload = True
@@ -88,11 +93,63 @@ def _extract_bearer_token():
 
 def _request_token():
     return (
-        request.headers.get("X-Dashboard-Token")
+        request.headers.get("X-Dashboard-Key")
+        or request.headers.get("X-Dashboard-Token")
         or request.headers.get("X-App-Token")
         or request.headers.get("X-API-Key")
         or _extract_bearer_token()
     )
+
+@app.before_request
+def check_dashboard_access():
+    """
+    Protects dashboard views and data routes behind DASHBOARD_ACCESS_KEY / session authentication.
+    Whitelists public routes for the Wavify Android App download page.
+    """
+    path = request.path
+
+    # Public whitelist: /download, /app, /download/latest.apk, /app/download, /api/app/release, /static, /logout, /favicon.ico, /ping, /api/worker/, /api/import/status/
+    if (
+        path in ('/download', '/app', '/download/latest.apk', '/app/download', '/app/latest.apk', '/api/app/release', '/logout', '/favicon.ico', '/ping')
+        or any(path.startswith(prefix) for prefix in ('/download/', '/app/', '/api/app/release/', '/static/', '/api/worker/', '/api/import/status/'))
+    ):
+        return None
+
+    # Check if session is already authenticated
+    if session.get('authenticated'):
+        return None
+
+    access_key = get_dashboard_access_key()
+
+    # Check query param ?key=...
+    query_key = request.args.get('key')
+    if query_key and secrets.compare_digest(query_key, access_key):
+        session['authenticated'] = True
+        return None
+
+    # Check headers / tokens
+    token = _request_token()
+    if token:
+        valid_tokens = [access_key]
+        for env_var in ("DASHBOARD_WRITE_TOKEN", "API_WRITE_TOKEN", "APP_WRITE_TOKEN", "WAVIFY_WORKER_TOKEN"):
+            val = os.environ.get(env_var)
+            if val:
+                valid_tokens.append(val)
+        if any(secrets.compare_digest(token, vt) for vt in valid_tokens):
+            if secrets.compare_digest(token, access_key):
+                session['authenticated'] = True
+            return None
+
+    # If unauthenticated, return 401 for API endpoints, redirect to /download for web views
+    if path.startswith('/api/'):
+        return jsonify({"error": "Unauthorized. Access key required."}), 401
+
+    return redirect('/download')
+
+@app.route('/logout')
+def logout():
+    session.pop('authenticated', None)
+    return redirect('/download')
 
 def require_write_auth(app_endpoint=False):
     def decorator(func):
