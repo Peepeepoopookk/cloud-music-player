@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Download Wavify for Android — Personal Cloud Music Player</title>
+    <meta name="description" content="Download Wavify Android APK — stream your cloud music library losslessly from Google Drive with offline caching, synced lyrics, and a clean warm pottery design.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg-main: #faf7f2;
+            --bg-card: #ffffff;
+            --bg-card-subtle: #f4efe6;
+            --border-color: #e8e2d5;
+            --border-color-hover: #d9d0bd;
+            --text-color: #2a2620;
+            --text-muted: #8a8377;
+            --text-dim: #b3ac9d;
+            
+            --primary-color: #c1440e;
+            --primary-hover: #a53a0c;
+            --primary-light: #f4e0d5;
+            --primary-glow: rgba(193, 68, 14, 0.15);
+            
+            --accent-sage: #6b7c5f;
+            --accent-sage-light: #eef2ec;
+            --accent-gold: #c99a2e;
+            --accent-gold-light: #fdf8eb;
+            
+            --status-green: #2e7d32;
+            --status-green-light: #edf7ed;
+            
+            --radius-sm: 8px;
+            --radius-md: 14px;
+            --radius-lg: 20px;
+            --radius-xl: 28px;
+            --radius-pill: 9999px;
+            
+            --shadow-sm: 0 2px 8px rgba(42, 38, 32, 0.04);
+            --shadow-md: 0 8px 24px rgba(42, 38, 32, 0.07);
+            --shadow-lg: 0 16px 40px rgba(42, 38, 32, 0.1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: var(--bg-main);
+            color: var(--text-color);
+            line-height: 1.6;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Top Navigation Header */
+        .header-nav {
+            width: 100%;
+            max-width: 1120px;
+            margin: 0 auto;
+            padding: 20px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .brand-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+            color: var(--text-color);
+        }
+
+        .brand-icon-wrap {
+            width: 38px;
+            height: 38px;
+            background: linear-gradient(135deg, #c1440e 0%, #e06028 100%);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 12px var(--primary-glow);
+            color: #ffffff;
+        }
+
+        .brand-name {
+            font-size: 1.25rem;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+        }
+
+        .nav-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .nav-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            border-radius: var(--radius-pill);
+            font-size: 0.88rem;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+
+        .nav-btn-secondary {
+            background: var(--bg-card);
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+        }
+
+        .nav-btn-secondary:hover {
+            border-color: var(--border-color-hover);
+            background: var(--bg-card-subtle);
+            transform: translateY(-1px);
+        }
+
+        /* Main Container */
+        .main-content {
+            flex: 1;
+            width: 100%;
+            max-width: 1120px;
+            margin: 0 auto;
+            padding: 16px 24px 64px 24px;
+        }
+
+        /* Hero Section */
+        .hero-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-xl);
+            padding: 48px;
+            box-shadow: var(--shadow-md);
+            display: grid;
+            grid-template-columns: minmax(0, 1.4fr) minmax(0, 0.9fr);
+            gap: 48px;
+            align-items: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero-card::before {
+            content: "";
+            position: absolute;
+            top: -120px;
+            right: -120px;
+            width: 320px;
+            height: 320px;
+            background: radial-gradient(circle, var(--primary-light) 0%, rgba(244, 224, 213, 0) 70%);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .hero-left {
+            position: relative;
+            z-index: 1;
+        }
+
+        .app-badge-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 20px;
+            align-items: center;
+        }
+
+        .badge-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 12px;
+            border-radius: var(--radius-pill);
+            font-size: 0.8rem;
+            font-weight: 600;
+            border: 1px solid transparent;
+        }
+
+        .badge-version {
+            background: var(--primary-light);
+            color: var(--primary-color);
+            border-color: rgba(193, 68, 14, 0.2);
+        }
+
+        .badge-os {
+            background: var(--accent-sage-light);
+            color: var(--accent-sage);
+            border-color: rgba(107, 124, 95, 0.2);
+        }
+
+        .badge-size {
+            background: var(--bg-card-subtle);
+            color: var(--text-muted);
+            border-color: var(--border-color);
+        }
+
+        .badge-free {
+            background: var(--status-green-light);
+            color: var(--status-green);
+            border-color: rgba(46, 125, 50, 0.2);
+        }
+
+        .hero-title {
+            font-size: 2.75rem;
+            font-weight: 800;
+            line-height: 1.15;
+            letter-spacing: -0.03em;
+            color: var(--text-color);
+            margin-bottom: 14px;
+        }
+
+        .hero-tagline {
+            font-size: 1.2rem;
+            color: var(--primary-color);
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+
+        .hero-description {
+            font-size: 1rem;
+            color: var(--text-muted);
+            line-height: 1.6;
+            margin-bottom: 32px;
+            max-width: 540px;
+        }
+
+        .cta-container {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .btn-download-primary {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            background: var(--primary-color);
+            color: #ffffff;
+            font-size: 1.1rem;
+            font-weight: 700;
+            padding: 16px 32px;
+            border-radius: var(--radius-md);
+            text-decoration: none;
+            box-shadow: 0 8px 24px var(--primary-glow);
+            transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+            border: 0;
+            cursor: pointer;
+            width: fit-content;
+        }
+
+        .btn-download-primary:hover {
+            background: var(--primary-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 12px 28px rgba(193, 68, 14, 0.28);
+        }
+
+        .btn-download-primary:active {
+            transform: translateY(0);
+        }
+
+        .download-meta {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 4px;
+        }
+
+        .hero-right {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* QR Code & Phone Mockup Box */
+        .qr-card {
+            background: var(--bg-card-subtle);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            text-align: center;
+            width: 100%;
+            max-width: 280px;
+            box-shadow: var(--shadow-sm);
+            transition: transform 0.2s ease, border-color 0.2s ease;
+        }
+
+        .qr-card:hover {
+            border-color: var(--border-color-hover);
+            transform: translateY(-2px);
+        }
+
+        .qr-image-wrap {
+            width: 180px;
+            height: 180px;
+            margin: 0 auto 16px auto;
+            background: #ffffff;
+            border-radius: 12px;
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .qr-image-wrap img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            border-radius: 6px;
+        }
+
+        .qr-title {
+            font-size: 0.94rem;
+            font-weight: 700;
+            color: var(--text-color);
+            margin-bottom: 4px;
+        }
+
+        .qr-desc {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            line-height: 1.4;
+        }
+
+        /* Sideloading Guide */
+        .section-heading {
+            font-size: 1.6rem;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            color: var(--text-color);
+            margin: 48px 0 20px 0;
+            text-align: center;
+        }
+
+        .section-subheading {
+            font-size: 0.95rem;
+            color: var(--text-muted);
+            text-align: center;
+            margin-top: -12px;
+            margin-bottom: 32px;
+        }
+
+        .guide-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin-bottom: 48px;
+        }
+
+        .guide-step-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 28px 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            transition: transform 0.2s ease, border-color 0.2s ease;
+        }
+
+        .guide-step-card:hover {
+            border-color: var(--border-color-hover);
+            transform: translateY(-2px);
+        }
+
+        .step-number {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--primary-light);
+            color: var(--primary-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 0.9rem;
+        }
+
+        .step-title {
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: var(--text-color);
+        }
+
+        .step-desc {
+            font-size: 0.88rem;
+            color: var(--text-muted);
+            line-height: 1.5;
+        }
+
+        /* Features Section */
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 20px;
+            margin-bottom: 48px;
+        }
+
+        .feature-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .feature-icon-box {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            background: var(--bg-card-subtle);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--primary-color);
+            margin-bottom: 4px;
+        }
+
+        .feature-title {
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: var(--text-color);
+        }
+
+        .feature-desc {
+            font-size: 0.88rem;
+            color: var(--text-muted);
+            line-height: 1.5;
+        }
+
+        /* Release Notes Card */
+        .notes-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 32px;
+            margin-bottom: 48px;
+        }
+
+        .notes-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .notes-title {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: var(--text-color);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .notes-content {
+            font-size: 0.92rem;
+            color: var(--text-color);
+            line-height: 1.6;
+            white-space: pre-line;
+            background: var(--bg-card-subtle);
+            padding: 16px 20px;
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border-color);
+            font-family: inherit;
+        }
+
+        /* Footer */
+        .footer {
+            border-top: 1px solid var(--border-color);
+            background: var(--bg-card);
+            padding: 32px 24px;
+            text-align: center;
+            font-size: 0.88rem;
+            color: var(--text-muted);
+        }
+
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 24px;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+        }
+
+        .footer-links a {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.2s ease;
+        }
+
+        .footer-links a:hover {
+            color: var(--primary-color);
+        }
+
+        /* Mobile Responsive */
+        @media (max-width: 840px) {
+            .hero-card {
+                grid-template-columns: 1fr;
+                padding: 32px 24px;
+                gap: 32px;
+            }
+
+            .hero-title {
+                font-size: 2.1rem;
+            }
+
+            .guide-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .qr-card {
+                max-width: 100%;
+            }
+
+            .btn-download-primary {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header Navigation -->
+    <header class="header-nav">
+        <a href="/" class="brand-link">
+            <div class="brand-icon-wrap">
+                <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M2 10v4M6 6v12M10 3v18M14 8v8M18 5v14M22 10v4"/>
+                </svg>
+            </div>
+            <span class="brand-name">Wavify</span>
+        </a>
+
+        <div class="nav-actions">
+            <a href="/" class="nav-btn nav-btn-secondary">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="3" width="7" height="7"/>
+                    <rect x="14" y="3" width="7" height="7"/>
+                    <rect x="14" y="14" width="7" height="7"/>
+                    <rect x="3" y="14" width="7" height="7"/>
+                </svg>
+                <span>Web Dashboard</span>
+            </a>
+            <a href="{{ release.repo_url }}" target="_blank" rel="noopener noreferrer" class="nav-btn nav-btn-secondary" title="View Source on GitHub">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                    <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+                </svg>
+                <span>GitHub</span>
+            </a>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Hero Card -->
+        <section class="hero-card">
+            <div class="hero-left">
+                <div class="app-badge-row">
+                    <span class="badge-pill badge-version">
+                        <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><circle cx="12" cy="12" r="10"/></svg>
+                        {{ release.tag_name }}
+                    </span>
+                    <span class="badge-pill badge-size">{{ release.apk_size_mb }}</span>
+                    <span class="badge-pill badge-os">Android 8.0+</span>
+                    <span class="badge-pill badge-free">Free &amp; Open Source</span>
+                </div>
+
+                <h1 class="hero-title">Wavify for Android</h1>
+                <div class="hero-tagline">Your personal cloud music, offline &amp; streamed.</div>
+                <p class="hero-description">
+                    Stream high-fidelity audio straight from your Google Drive cloud archive, save albums for offline flights, and view real-time synchronized lyrics in a distraction-free interface.
+                </p>
+
+                <div class="cta-container">
+                    <a href="/download/latest.apk" class="btn-download-primary" id="btn-download-apk">
+                        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+                        </svg>
+                        <span>Download APK ({{ release.tag_name }})</span>
+                    </a>
+                    <div class="download-meta">
+                        <span>📦 {{ release.apk_name }}</span>
+                        <span>•</span>
+                        <span>Updated {{ release.published_at }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Desktop QR Scanner Card -->
+            <div class="hero-right">
+                <div class="qr-card">
+                    <div class="qr-image-wrap">
+                        <img id="qr-code-img" src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data={{ request.host_url }}download/latest.apk" alt="Scan QR Code to Download APK on Android" loading="lazy">
+                    </div>
+                    <div class="qr-title">Scan on your Phone</div>
+                    <div class="qr-desc">Point your phone camera to download the APK installer directly to Android.</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Sideloading Quick Guide -->
+        <h2 class="section-heading">How to Install</h2>
+        <p class="section-subheading">First time installing an Android APK? Follow these 3 simple steps.</p>
+
+        <div class="guide-grid">
+            <div class="guide-step-card">
+                <div class="step-number">1</div>
+                <div class="step-title">Download the APK</div>
+                <div class="step-desc">
+                    Tap the <strong>Download APK</strong> button above to save the <code>{{ release.apk_name }}</code> package to your device's Downloads folder.
+                </div>
+            </div>
+
+            <div class="guide-step-card">
+                <div class="step-number">2</div>
+                <div class="step-title">Allow Unknown Apps</div>
+                <div class="step-desc">
+                    If prompted with <em>"File might be harmful"</em> or <em>"Install unknown apps"</em>, tap <strong>Settings</strong> and toggle on <strong>Allow from this source</strong> for your browser.
+                </div>
+            </div>
+
+            <div class="guide-step-card">
+                <div class="step-number">3</div>
+                <div class="step-title">Open &amp; Enjoy</div>
+                <div class="step-desc">
+                    Tap <strong>Install</strong>, then open Wavify. Connect to your personal server address and begin listening with zero ads and lossless quality!
+                </div>
+            </div>
+        </div>
+
+        <!-- Features Grid -->
+        <h2 class="section-heading">App Highlights</h2>
+        <p class="section-subheading">Built from the ground up for seamless personal cloud audio.</p>
+
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-icon-box">
+                    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M17.5 19C19.93 19 21.9 17.03 21.9 14.6C21.9 12.35 20.21 10.49 18 10.23C17.52 6.64 14.43 4 10.75 4C7.8 4 5.26 5.68 4.21 8.24C2.17 8.79 0.75 10.63 0.75 12.8C0.75 15.67 3.08 18 5.95 18H17.5M10 17v-6l4.5 3-4.5 3z"/>
+                    </svg>
+                </div>
+                <div class="feature-title">Cloud Streaming</div>
+                <div class="feature-desc">Connects directly to your private Google Drive database for instant lossless audio streaming.</div>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon-box">
+                    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+                    </svg>
+                </div>
+                <div class="feature-title">Offline Caching</div>
+                <div class="feature-desc">Download tracks, albums, or full playlists with a single tap for offline listening anytime.</div>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon-box">
+                    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M9 18V5l12-2v13M9 9l12-2M9 18c0 1.66-1.34 3-3 3s-3-1.34-3-3 1.34-3 3-3 3 1.34 3 3zm12-2c0 1.66-1.34 3-3 3s-3-1.34-3-3 1.34-3 3-3 3 1.34 3 3z"/>
+                    </svg>
+                </div>
+                <div class="feature-title">Synced Lyrics &amp; Art</div>
+                <div class="feature-desc">Synchronized word-by-word lyrics, high-res artwork, and intelligent metadata tagging.</div>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon-box">
+                    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                    </svg>
+                </div>
+                <div class="feature-title">100% Private &amp; Ad-Free</div>
+                <div class="feature-desc">No trackers, no telemetry, no subscription fees. Fully open source and controlled by you.</div>
+            </div>
+        </div>
+
+        <!-- Release Notes Card -->
+        <div class="notes-card">
+            <div class="notes-header">
+                <div class="notes-title">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                        <line x1="16" y1="13" x2="8" y2="13"></line>
+                        <line x1="16" y1="17" x2="8" y2="17"></line>
+                        <polyline points="10 9 9 9 8 9"></polyline>
+                    </svg>
+                    <span>Release Notes ({{ release.version_name }})</span>
+                </div>
+                <a href="{{ release.html_url }}" target="_blank" rel="noopener noreferrer" class="nav-btn nav-btn-secondary" style="font-size: 0.8rem;">
+                    GitHub Release &rarr;
+                </a>
+            </div>
+            <div class="notes-content">{{ release.release_notes }}</div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-links">
+            <a href="/">Dashboard</a>
+            <a href="{{ release.repo_url }}" target="_blank" rel="noopener noreferrer">GitHub Repository</a>
+            <a href="{{ release.releases_url }}" target="_blank" rel="noopener noreferrer">All Releases</a>
+            <a href="/api/app/release" target="_blank">Release JSON API</a>
+        </div>
+        <p>&copy; 2026 Wavify • Cloud Music Player • Android Client</p>
+    </footer>
+
+    <script>
+        // Ensure QR code image dynamically uses current origin if accessed via custom domain
+        (function() {
+            try {
+                const qrImg = document.getElementById('qr-code-img');
+                if (qrImg) {
+                    const downloadUrl = window.location.origin + '/download/latest.apk';
+                    qrImg.src = 'https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=' + encodeURIComponent(downloadUrl);
+                }
+            } catch (e) {}
+        })();
+    </script>
+</body>
+</html>

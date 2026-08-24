@@ -8,7 +8,8 @@ import functools
 import secrets
 import re
 import uuid
-from flask import Flask, render_template, jsonify, request, stream_with_context, Response
+import time
+from flask import Flask, render_template, jsonify, request, stream_with_context, Response, redirect
 from dotenv import load_dotenv
 
 # Load env variables from .env in project root
@@ -810,6 +811,133 @@ def imported_playlists_page():
     except Exception as e:
         logger.error(f"Error rendering imported_playlists.html: {e}", exc_info=True)
         return f"Error loading page: {str(e)}", 500
+
+# Cache dictionary and TTL for latest GitHub release of Wavify Android App
+_app_release_cache = {
+    "data": None,
+    "timestamp": 0
+}
+_APP_RELEASE_CACHE_TTL = 600  # 10 minutes
+
+def get_latest_app_release():
+    """
+    Fetches latest release metadata for the Wavify Android App from GitHub Releases.
+    Cached in-memory for 10 minutes with graceful fallback on rate limits/errors.
+    """
+    now = time.time()
+    if _app_release_cache["data"] and (now - _app_release_cache["timestamp"] < _APP_RELEASE_CACHE_TTL):
+        return _app_release_cache["data"]
+
+    url = "https://api.github.com/repos/Peepeepoopookk/wavify/releases/latest"
+    headers = {
+        "Accept": "application/vnd.github.v3+json",
+        "User-Agent": "Wavify-Dashboard"
+    }
+
+    try:
+        r = requests.get(url, headers=headers, timeout=6)
+        if r.status_code == 200:
+            raw = r.json()
+            tag_name = raw.get("tag_name") or "v1.0.0"
+            version_name = raw.get("name") or tag_name
+            html_url = raw.get("html_url") or "https://github.com/Peepeepoopookk/wavify/releases"
+            body = raw.get("body") or ""
+            published_at_raw = raw.get("published_at")
+            
+            published_at_fmt = "Recent"
+            if published_at_raw:
+                try:
+                    dt = datetime.datetime.fromisoformat(published_at_raw.replace("Z", "+00:00"))
+                    published_at_fmt = dt.strftime("%b %d, %Y")
+                except Exception:
+                    published_at_fmt = published_at_raw[:10]
+
+            assets = raw.get("assets", [])
+            apk_asset = next((a for a in assets if (a.get("name") or "").lower().endswith(".apk")), None)
+            
+            if apk_asset:
+                apk_url = apk_asset.get("browser_download_url")
+                apk_name = apk_asset.get("name")
+                size_bytes = apk_asset.get("size") or 0
+                apk_size_mb = f"{size_bytes / (1024 * 1024):.2f} MB" if size_bytes else "Unknown"
+            else:
+                apk_url = html_url
+                apk_name = "Wavify.apk"
+                apk_size_mb = "~4.2 MB"
+
+            release_data = {
+                "version_name": version_name,
+                "tag_name": tag_name,
+                "apk_download_url": apk_url,
+                "apk_name": apk_name,
+                "apk_size_mb": apk_size_mb,
+                "published_at": published_at_fmt,
+                "published_at_raw": published_at_raw,
+                "release_notes": body.strip() if body else "Latest release with offline caching, lossless cloud playback, and synced lyrics.",
+                "html_url": html_url,
+                "repo_url": "https://github.com/Peepeepoopookk/wavify",
+                "releases_url": "https://github.com/Peepeepoopookk/wavify/releases",
+                "is_fallback": False
+            }
+            _app_release_cache["data"] = release_data
+            _app_release_cache["timestamp"] = now
+            return release_data
+    except Exception as e:
+        logger.warning(f"Error fetching latest Wavify release from GitHub: {e}")
+
+    if _app_release_cache["data"]:
+        return _app_release_cache["data"]
+
+    return {
+        "version_name": "v1.0.0",
+        "tag_name": "v1.0.0",
+        "apk_download_url": "https://github.com/Peepeepoopookk/wavify/releases/latest",
+        "apk_name": "Wavify.apk",
+        "apk_size_mb": "~4.2 MB",
+        "published_at": "August 2026",
+        "published_at_raw": None,
+        "release_notes": "Latest version with cloud music streaming, offline downloads, and synced lyrics.",
+        "html_url": "https://github.com/Peepeepoopookk/wavify/releases",
+        "repo_url": "https://github.com/Peepeepoopookk/wavify",
+        "releases_url": "https://github.com/Peepeepoopookk/wavify/releases",
+        "is_fallback": True
+    }
+
+@app.route('/download')
+@app.route('/app')
+def download_page():
+    """
+    GET /download, GET /app — serves the public Wavify Android App download page.
+    No admin authentication required.
+    """
+    try:
+        release = get_latest_app_release()
+        return render_template('download.html', release=release)
+    except Exception as e:
+        logger.error(f"Error rendering download.html: {e}", exc_info=True)
+        return f"Error loading download page: {str(e)}", 500
+
+@app.route('/download/latest.apk')
+@app.route('/app/download')
+@app.route('/app/latest.apk')
+def download_apk_redirect():
+    """
+    GET /download/latest.apk, GET /app/download — redirects directly to latest APK asset.
+    """
+    try:
+        release = get_latest_app_release()
+        apk_url = release.get("apk_download_url") or "https://github.com/Peepeepoopookk/wavify/releases/latest"
+        return redirect(apk_url, code=302)
+    except Exception as e:
+        logger.error(f"Error redirecting to APK download: {e}", exc_info=True)
+        return redirect("https://github.com/Peepeepoopookk/wavify/releases/latest", code=302)
+
+@app.route('/api/app/release', methods=['GET'])
+def api_app_release():
+    """
+    GET /api/app/release — JSON API for latest app release metadata.
+    """
+    return jsonify(get_latest_app_release())
 
 @app.route('/api/tracks', methods=['GET'])
 def get_tracks():
