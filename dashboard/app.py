@@ -108,10 +108,10 @@ def check_dashboard_access():
     """
     path = request.path
 
-    # Public whitelist: /download, /app, /download/latest.apk, /app/download, /api/app/release, /static, /logout, /favicon.ico, /ping, /api/worker/, /api/import/status/
+    # Public whitelist: /download, /app, /download/latest.apk, /app/download, /api/app/release, /static, /stream/, /logout, /favicon.ico, /ping, /api/worker/, /api/import/status/
     if (
         path in ('/download', '/app', '/download/latest.apk', '/app/download', '/app/latest.apk', '/api/app/release', '/logout', '/favicon.ico', '/ping')
-        or any(path.startswith(prefix) for prefix in ('/download/', '/app/', '/api/app/release/', '/static/', '/api/worker/', '/api/import/status/'))
+        or any(path.startswith(prefix) for prefix in ('/stream/', '/download/', '/app/', '/api/app/release/', '/static/', '/api/worker/', '/api/import/status/'))
     ):
         return None
 

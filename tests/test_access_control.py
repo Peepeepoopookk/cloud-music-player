@@ -36,6 +36,19 @@ class DashboardAccessControlTestCase(unittest.TestCase):
         data = res.get_json()
         self.assertIn("tag_name", data)
 
+    @patch('requests.get')
+    def test_stream_route_accessible_without_auth(self, mock_get):
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.headers = {'Content-Type': 'audio/ogg', 'Accept-Ranges': 'bytes'}
+        mock_response.iter_content.return_value = [b"OggS-dummy-audio-content"]
+        mock_get.return_value = mock_response
+
+        res = self.client.get('/stream/test_drive_file_123')
+        self.assertEqual(res.status_code, 200)
+        self.assertNotEqual(res.status_code, 302)
+        self.assertEqual(res.headers.get('Content-Type'), 'audio/ogg')
+
     def test_dashboard_root_redirects_unauthenticated_user_to_download(self):
         res = self.client.get('/')
         self.assertEqual(res.status_code, 302)
