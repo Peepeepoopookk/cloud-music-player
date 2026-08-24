@@ -1,5 +1,6 @@
 import os
 import sys
+import uuid
 import time
 import logging
 import datetime
@@ -868,7 +869,8 @@ def run_scraper():
         try:
             # Step A: Download audio via yt-dlp
             logger.info(f"Downloading audio stream for: '{title}'...")
-            local_file_path = download_track(title, artist, temp_dir)
+            unique_id = spotify_id if (spotify_id and spotify_id not in {"UnknownID", "unknown", "None", ""}) else uuid.uuid4().hex
+            local_file_path = download_track(title, artist, temp_dir, track_id=unique_id)
             
             # Step B: Enrich Metadata (Replaces separate album_art, duration, and language calls)
             logger.info(f"Enriching metadata for '{title}' by '{artist}'...")

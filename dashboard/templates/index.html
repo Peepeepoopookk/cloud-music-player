@@ -213,7 +213,7 @@
                 <div class="section-header">
                     <div class="section-title-wrap" style="display: flex; align-items: center; gap: 12px;">
                         <h2 style="margin: 0;">Artists</h2>
-                        <span class="badge" id="artists-total-badge" style="background-color: var(--primary); color: #000; font-weight: 600; padding: 4px 12px; border-radius: 12px;">0 Total</span>
+                        <span class="badge" id="artists-total-badge" style="background-color: var(--primary-light); color: var(--primary-color); font-weight: 700; padding: 4px 12px; border-radius: 12px; border: 1px solid rgba(193, 68, 14, 0.2);">0 Total</span>
                     </div>
                     <p class="section-desc">Browse your auto-grouped artists and their tracks.</p>
                 </div>
@@ -227,7 +227,7 @@
                         <input type="text" id="artists-search-input" placeholder="Search artists...">
                     </div>
                     <div>
-                        <select id="artists-sort-select" class="settings-select" style="padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border); background-color: var(--bg-surface); color: var(--text-primary); cursor: pointer;">
+                        <select id="artists-sort-select" class="settings-select" style="padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border-color); background-color: var(--bg-card); color: var(--text-color); cursor: pointer;">
                             <option value="count_desc">Sort by Track Count</option>
                             <option value="alpha_asc">Sort Alphabetically</option>
                         </select>
@@ -246,13 +246,13 @@
                         Back to Artists
                     </button>
 
-                    <div style="display: flex; align-items: center; gap: 24px; margin-bottom: 32px; padding: 24px; background: var(--bg-surface); border-radius: 16px; border: 1px solid var(--border);">
+                    <div style="display: flex; align-items: center; gap: 24px; margin-bottom: 32px; padding: 24px; background: var(--bg-card); border-radius: 16px; border: 1px solid var(--border-color); box-shadow: var(--shadow-sm);">
                         <div id="artist-detail-image-container">
-                            <img id="artist-detail-image" src="" alt="" style="width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 3px solid rgba(255,255,255,0.1);">
+                            <img id="artist-detail-image" src="" alt="" style="width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 3px solid var(--border-color); box-shadow: var(--shadow-md);">
                         </div>
                         <div>
                             <h2 id="artist-detail-name" style="margin: 0 0 8px 0; font-size: 2rem;">Artist Name</h2>
-                            <span class="badge" id="artist-detail-count" style="background: rgba(255,255,255,0.1); padding: 6px 12px; border-radius: 12px; font-size: 0.9rem;">0 Tracks</span>
+                            <span class="badge" id="artist-detail-count" style="background: var(--bg-card-hover); color: var(--text-muted); border: 1px solid var(--border-color); padding: 6px 12px; border-radius: 12px; font-size: 0.9rem;">0 Tracks</span>
                         </div>
                     </div>
 
@@ -316,40 +316,52 @@
 
                     <!-- Playlist Preview Container -->
                     <div class="playlist-preview-container hidden" id="playlist-preview-container">
-                        <div id="playlist-preview-warning" style="display: none; background: rgba(255, 193, 7, 0.1); border-left: 4px solid #ffc107; padding: 12px; margin-bottom: 16px; border-radius: 4px; color: #ffc107; font-size: 0.9rem;">
+                        <div id="playlist-preview-warning" style="display: none; background: rgba(201, 154, 46, 0.12); border-left: 4px solid var(--accent-gold); padding: 12px; margin-bottom: 16px; border-radius: 4px; color: #8e6c1e; font-size: 0.9rem;">
                             <!-- Warning text here -->
                         </div>
-                        <div class="playlist-preview-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid var(--border);">
+                        <div class="playlist-preview-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid var(--border-color);">
                             <div>
-                                <h4 id="preview-playlist-name" style="font-size: 1.2rem; color: #fff; margin-bottom: 4px;">Playlist Name</h4>
-                                <span class="badge badge-genre" id="preview-playlist-count" style="margin-right: 8px; padding: 2px 8px; border-radius: 12px; background: rgba(255,255,255,0.1); font-size: 0.8rem;">0 Tracks</span>
-                                <span class="badge" id="preview-playlist-size" style="background-color: rgba(255, 255, 255, 0.05); color: var(--tertiary); padding: 2px 8px; border-radius: 12px; font-size: 0.8rem;">~0 MB</span>
+                                <h4 id="preview-playlist-name" style="font-size: 1.2rem; color: var(--text-color); margin-bottom: 4px;">Playlist Name</h4>
+                                <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 6px;">
+                                    <span class="badge badge-genre" id="preview-playlist-count" style="padding: 2px 8px; border-radius: 12px; font-size: 0.8rem;">0 Tracks</span>
+                                    <span class="badge badge-success" id="preview-playlist-new-tracks" style="padding: 2px 8px; border-radius: 12px; font-size: 0.8rem;">0 New tracks to import</span>
+                                    <span class="badge" id="preview-playlist-already-in-library" style="background-color: var(--bg-card-hover); color: var(--text-muted); padding: 2px 8px; border-radius: 12px; font-size: 0.8rem; border: 1px solid var(--border-color);">0 Already in library</span>
+                                    <span class="badge" id="preview-playlist-size" style="background-color: var(--bg-card-hover); color: var(--text-muted); padding: 2px 8px; border-radius: 12px; font-size: 0.8rem; border: 1px solid var(--border-color);">~0 MB</span>
+                                </div>
                             </div>
                             <div style="display: flex; gap: 8px;">
                                 <button class="btn btn-secondary" id="btn-cancel-playlist-preview">Cancel</button>
                                 <button class="btn btn-primary" id="btn-start-playlist-import">Start Import</button>
                             </div>
                         </div>
-                        <div id="preview-tracks-list" style="color: var(--tertiary); font-size: 0.9rem; margin-bottom: 8px; line-height: 1.8;">
+                        <div id="preview-tracks-list" style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 8px; line-height: 1.8;">
                             <!-- Preview tracks will be listed here -->
                         </div>
                     </div>
 
                     <!-- Playlist Progress Container -->
                     <div class="playlist-progress-container hidden" id="playlist-progress-container">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                            <div>
-                                <span class="badge badge-language" id="playlist-status-badge" style="padding: 2px 8px; border-radius: 12px; background: rgba(255,255,255,0.1); font-size: 0.8rem;">Running</span>
-                                <span style="font-weight: 600; color: #fff; margin-left: 12px;" id="playlist-progress-text">Processed: 0 / 0</span>
-                                <span id="gemini-pending-status" style="display: none; padding: 2px 8px; border-radius: 12px; background: rgba(0, 123, 255, 0.2); color: #66b2ff; font-size: 0.8rem; margin-left: 12px;" class="badge text-bg-info"></span>
+                        <div class="downloader-progress-header">
+                            <div class="downloader-progress-title-wrap">
+                                <span class="badge badge-language" id="playlist-status-badge">Running</span>
+                                <span class="downloader-progress-title" id="playlist-progress-text">Processed: 0 / 0</span>
+                                <span id="gemini-pending-status" style="display: none;" class="badge badge-info text-bg-info"></span>
                             </div>
-                            <div style="display: flex; gap: 12px; align-items: center; font-size: 0.85rem; color: var(--tertiary);">
-                                <span style="color: #30d158;" id="playlist-stat-downloaded">Downloaded: 0</span>
-                                <span style="color: #ffbd2e;" id="playlist-stat-skipped">Skipped: 0</span>
-                                <span style="color: #ff453a;" id="playlist-stat-failed">Failed: 0</span>
-                                <button class="btn btn-danger" id="btn-cancel-playlist-import" style="margin-left: 12px; padding: 4px 10px; font-size: 0.75rem;">Cancel</button>
+                            <button class="btn btn-danger" id="btn-cancel-playlist-import">Cancel</button>
+                        </div>
+
+                        <div class="downloader-stats-grid">
+                            <div class="downloader-stat-card">
+                                <span class="downloader-stat-num text-success" id="playlist-stat-downloaded"><span class="stat-number">0</span><span class="stat-label">Downloaded</span></span>
+                            </div>
+                            <div class="downloader-stat-card">
+                                <span class="downloader-stat-num text-warning" id="playlist-stat-skipped"><span class="stat-number">0</span><span class="stat-label">Skipped</span></span>
+                            </div>
+                            <div class="downloader-stat-card">
+                                <span class="downloader-stat-num text-danger" id="playlist-stat-failed"><span class="stat-number">0</span><span class="stat-label">Failed</span></span>
                             </div>
                         </div>
+
                         <div class="progress-bar-container">
                             <div class="progress-bar-fill" id="playlist-progress-fill" style="width: 0%"></div>
                         </div>
@@ -374,35 +386,47 @@
                     </div>
 
                     <div class="playlist-preview-container hidden" id="spotify-library-preview-container">
-                        <div id="spotify-library-preview-warning" style="display: none; background: rgba(255, 193, 7, 0.1); border-left: 4px solid #ffc107; padding: 12px; margin-bottom: 16px; border-radius: 4px; color: #ffc107; font-size: 0.9rem;"></div>
-                        <div class="playlist-preview-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid var(--border);">
+                        <div id="spotify-library-preview-warning" style="display: none; background: rgba(201, 154, 46, 0.12); border-left: 4px solid var(--accent-gold); padding: 12px; margin-bottom: 16px; border-radius: 4px; color: #8e6c1e; font-size: 0.9rem;"></div>
+                        <div class="playlist-preview-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid var(--border-color);">
                             <div>
-                                <h4 id="spotify-library-preview-name" style="font-size: 1.2rem; color: #fff; margin-bottom: 4px;">Playlist Name</h4>
-                                <span class="badge badge-genre" id="spotify-library-preview-count" style="margin-right: 8px; padding: 2px 8px; border-radius: 12px; background: rgba(255,255,255,0.1); font-size: 0.8rem;">0 Tracks</span>
-                                <span class="badge" id="spotify-library-preview-size" style="background-color: rgba(255, 255, 255, 0.05); color: var(--tertiary); padding: 2px 8px; border-radius: 12px; font-size: 0.8rem;">~0 MB</span>
+                                <h4 id="spotify-library-preview-name" style="font-size: 1.2rem; color: var(--text-color); margin-bottom: 4px;">Playlist Name</h4>
+                                <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 6px;">
+                                    <span class="badge badge-genre" id="spotify-library-preview-count" style="padding: 2px 8px; border-radius: 12px; font-size: 0.8rem;">0 Tracks</span>
+                                    <span class="badge badge-success" id="spotify-library-preview-new-tracks" style="padding: 2px 8px; border-radius: 12px; font-size: 0.8rem;">0 New tracks to import</span>
+                                    <span class="badge" id="spotify-library-preview-already-in-library" style="background-color: var(--bg-card-hover); color: var(--text-muted); padding: 2px 8px; border-radius: 12px; font-size: 0.8rem; border: 1px solid var(--border-color);">0 Already in library</span>
+                                    <span class="badge" id="spotify-library-preview-size" style="background-color: var(--bg-card-hover); color: var(--text-muted); padding: 2px 8px; border-radius: 12px; font-size: 0.8rem; border: 1px solid var(--border-color);">~0 MB</span>
+                                </div>
                             </div>
                             <div style="display: flex; gap: 8px;">
                                 <button class="btn btn-secondary" id="btn-cancel-spotify-library-preview">Cancel</button>
                                 <button class="btn btn-primary" id="btn-start-spotify-library-import" disabled>Start Import</button>
                             </div>
                         </div>
-                        <div id="spotify-library-preview-tracks-list" style="color: var(--tertiary); font-size: 0.9rem; margin-bottom: 8px; line-height: 1.8;"></div>
+                        <div id="spotify-library-preview-tracks-list" style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 8px; line-height: 1.8;"></div>
                     </div>
 
                     <div class="playlist-progress-container hidden" id="spotify-library-progress-container">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                            <div>
-                                <span class="badge badge-language" id="spotify-library-status-badge" style="padding: 2px 8px; border-radius: 12px; background: rgba(255,255,255,0.1); font-size: 0.8rem;">Running</span>
-                                <span style="font-weight: 600; color: #fff; margin-left: 12px;" id="spotify-library-progress-text">Processed: 0 / 0</span>
-                                <span id="spotify-library-gemini-status" style="display: none; padding: 2px 8px; border-radius: 12px; background: rgba(0, 123, 255, 0.2); color: #66b2ff; font-size: 0.8rem; margin-left: 12px;" class="badge text-bg-info"></span>
+                        <div class="downloader-progress-header">
+                            <div class="downloader-progress-title-wrap">
+                                <span class="badge badge-language" id="spotify-library-status-badge">Running</span>
+                                <span class="downloader-progress-title" id="spotify-library-progress-text">Processed: 0 / 0</span>
+                                <span id="spotify-library-gemini-status" style="display: none;" class="badge badge-info text-bg-info"></span>
                             </div>
-                            <div style="display: flex; gap: 12px; align-items: center; font-size: 0.85rem; color: var(--tertiary);">
-                                <span style="color: #30d158;" id="spotify-library-stat-downloaded">Downloaded: 0</span>
-                                <span style="color: #ffbd2e;" id="spotify-library-stat-skipped">Skipped: 0</span>
-                                <span style="color: #ff453a;" id="spotify-library-stat-failed">Failed: 0</span>
-                                <button class="btn btn-danger" id="btn-cancel-spotify-library-import" style="margin-left: 12px; padding: 4px 10px; font-size: 0.75rem;">Cancel</button>
+                            <button class="btn btn-danger" id="btn-cancel-spotify-library-import">Cancel</button>
+                        </div>
+
+                        <div class="downloader-stats-grid">
+                            <div class="downloader-stat-card">
+                                <span class="downloader-stat-num text-success" id="spotify-library-stat-downloaded"><span class="stat-number">0</span><span class="stat-label">Downloaded</span></span>
+                            </div>
+                            <div class="downloader-stat-card">
+                                <span class="downloader-stat-num text-warning" id="spotify-library-stat-skipped"><span class="stat-number">0</span><span class="stat-label">Skipped</span></span>
+                            </div>
+                            <div class="downloader-stat-card">
+                                <span class="downloader-stat-num text-danger" id="spotify-library-stat-failed"><span class="stat-number">0</span><span class="stat-label">Failed</span></span>
                             </div>
                         </div>
+
                         <div class="progress-bar-container">
                             <div class="progress-bar-fill" id="spotify-library-progress-fill" style="width: 0%"></div>
                         </div>
@@ -414,15 +438,15 @@
                     <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
                         <h3>Import Logs</h3>
                         <div style="display: flex; gap: 12px; align-items: center;">
-                            <label style="display: flex; align-items: center; gap: 6px; font-size: 0.85rem; color: var(--tertiary); cursor: pointer;">
+                            <label style="display: flex; align-items: center; gap: 6px; font-size: 0.85rem; color: var(--text-muted); cursor: pointer;">
                                 <input type="checkbox" id="toggle-playlist-logs-auto-refresh"> Auto Refresh
                             </label>
                             <button class="btn btn-secondary" id="btn-copy-playlist-logs" style="padding: 6px 12px; font-size: 0.85rem;">Copy Logs</button>
                             <button class="btn btn-secondary" id="btn-refresh-playlist-logs" style="padding: 6px 12px; font-size: 0.85rem;">Refresh Logs</button>
                         </div>
                     </div>
-                    <div class="terminal-body" style="background: #0a0a0a; border-radius: 8px; padding: 12px; border: 1px solid var(--border);">
-                        <pre id="playlist-logs-output-area" style="margin: 0; font-family: monospace; font-size: 12px; height: 300px; overflow-y: auto; white-space: pre-wrap; word-break: break-all; color: #fff;"></pre>
+                    <div class="terminal-body" style="background: #191816; border-radius: var(--radius-md); padding: 14px; border: 1px solid var(--border-color);">
+                        <pre id="playlist-logs-output-area" style="margin: 0; font-family: ui-monospace, SFMono-Regular, monospace; font-size: 12px; height: 300px; overflow-y: auto; white-space: pre-wrap; word-break: break-all; color: #e6dfd1;"></pre>
                     </div>
                 </div>
 
@@ -433,8 +457,8 @@
                             <h3>Backfill Engine</h3>
                             <p class="section-desc">Find and fill missing metadata across your entire library.</p>
                         </div>
-                        <div style="display: flex; gap: 12px; align-items: center;">
-                            <span class="badge" id="backfill-status-badge" style="background-color: rgba(255, 255, 255, 0.05); color: var(--tertiary); padding: 4px 10px; border-radius: 12px; font-size: 0.85rem;">Idle</span>
+                        <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+                            <span class="badge" id="backfill-status-badge" style="background-color: var(--bg-card-hover); color: var(--text-muted); border: 1px solid var(--border-color); padding: 4px 10px; border-radius: 12px; font-size: 0.85rem;">Idle</span>
                             <button class="btn btn-secondary" id="btn-audit-library" style="padding: 6px 16px; font-size: 0.85rem;">Audit Library</button>
                             <button class="btn btn-secondary" id="btn-run-complete-backfill" style="padding: 6px 16px; font-size: 0.85rem;">Run Complete Backfill</button>
                             <button class="btn btn-secondary" id="btn-run-gemini-backfill" style="padding: 6px 16px; font-size: 0.85rem;">Run Gemini AI</button>
@@ -445,29 +469,29 @@
                     </div>
                     
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 20px;">
-                        <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 12px; padding: 16px;">
-                            <h4 style="margin-bottom: 8px; color: #fff; font-size: 0.95rem;">Album Art</h4>
-                            <p style="color: var(--tertiary); font-size: 0.85rem; margin-bottom: 12px;" id="backfill-art-text">Loading...</p>
+                        <div style="background: var(--bg-card-hover); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 16px;">
+                            <h4 style="margin-bottom: 8px; color: var(--text-color); font-size: 0.95rem;">Album Art</h4>
+                            <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 12px;" id="backfill-art-text">Loading...</p>
                             <button class="btn btn-secondary btn-run-backfill" data-type="album_art" style="width: 100%; font-size: 0.8rem; padding: 6px;">Run</button>
                         </div>
-                        <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 12px; padding: 16px;">
-                            <h4 style="margin-bottom: 8px; color: #fff; font-size: 0.95rem;">Duration</h4>
-                            <p style="color: var(--tertiary); font-size: 0.85rem; margin-bottom: 12px;" id="backfill-dur-text">Loading...</p>
+                        <div style="background: var(--bg-card-hover); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 16px;">
+                            <h4 style="margin-bottom: 8px; color: var(--text-color); font-size: 0.95rem;">Duration</h4>
+                            <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 12px;" id="backfill-dur-text">Loading...</p>
                             <button class="btn btn-secondary btn-run-backfill" data-type="duration" style="width: 100%; font-size: 0.8rem; padding: 6px;">Run</button>
                         </div>
-                        <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 12px; padding: 16px;">
-                            <h4 style="margin-bottom: 8px; color: #fff; font-size: 0.95rem;">Language</h4>
-                            <p style="color: var(--tertiary); font-size: 0.85rem; margin-bottom: 12px;" id="backfill-lang-text">Loading...</p>
+                        <div style="background: var(--bg-card-hover); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 16px;">
+                            <h4 style="margin-bottom: 8px; color: var(--text-color); font-size: 0.95rem;">Language</h4>
+                            <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 12px;" id="backfill-lang-text">Loading...</p>
                             <button class="btn btn-secondary btn-run-backfill" data-type="language" style="width: 100%; font-size: 0.8rem; padding: 6px;">Run</button>
                         </div>
                     </div>
 
                     <!-- Backfill Logs -->
-                    <div class="terminal-body" style="background: #0a0a0a; border-radius: 8px; padding: 12px; border: 1px solid var(--border);">
+                    <div class="terminal-body" style="background: #191816; border-radius: var(--radius-md); padding: 14px; border: 1px solid var(--border-color);">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                            <span style="font-size: 0.75rem; color: var(--tertiary); text-transform: uppercase; letter-spacing: 1px;">Backfill Logs</span>
+                            <span style="font-size: 0.75rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px;">Backfill Logs</span>
                         </div>
-                        <pre id="backfill-logs-output" style="margin: 0; font-family: monospace; font-size: 11px; height: 150px; overflow-y: auto; white-space: pre-wrap; word-break: break-all; color: #a1a1aa;">Waiting for engine...</pre>
+                        <pre id="backfill-logs-output" style="margin: 0; font-family: ui-monospace, SFMono-Regular, monospace; font-size: 11px; height: 150px; overflow-y: auto; white-space: pre-wrap; word-break: break-all; color: #d4cdc1;">Waiting for engine...</pre>
                     </div>
                 </div>
 
@@ -586,7 +610,7 @@
                         <h3>Album Art Status</h3>
                     </div>
                     <div style="display: flex; align-items: center; gap: 16px;">
-                        <div class="metric-icon-wrap" style="color: var(--primary); background-color: rgba(255, 255, 255, 0.04); display: flex; align-items: center; justify-content: center; width: 48px; height: 48px; border-radius: 50%;">
+                        <div class="metric-icon-wrap" style="color: var(--primary-color); background-color: var(--primary-light); display: flex; align-items: center; justify-content: center; width: 48px; height: 48px; border-radius: 50%;">
                             <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2">
                                 <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
                                 <circle cx="8.5" cy="8.5" r="1.5"/>
@@ -594,9 +618,9 @@
                             </svg>
                         </div>
                         <div>
-                            <span class="metric-label" style="font-size: 0.85rem; color: var(--tertiary); display: block;">Coverage</span>
-                            <span id="storage-album-art-info" style="font-size: 1.25rem; font-weight: 600; color: #ffffff;">0 / 0 tracks have album art</span>
-                            <span id="storage-album-art-size" style="font-size: 0.85rem; color: var(--tertiary); display: block; margin-top: 4px;">~0 Bytes estimated</span>
+                            <span class="metric-label" style="font-size: 0.85rem; color: var(--text-muted); display: block;">Coverage</span>
+                            <span id="storage-album-art-info" style="font-size: 1.25rem; font-weight: 700; color: var(--text-color);">0 / 0 tracks have album art</span>
+                            <span id="storage-album-art-size" style="font-size: 0.85rem; color: var(--text-muted); display: block; margin-top: 4px;">~0 Bytes estimated</span>
                         </div>
                     </div>
                 </div>
@@ -761,7 +785,7 @@
                         <input type="text" id="app-imports-search-input" placeholder="Search by title, artist, or device ID...">
                     </div>
                     <div class="filter-box" style="margin-left: auto;">
-                        <select id="app-imports-device-filter" class="settings-text-input" style="padding: 6px 12px; border-radius: 20px; border: 1px solid var(--border); background-color: var(--bg-base); color: var(--primary);">
+                        <select id="app-imports-device-filter" class="settings-text-input" style="padding: 6px 12px; border-radius: 20px; border: 1px solid var(--border-color); background-color: var(--bg-card); color: var(--text-color);">
                             <option value="">All Devices</option>
                         </select>
                     </div>

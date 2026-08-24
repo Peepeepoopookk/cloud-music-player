@@ -80,18 +80,22 @@ def choose_best_video(entries, artist):
         if 'karaoke' in title:
             score -= 25
             
+            
         logger.debug(f"Candidate: '{title}' by channel '{channel}' - Score: {score}")
         
         if score > highest_score:
             highest_score = score
             best_entry = entry
             
+    if highest_score < 0:
+        return None
+        
     return best_entry if best_entry else entries[0]
 
-def download_track(title, artist, output_dir, cancel_check_callback=None):
+def download_track(title, artist, output_dir, track_id=None, cancel_check_callback=None):
     """
     Downloads the best quality audio for a track using yt-dlp.
-    Searches YouTube, enforces quality controls, and saves as '{artist} - {title}.opus'.
+    Searches YouTube, enforces quality controls, and saves as '{track_id}.opus' (or fallback).
     Returns the absolute path of the downloaded file.
     """
     # Create output directory if it doesn't exist
@@ -102,10 +106,17 @@ def download_track(title, artist, output_dir, cancel_check_callback=None):
     delay = random.uniform(1.5, 4.0)
     logger.info(f"Waiting {delay:.2f} seconds before searching YouTube...")
     time.sleep(delay)
+    if cancel_check_callback and cancel_check_callback():
+        raise Exception("Download cancelled by user")
     
-    # Clean the artist/title to form a safe query and safe output filename
+    # Clean the artist/title to form a safe query
     safe_artist = sanitize_filename(artist)
     safe_title = sanitize_filename(title)
+    
+    if track_id:
+        out_filename = sanitize_filename(str(track_id))
+    else:
+        out_filename = f"{safe_artist} - {safe_title}"
     
     search_query = f"ytsearch5:{safe_artist} - {safe_title} official audio"
     logger.info(f"Searching YouTube for: '{search_query}'")
@@ -128,6 +139,9 @@ def download_track(title, artist, output_dir, cancel_check_callback=None):
             search_results = ydl.extract_info(search_query, download=False)
             entries = search_results.get('entries', [])
             
+        if cancel_check_callback and cancel_check_callback():
+            raise Exception("Download cancelled by user")
+
         if not entries:
             raise ValueError(f"No search results found on YouTube for query: {search_query}")
             
@@ -170,8 +184,15 @@ def download_track(title, artist, output_dir, cancel_check_callback=None):
         # Sort by score descending
         scored_entries.sort(key=lambda x: x[0], reverse=True)
         
+        # Filter out candidates that do not meet the minimum score threshold
+        MIN_SCORE_THRESHOLD = 0
+        valid_entries = [(s, e) for s, e in scored_entries if s >= MIN_SCORE_THRESHOLD]
+        
+        if not valid_entries:
+            raise ValueError(f"No YouTube candidates met the minimum score threshold of {MIN_SCORE_THRESHOLD} for query: {search_query}")
+        
         last_error = None
-        for score, entry in scored_entries:
+        for score, entry in valid_entries:
             video_url = entry.get('url') or entry.get('webpage_url') or f"https://www.youtube.com/watch?v={entry.get('id')}"
             logger.info(f"Attempting download for: '{entry.get('title')}' ({video_url}) [Score: {score}]")
             
@@ -189,6 +210,9 @@ def download_track(title, artist, output_dir, cancel_check_callback=None):
                     ydl_opts_info['cookiefile'] = '/tmp/cookies.txt'
                 with yt_dlp.YoutubeDL(ydl_opts_info) as ydl:
                     video_info = ydl.extract_info(video_url, download=False)
+                    
+                if cancel_check_callback and cancel_check_callback():
+                    raise Exception("Download cancelled by user")
                     
                 # Quality control checks:
                 

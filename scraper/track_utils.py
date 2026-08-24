@@ -27,8 +27,6 @@ def normalize_text(value):
     text = unicodedata.normalize("NFKD", str(value or ""))
     text = text.encode("ascii", "ignore").decode("ascii")
     text = text.lower()
-    text = re.sub(r"\([^)]*(?:feat|ft|from|version|remix)[^)]*\)", " ", text)
-    text = re.sub(r"\b(feat|ft|featuring|from|version|remix|remastered)\b", " ", text)
     text = re.sub(r"[^a-z0-9]+", " ", text)
     return re.sub(r"\s+", " ", text).strip()
 
@@ -203,3 +201,51 @@ def merge_track(existing, incoming, now=None):
     if changed:
         existing["updatedAt"] = now
     return changed
+
+
+def check_playlist_duplicates(tracks, library_tracks):
+    """
+    Fast, exact duplicate detection between playlist tracks and library tracks.
+    Uses exact Spotify ID matching and normalized title|artist matching without fuzzy comparison.
+    Returns a list of dicts for each track indicating is_duplicate and match_type.
+    """
+    library_tracks = library_tracks or []
+    tracks = tracks or []
+
+    existing_spotify_ids = set()
+    existing_title_artists = set()
+
+    for lt in library_tracks:
+        if not isinstance(lt, dict):
+            continue
+        sid = lt.get("spotify_id")
+        if spotify_id_is_real(sid):
+            existing_spotify_ids.add(str(sid).strip())
+
+        t_norm = normalize_text(lt.get("title") or lt.get("name") or "")
+        a_norm = normalize_artist(lt.get("artist") or lt.get("artists") or "")
+        if t_norm and a_norm:
+            existing_title_artists.add(f"{t_norm}|{a_norm}")
+
+    results = []
+    for t in tracks:
+        if not isinstance(t, dict):
+            results.append({"track": t, "is_duplicate": False, "match_type": None})
+            continue
+
+        cand_sid = t.get("spotify_id") or t.get("id")
+        if spotify_id_is_real(cand_sid) and str(cand_sid).strip() in existing_spotify_ids:
+            results.append({"track": t, "is_duplicate": True, "match_type": "spotify_id"})
+            continue
+
+        cand_t = normalize_text(t.get("title") or t.get("name") or "")
+        cand_a = normalize_artist(t.get("artist") or t.get("artists") or "")
+        cand_key = f"{cand_t}|{cand_a}" if cand_t and cand_a else None
+
+        if cand_key and cand_key in existing_title_artists:
+            results.append({"track": t, "is_duplicate": True, "match_type": "exact_title_artist"})
+        else:
+            results.append({"track": t, "is_duplicate": False, "match_type": None})
+
+    return results
+

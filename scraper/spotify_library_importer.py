@@ -7,10 +7,11 @@ import urllib.parse
 
 import requests
 
-from dashboard.drive_client import upload_json, search_file_by_name
+from dashboard.drive_client import upload_json, search_file_by_name, download_json
 from scraper.drive_uploader import get_db_file_id
-from scraper.playlist_importer import active_imports
+from scraper.playlist_importer import active_imports, create_cancel_event
 from scraper.playlist_manager import add_playlist
+from scraper.track_utils import extract_tracks, check_playlist_duplicates
 
 logger = logging.getLogger(__name__)
 
@@ -136,6 +137,20 @@ def get_spotify_library_playlist_preview(playlist_url):
     total_tracks = int(metadata.get("total_tracks") or len(preview_tracks))
     estimated_mb = total_tracks * 5
 
+    already_in_library = 0
+    try:
+        db_file_id, _ = get_db_file_id()
+        if db_file_id:
+            db_data = download_json(db_file_id)
+            lib_tracks, _ = extract_tracks(db_data)
+            duplicate_results = check_playlist_duplicates(preview_tracks, lib_tracks)
+            already_in_library = sum(1 for r in duplicate_results if r.get("is_duplicate"))
+    except Exception as e:
+        logger.warning(f"Error checking duplicates for Spotify library preview: {e}")
+        already_in_library = 0
+
+    new_tracks_importable = max(0, total_tracks - already_in_library)
+
     return {
         "playlist_id": playlist_id,
         "playlist_name": metadata.get("playlist_name") or "Spotify Library Playlist",
@@ -143,6 +158,8 @@ def get_spotify_library_playlist_preview(playlist_url):
         "owner_name": metadata.get("owner_name"),
         "total_tracks": total_tracks,
         "tracks_available_for_import": total_tracks,
+        "already_in_library": already_in_library,
+        "new_tracks_importable": new_tracks_importable,
         "truncated": False,
         "truncation_warning": None,
         "estimated_size_mb": estimated_mb,
@@ -251,6 +268,7 @@ def start_spotify_library_import(playlist_url, batch_size=15, device_id=None, im
     existing_file_id = search_file_by_name(state_filename, parent_id)
     upload_json(existing_file_id, state, state_filename, parent_id=parent_id)
     active_imports[playlist_id] = state
+    create_cancel_event(playlist_id)
     return playlist_id
 
 

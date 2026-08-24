@@ -402,9 +402,12 @@ def _mark_playlist_import_state(playlist_id, status, error=None):
     if not playlist_id:
         return
 
-    from scraper.playlist_importer import active_imports
+    from scraper.playlist_importer import active_imports, set_cancel_event
     from scraper.drive_uploader import get_db_file_id as get_uploader_db_file_id
     from dashboard.drive_client import search_file_by_name
+
+    if status == "cancelled":
+        set_cancel_event(playlist_id)
 
     state_filename = f"playlist_import_state_{playlist_id}.json"
     state = active_imports.get(playlist_id, {}).copy()
@@ -428,6 +431,7 @@ def _mark_playlist_import_state(playlist_id, status, error=None):
         logger.warning(f"Could not mark playlist import {playlist_id} as {status}: {e}")
 
 def _cancel_dashboard_playlist_queue(playlist_id=None):
+    from scraper.playlist_importer import set_cancel_event
     with playlist_queue_lock:
         pl_state = background_tasks["playlist_import"]
         pl_state["cancel_requested"] = True
@@ -439,6 +443,7 @@ def _cancel_dashboard_playlist_queue(playlist_id=None):
         _recalculate_playlist_queue_counts_unlocked(pl_state)
 
     if target_playlist_id:
+        set_cancel_event(target_playlist_id)
         _mark_playlist_import_state(target_playlist_id, "cancelled")
 
     return target_playlist_id
@@ -645,6 +650,7 @@ def _start_spotify_library_dashboard_import(url):
     return snapshot, None
 
 def _cancel_spotify_library_dashboard_import(playlist_id=None):
+    from scraper.playlist_importer import set_cancel_event
     with spotify_library_import_lock:
         task_state = background_tasks["spotify_library_import"]
         task_state["cancel_requested"] = True
@@ -654,6 +660,7 @@ def _cancel_spotify_library_dashboard_import(playlist_id=None):
             task_state["finished_at"] = _utc_now_iso()
 
     if target_playlist_id:
+        set_cancel_event(target_playlist_id)
         _mark_playlist_import_state(target_playlist_id, "cancelled")
 
     return target_playlist_id
@@ -2003,6 +2010,8 @@ def playlist_queue_preview():
         previews = []
         ready_count = 0
         total_tracks = 0
+        total_already_in_library = 0
+        total_new_tracks_importable = 0
         estimated_size_mb = 0
 
         for index, url in enumerate(urls):
@@ -2018,6 +2027,8 @@ def playlist_queue_preview():
                 item["url"] = url
                 ready_count += 1
                 total_tracks += int(preview.get("tracks_available_for_import") or preview.get("total_tracks") or 0)
+                total_already_in_library += int(preview.get("already_in_library") or 0)
+                total_new_tracks_importable += int(preview.get("new_tracks_importable") or 0)
                 estimated_size_mb += int(preview.get("estimated_size_mb") or 0)
             except Exception as preview_err:
                 logger.warning(f"Playlist queue preview failed for {url}: {preview_err}")
@@ -2031,6 +2042,8 @@ def playlist_queue_preview():
             "ready_count": ready_count,
             "error_count": len(previews) - ready_count,
             "total_tracks": total_tracks,
+            "total_already_in_library": total_already_in_library,
+            "total_new_tracks_importable": total_new_tracks_importable,
             "estimated_size_mb": estimated_size_mb,
             "estimated_size_display": f"~{estimated_size_mb} MB",
             "previews": previews

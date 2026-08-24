@@ -17,6 +17,10 @@ oauth_credentials.json.json
 # Flask
 instance/
 
+# App temporary files and logs
+temp/
+*.log
+
 # OS
 .DS_Store
 Thumbs.db

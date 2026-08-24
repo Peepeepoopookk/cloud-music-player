@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Imported Playlists | Cloud Music Player</title>
+    <title>Imported Playlists | Wavify</title>
     <meta name="dashboard-write-token" content="{{ dashboard_write_token }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <script src="{{ url_for('static', filename='auth.js') }}"></script>
@@ -12,99 +12,136 @@
             width: 100%;
             max-width: 1440px;
             margin: 0 auto;
-            padding: 24px;
+            padding: 32px 40px;
         }
         .playlist-shell {
             display: grid;
-            grid-template-columns: minmax(280px, 330px) minmax(0, 1fr);
-            gap: 18px;
+            grid-template-columns: minmax(300px, 360px) minmax(0, 1fr);
+            gap: 24px;
             align-items: start;
         }
         .playlist-list,
         .playlist-detail {
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            background: rgba(255, 255, 255, 0.035);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            background: var(--bg-card);
+            box-shadow: var(--shadow-sm);
             overflow: hidden;
+            transition: border-color 0.15s ease, box-shadow 0.15s ease;
+        }
+        .playlist-list:hover,
+        .playlist-detail:hover {
+            border-color: var(--border-color-hover);
         }
         .playlist-toolbar {
             display: flex;
             gap: 10px;
             align-items: center;
-            padding: 14px;
-            border-bottom: 1px solid var(--border);
+            padding: 16px;
+            border-bottom: 1px solid var(--border-color);
+            background: #faf7f2;
         }
         .playlist-search {
             width: 100%;
             min-width: 0;
-            padding: 10px 12px;
-            border-radius: 8px;
-            border: 1px solid var(--border);
-            background: rgba(0, 0, 0, 0.2);
-            color: var(--primary);
+            padding: 9px 14px;
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border-color);
+            background: #ffffff;
+            color: var(--text-color);
             font: inherit;
+            font-size: 0.88rem;
+        }
+        .playlist-search:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px var(--primary-light);
         }
         .playlist-items {
-            max-height: calc(100vh - 180px);
+            max-height: calc(100vh - 220px);
             overflow-y: auto;
         }
         .playlist-row {
             width: 100%;
             display: grid;
             grid-template-columns: 56px minmax(0, 1fr);
-            gap: 12px;
+            gap: 14px;
             align-items: center;
-            padding: 12px 14px;
+            padding: 14px 16px;
             border: 0;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.055);
+            border-bottom: 1px solid var(--border-color);
             background: transparent;
             color: inherit;
             text-align: left;
             cursor: pointer;
+            transition: all 0.15s ease;
         }
-        .playlist-row:hover,
+        .playlist-row:last-child {
+            border-bottom: none;
+        }
+        .playlist-row:hover {
+            background: var(--bg-card-hover);
+        }
         .playlist-row.active {
-            background: rgba(255, 255, 255, 0.06);
+            background: var(--primary-light);
+            border-left: 3px solid var(--primary-color);
         }
+        
+        /* 2x2 Artwork Collage with scattered art-directed rotation */
         .cover-box {
             width: 56px;
             height: 56px;
             border-radius: 8px;
             overflow: hidden;
-            background: rgba(255, 255, 255, 0.06);
-            border: 1px solid var(--border);
+            background: #ebe5d8;
+            border: 1px solid var(--border-color);
             display: grid;
             grid-template-columns: 1fr 1fr;
             grid-template-rows: 1fr 1fr;
+            padding: 2px;
+            gap: 2px;
+            box-shadow: 0 2px 6px rgba(42, 38, 32, 0.08);
         }
         .cover-box.single {
             display: block;
+            padding: 0;
         }
         .cover-box img {
             width: 100%;
             height: 100%;
             object-fit: cover;
             display: block;
+            border-radius: 3px;
+            transition: transform 0.2s ease;
         }
+        .cover-box:not(.single) img:nth-child(1) { transform: rotate(-2deg); }
+        .cover-box:not(.single) img:nth-child(2) { transform: rotate(2.5deg); }
+        .cover-box:not(.single) img:nth-child(3) { transform: rotate(1.5deg); }
+        .cover-box:not(.single) img:nth-child(4) { transform: rotate(-2deg); }
+        .playlist-row:hover .cover-box img { transform: rotate(0deg); }
+
         .cover-fallback {
             width: 100%;
             height: 100%;
             display: flex;
             align-items: center;
             justify-content: center;
-            color: var(--tertiary);
+            color: var(--text-dim);
+            grid-column: span 2;
+            grid-row: span 2;
         }
         .playlist-name {
             font-weight: 700;
-            color: var(--primary);
+            color: var(--text-color);
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
+            font-size: 0.94rem;
         }
         .playlist-meta {
-            color: var(--tertiary);
-            font-size: 0.82rem;
-            margin-top: 2px;
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            margin-top: 3px;
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
@@ -112,21 +149,49 @@
         .detail-head {
             display: grid;
             grid-template-columns: 112px minmax(0, 1fr);
-            gap: 18px;
-            padding: 18px;
-            border-bottom: 1px solid var(--border);
+            gap: 20px;
+            padding: 24px;
+            border-bottom: 1px solid var(--border-color);
             align-items: center;
+            background: #faf7f2;
         }
         .detail-cover {
             width: 112px;
             height: 112px;
-            border-radius: 8px;
+            border-radius: 12px;
+            overflow: hidden;
+            background: #ebe5d8;
+            border: 1px solid var(--border-color);
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: 1fr 1fr;
+            padding: 3px;
+            gap: 3px;
+            box-shadow: 0 4px 16px rgba(42, 38, 32, 0.1);
         }
+        .detail-cover.single {
+            display: block;
+            padding: 0;
+        }
+        .detail-cover img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 4px;
+            transition: transform 0.25s ease;
+        }
+        .detail-cover:not(.single) img:nth-child(1) { transform: rotate(-2deg); }
+        .detail-cover:not(.single) img:nth-child(2) { transform: rotate(2.5deg); }
+        .detail-cover:not(.single) img:nth-child(3) { transform: rotate(1.5deg); }
+        .detail-cover:not(.single) img:nth-child(4) { transform: rotate(-2deg); }
+        .detail-cover:hover img { transform: rotate(0deg); }
+
         .detail-title {
-            font-size: 1.55rem;
-            color: var(--primary);
+            font-size: 1.65rem;
+            color: var(--text-color);
             font-weight: 800;
-            line-height: 1.15;
+            line-height: 1.2;
+            letter-spacing: -0.025em;
             overflow-wrap: anywhere;
         }
         .detail-stats {
@@ -136,20 +201,22 @@
             margin-top: 12px;
         }
         .stat-pill {
-            border: 1px solid var(--border);
-            border-radius: 999px;
-            padding: 5px 10px;
-            color: var(--tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-pill);
+            padding: 4px 12px;
+            color: var(--text-muted);
             font-size: 0.8rem;
-            background: rgba(255, 255, 255, 0.03);
+            font-weight: 500;
+            background: #ffffff;
         }
         .tracks-table-wrap {
             overflow: auto;
-            max-height: calc(100vh - 300px);
+            max-height: calc(100vh - 340px);
         }
         .tracks-table {
             width: 100%;
-            border-collapse: collapse;
+            border-collapse: separate;
+            border-spacing: 0;
             table-layout: fixed;
             min-width: 980px;
         }
@@ -163,40 +230,50 @@
         .tracks-table col.col-drive { width: 10%; }
         .tracks-table th,
         .tracks-table td {
-            padding: 12px 12px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+            padding: 6px 12px;
+            border-bottom: 1px solid var(--border-color);
             text-align: left;
-            font-size: 0.84rem;
-            vertical-align: top;
+            font-size: 0.86rem;
+            vertical-align: middle;
             overflow: hidden;
+            height: 48px;
         }
         .tracks-table th {
-            color: var(--tertiary);
-            font-size: 0.75rem;
+            color: var(--text-muted);
+            font-size: 0.74rem;
             text-transform: uppercase;
             font-weight: 700;
-            background: rgba(13, 17, 23, 0.98);
+            letter-spacing: 0.04em;
+            background: #f7f3eb;
             position: sticky;
             top: 0;
             z-index: 2;
+            padding: 8px 12px;
         }
         .track-cell {
             display: grid;
-            grid-template-columns: 38px minmax(0, 1fr);
-            gap: 10px;
-            align-items: start;
+            grid-template-columns: 40px minmax(0, 1fr);
+            gap: 12px;
+            align-items: center;
             min-width: 0;
         }
         .track-art {
-            width: 38px;
-            height: 38px;
-            border-radius: 6px;
+            width: 40px !important;
+            height: 40px !important;
+            min-width: 40px !important;
+            min-height: 40px !important;
+            max-width: 40px !important;
+            max-height: 40px !important;
+            border-radius: var(--radius-sm);
             object-fit: cover;
-            background: rgba(255, 255, 255, 0.06);
+            background: #ede7da;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 1px 3px rgba(42, 38, 32, 0.08);
+            flex-shrink: 0;
         }
         .track-title {
             display: block;
-            color: var(--primary);
+            color: var(--text-color);
             font-weight: 650;
             overflow: hidden;
             text-overflow: ellipsis;
@@ -204,15 +281,16 @@
         }
         .track-sub {
             display: block;
-            color: var(--tertiary);
+            color: var(--text-muted);
             font-size: 0.78rem;
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
+            margin-top: 2px;
         }
         .cell-main {
             display: block;
-            color: var(--primary);
+            color: var(--text-color);
             line-height: 1.35;
             overflow: hidden;
             text-overflow: ellipsis;
@@ -220,42 +298,47 @@
         }
         .cell-wrap {
             display: block;
-            color: var(--primary);
+            color: var(--text-color);
             line-height: 1.35;
             white-space: normal;
             overflow-wrap: anywhere;
         }
         .cell-muted {
-            color: var(--tertiary);
+            color: var(--text-muted);
         }
         .drive-code {
             display: inline-block;
             max-width: 100%;
-            padding: 2px 5px;
-            border-radius: 5px;
-            background: rgba(255, 255, 255, 0.05);
-            color: var(--tertiary);
+            padding: 2px 6px;
+            border-radius: 4px;
+            background: var(--bg-card-hover);
+            color: var(--text-muted);
+            border: 1px solid var(--border-color);
+            font-family: monospace;
+            font-size: 0.75rem;
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
-            vertical-align: top;
+            vertical-align: middle;
         }
         .empty-state {
-            padding: 42px 18px;
+            padding: 56px 24px;
             text-align: center;
-            color: var(--tertiary);
+            color: var(--text-muted);
+            font-size: 0.92rem;
+            line-height: 1.5;
         }
         .source-link {
-            color: var(--primary);
+            color: var(--primary-color);
             text-decoration: none;
-            border-bottom: 1px solid var(--border-hover);
+            font-weight: 600;
         }
         .source-link:hover {
-            border-color: var(--primary);
+            text-decoration: underline;
         }
         @media (max-width: 900px) {
             .playlist-page {
-                padding: 14px;
+                padding: 18px;
             }
             .playlist-shell {
                 grid-template-columns: 1fr;
@@ -271,7 +354,7 @@
                 height: 76px;
             }
             .detail-title {
-                font-size: 1.15rem;
+                font-size: 1.25rem;
             }
         }
     </style>
@@ -284,11 +367,11 @@
             </svg>
             <h1>Imported Playlists</h1>
         </div>
-        <a href="/" class="btn btn-secondary" style="text-decoration: none;">Back to Dashboard</a>
+        <a href="/" class="btn btn-secondary" style="text-decoration: none;">&larr; Back to Dashboard</a>
     </header>
 
     <main class="playlist-page">
-        <div class="section-header" style="margin-bottom: 18px;">
+        <div class="section-header" style="margin-bottom: 24px;">
             <div class="section-title-wrap">
                 <h2>Playlist Library</h2>
                 <p class="section-desc" id="playlist-summary">Loading imported playlists...</p>
@@ -299,7 +382,7 @@
         <div class="playlist-shell">
             <section class="playlist-list">
                 <div class="playlist-toolbar">
-                    <input class="playlist-search" id="playlist-search" type="search" placeholder="Search playlists">
+                    <input class="playlist-search" id="playlist-search" type="search" placeholder="Search playlists...">
                 </div>
                 <div class="playlist-items" id="playlist-items">
                     <div class="empty-state">Loading playlists...</div>
@@ -307,7 +390,12 @@
             </section>
 
             <section class="playlist-detail" id="playlist-detail">
-                <div class="empty-state">Select a playlist to view its songs.</div>
+                <div class="empty-state">
+                    <svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="currentColor" stroke-width="1.5" style="color: var(--text-dim); margin-bottom: 12px;">
+                        <path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle>
+                    </svg>
+                    <p style="font-weight: 500;">Select a playlist from the catalog to browse its tracks.</p>
+                </div>
             </section>
         </div>
     </main>
@@ -401,10 +489,10 @@
                             </div>
                         </td>
                         <td><span class="cell-wrap">${escapeHtml(track.artist)}</span></td>
-                        <td><span class="cell-main">${escapeHtml(track.genre || 'Unknown')}</span></td>
-                        <td><span class="cell-main">${escapeHtml(track.language || 'unknown')}</span></td>
+                        <td><span class="tag tag-genre">${escapeHtml(track.genre || 'Unknown')}</span></td>
+                        <td><span class="tag tag-lang">${escapeHtml(track.language || 'unknown')}</span></td>
                         <td><span class="cell-main">${escapeHtml(track.duration || '--:--')}</span></td>
-                        <td><span class="cell-wrap cell-muted">${escapeHtml(track.source || 'unknown')}</span></td>
+                        <td><span class="tag tag-source">${escapeHtml(track.source || 'unknown')}</span></td>
                         <td>${streamId ? `<code class="drive-code" title="${escapeHtml(streamId)}">${escapeHtml(shortId)}</code>` : ''}</td>
                     </tr>
                 `;
@@ -414,12 +502,18 @@
         function renderPlaylistDetail() {
             const playlist = allPlaylists.find(pl => pl.id === selectedPlaylistId);
             if (!playlist) {
-                playlistDetail.innerHTML = '<div class="empty-state">Select a playlist to view its songs.</div>';
+                playlistDetail.innerHTML = `
+                    <div class="empty-state">
+                        <svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="currentColor" stroke-width="1.5" style="color: var(--text-dim); margin-bottom: 12px;">
+                            <path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle>
+                        </svg>
+                        <p style="font-weight: 500;">Select a playlist from the catalog to browse its tracks.</p>
+                    </div>`;
                 return;
             }
             const tracks = playlist.tracks || [];
             const sourceLink = playlist.source_url
-                ? `<a class="source-link" href="${escapeHtml(playlist.source_url)}" target="_blank" rel="noreferrer">Open Source</a>`
+                ? `<a class="source-link" href="${escapeHtml(playlist.source_url)}" target="_blank" rel="noreferrer">Open Source Link &rarr;</a>`
                 : '';
             playlistDetail.innerHTML = `
                 <div class="detail-head">
