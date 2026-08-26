@@ -420,7 +420,7 @@ def run_playlist_import(playlist_id, batch_size=15, source_override=None):
                 
                 logger.info(f"Processing playlist track: {title} by {artist}")
                 
-                from scraper.state_manager import is_duplicate, load_state
+                from scraper.state_manager import find_duplicate_track, load_state
                 track_to_check = {
                     "title": title,
                     "artist": artist,
@@ -431,13 +431,21 @@ def run_playlist_import(playlist_id, batch_size=15, source_override=None):
                         scraper_state = load_state()
                     except Exception:
                         scraper_state = {}
-                    is_dup = is_duplicate(track_to_check, scraper_state, existing_tracks)
+                    duplicate_track = find_duplicate_track(track_to_check, scraper_state, existing_tracks)
                 except Exception as e:
                     mark_failed_and_raise(e)
                 
-                if is_dup:
-                    logger.info(f"Skipping duplicate: {title}")
+                if duplicate_track:
                     state["skipped"] += 1
+                    existing_drive_id = duplicate_track.get("driveFileId") or duplicate_track.get("id")
+                    if existing_drive_id:
+                        try:
+                            add_track_to_playlist(playlist_id, existing_drive_id)
+                            logger.info(f"Duplicate '{title}' already exists as {existing_drive_id} — linked to playlist {playlist_id} instead of re-downloading")
+                        except Exception as link_err:
+                            logger.warning(f"Found duplicate '{title}' but failed to link it to playlist {playlist_id}: {link_err}")
+                    else:
+                        logger.warning(f"Found duplicate '{title}' but could not resolve its driveFileId — skipping link, playlist will not include it")
                 else:
                     local_file_path = None
                     drive_file_id_upload = None

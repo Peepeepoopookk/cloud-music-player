@@ -44,7 +44,7 @@ load_dotenv(dotenv_path=os.path.join(project_root, '.env'))
 from scraper.spotify_charts import build_song_pool, detect_track_language
 from scraper.metadata_enricher import enrich_track_metadata
 from scraper.downloader import download_track
-from scraper.drive_uploader import upload_track, bulk_update_database, get_db_file_id, fetch_album_art
+from scraper.drive_uploader import upload_track, bulk_update_database, get_db_file_id, fetch_album_art, sync_database_lite
 from scraper.album_art_resolver import resolve_album_art_with_details
 from scraper.duration_resolver import resolve_duration_with_details
 from scraper.gemini_import_pipeline import GEMINI_IMPORT_BATCH_SIZE, apply_gemini_to_import_batch
@@ -64,7 +64,9 @@ from scraper.state_manager import (
 
 def upload_database_json_locked(db_file_id, db_data, parent_id):
     with library_write_lock("database"):
-        return upload_json(db_file_id, db_data, 'database.json', parent_id=parent_id)
+        result = upload_json(db_file_id, db_data, 'database.json', parent_id=parent_id)
+    sync_database_lite(db_data, parent_id)
+    return result
 
 def determine_language_from_source(source, fallback="unknown"):
     """Legacy helper for fallback"""

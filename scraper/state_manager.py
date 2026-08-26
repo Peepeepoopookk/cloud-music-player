@@ -191,30 +191,28 @@ def is_pool_expired(state):
         logger.error(f"is_pool_expired: Error checking pool expiration: {e}. Treating as expired.", exc_info=True)
         return True
 
-def is_duplicate(track, state, database_tracks):
+def find_duplicate_track(track, state, database_tracks):
     """
-    checks all three layers:
+    checks all three layers and returns the matching track dict from database_tracks, or None:
        - Spotify ID match against state downloaded_ids AND database_tracks
        - Exact title + artist match against database_tracks
        - Fuzzy match using difflib against database_tracks title+artist, threshold 0.85
-       - Returns True if any layer matches
     """
     title = (track.get("title") or "").strip()
     artist = (track.get("artist") or "").strip()
-    logger.info(f"is_duplicate: Checking duplicates for track '{title}' by '{artist}'")
+    logger.info(f"find_duplicate_track: Checking duplicates for track '{title}' by '{artist}'")
 
     spotify_id = track.get("spotify_id")
-    downloaded_ids = state.get("downloaded_ids", [])
+    downloaded_ids = state.get("downloaded_ids", []) if isinstance(state, dict) else []
+    database_tracks = database_tracks or []
     
     # Layer 1: Spotify ID match against state downloaded_ids AND database_tracks
     if spotify_id:
-        if spotify_id in downloaded_ids:
-            logger.info(f"is_duplicate: Duplicate detected in Layer 1 (State Spotify ID Match): {spotify_id}")
-            return True
         for db_track in database_tracks:
             if db_track.get("spotify_id") == spotify_id:
-                logger.info(f"is_duplicate: Duplicate detected in Layer 1 (DB Spotify ID Match): {spotify_id}")
-                return True
+                logger.info(f"find_duplicate_track: Duplicate detected in Layer 1 (DB Spotify ID Match): {spotify_id}")
+                return db_track
+        # If in downloaded_ids but not in database_tracks, fall through to next layers
 
     # Normalize track parameters for string comparisons
     norm_title = title.lower()
@@ -228,18 +226,28 @@ def is_duplicate(track, state, database_tracks):
         
         # Layer 2: Exact title + artist match against database_tracks
         if norm_title == db_title and norm_artist == db_artist:
-            logger.info(f"is_duplicate: Duplicate detected in Layer 2 (Exact Title + Artist Match): '{title}' by '{artist}'")
-            return True
+            logger.info(f"find_duplicate_track: Duplicate detected in Layer 2 (Exact Title + Artist Match): '{title}' by '{artist}'")
+            return db_track
 
         # Layer 3: Fuzzy match using difflib against database_tracks title+artist, threshold 0.85
         matcher = difflib.SequenceMatcher(None, norm_track_str, db_track_str)
         ratio = matcher.ratio()
         if ratio >= 0.85:
-            logger.info(f"is_duplicate: Duplicate detected in Layer 3 (Fuzzy Match ratio={ratio:.3f} >= 0.85 with '{db_track.get('title')} by {db_track.get('artist')}')")
-            return True
+            logger.info(f"find_duplicate_track: Duplicate detected in Layer 3 (Fuzzy Match ratio={ratio:.3f} >= 0.85 with '{db_track.get('title')} by {db_track.get('artist')}')")
+            return db_track
 
-    logger.info(f"is_duplicate: No duplicate found for '{title}' by '{artist}'")
-    return False
+    logger.info(f"find_duplicate_track: No duplicate found for '{title}' by '{artist}'")
+    return None
+
+def is_duplicate(track, state, database_tracks):
+    """
+    checks all three layers:
+       - Spotify ID match against state downloaded_ids AND database_tracks
+       - Exact title + artist match against database_tracks
+       - Fuzzy match using difflib against database_tracks title+artist, threshold 0.85
+       - Returns True if any layer matches
+    """
+    return find_duplicate_track(track, state, database_tracks) is not None
 
 def get_effective_pool(state, database_tracks, songs_per_run):
     """

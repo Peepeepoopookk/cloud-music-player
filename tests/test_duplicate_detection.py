@@ -63,6 +63,50 @@ class DuplicateDetectionTests(unittest.TestCase):
         self.assertEqual(preview["already_in_library"], 1)
         self.assertEqual(preview["new_tracks_importable"], 2)
 
+    def test_find_duplicate_track_layers(self):
+        from scraper.state_manager import find_duplicate_track, is_duplicate
+
+        db_tracks = [
+            {"id": "drive_id_1", "driveFileId": "drive_id_1", "title": "Levitating", "artist": "Dua Lipa", "spotify_id": "sp_123"},
+            {"id": "drive_id_2", "driveFileId": "drive_id_2", "title": "Shape of You", "artist": "Ed Sheeran", "spotify_id": "sp_456"},
+            {"id": "drive_id_3", "driveFileId": "drive_id_3", "title": "Billie Jean", "artist": "Michael Jackson", "spotify_id": "sp_789"},
+        ]
+        state = {"downloaded_ids": ["sp_123", "sp_in_flight_999"]}
+
+        # Layer 1: Spotify ID match
+        cand1 = {"title": "Different Title", "artist": "Different Artist", "spotify_id": "sp_123"}
+        match1 = find_duplicate_track(cand1, state, db_tracks)
+        self.assertIsNotNone(match1)
+        self.assertEqual(match1["driveFileId"], "drive_id_1")
+        self.assertTrue(is_duplicate(cand1, state, db_tracks))
+
+        # Layer 1: in downloaded_ids but not in db_tracks (falls through and returns None if no title/artist match)
+        cand_in_flight = {"title": "Unseen Song", "artist": "Unseen Artist", "spotify_id": "sp_in_flight_999"}
+        self.assertIsNone(find_duplicate_track(cand_in_flight, state, db_tracks))
+        self.assertFalse(is_duplicate(cand_in_flight, state, db_tracks))
+
+        # Layer 2: Exact title + artist match
+        cand2 = {"title": "shape of you", "artist": "ed sheeran", "spotify_id": "sp_different"}
+        match2 = find_duplicate_track(cand2, state, db_tracks)
+        self.assertIsNotNone(match2)
+        self.assertEqual(match2["driveFileId"], "drive_id_2")
+        self.assertTrue(is_duplicate(cand2, state, db_tracks))
+
+        # Layer 3: Fuzzy match (difflib ratio >= 0.85)
+        cand3 = {"title": "Billie Jean (Remastered)", "artist": "Michael Jackson", "spotify_id": None}
+        # "billie jean (remastered) michael jackson" vs "billie jean michael jackson"
+        # Let's test standard fuzzy match
+        cand_fuzzy = {"title": "Billie Jean", "artist": "Michael Jackson ", "spotify_id": None}
+        match3 = find_duplicate_track(cand_fuzzy, state, db_tracks)
+        self.assertIsNotNone(match3)
+        self.assertEqual(match3["driveFileId"], "drive_id_3")
+        self.assertTrue(is_duplicate(cand_fuzzy, state, db_tracks))
+
+        # Completely fresh song
+        cand_fresh = {"title": "Brand New Song", "artist": "Brand New Artist", "spotify_id": "sp_new"}
+        self.assertIsNone(find_duplicate_track(cand_fresh, state, db_tracks))
+        self.assertFalse(is_duplicate(cand_fresh, state, db_tracks))
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -24,7 +24,7 @@ from dashboard.drive_client import list_files, download_json, upload_json, delet
 from scraper.state_manager import load_config, save_config, load_state, save_state, is_duplicate
 from scraper.spotify_charts import get_track_by_spotify_url
 from scraper.downloader import download_track
-from scraper.drive_uploader import upload_track, update_database, normalize_database, audit_database_fields
+from scraper.drive_uploader import upload_track, update_database, normalize_database, audit_database_fields, sync_database_lite
 from scraper.metadata_enricher import enrich_track_metadata
 from scraper.main import run_full_enrichment_pass, run_complete_backfill
 from scraper.playlist_importer import get_playlist_preview, start_playlist_import, get_playlist_status, run_playlist_import
@@ -1099,6 +1099,7 @@ def delete_track(file_id):
 
             # 3. Save updated database.json back to Drive
             upload_json(db_file_id, db_data, 'database.json')
+            sync_database_lite(db_data)
             invalidate_db_cache()
 
             # 4. Delete media file from Drive; restore DB if media deletion fails.
@@ -1108,6 +1109,7 @@ def delete_track(file_id):
                 logger.error(f"Media delete failed for {file_id}; attempting database rollback.", exc_info=True)
                 try:
                     upload_json(db_file_id, original_db_data, 'database.json')
+                    sync_database_lite(original_db_data)
                     invalidate_db_cache()
                 except Exception as rollback_err:
                     logger.error(f"Database rollback failed after delete error for {file_id}: {rollback_err}", exc_info=True)
@@ -2380,6 +2382,53 @@ def get_playlists():
         return jsonify(playlists)
     except Exception as e:
         logger.error(f"Error in GET /api/playlists: {e}", exc_info=True)
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/tracks/<path:file_id>/lyrics', methods=['GET'])
+def get_track_lyrics(file_id):
+    """
+    GET /api/tracks/<file_id>/lyrics
+    Returns the lyrics, syncedLyrics, and lyricsStatus for a specific track.
+    Reuses get_database_cached() to avoid redundant Google Drive downloads.
+    """
+    try:
+        db_data = get_database_cached()
+        if not db_data:
+            return jsonify({"error": "Database not available"}), 503
+
+        tracks = []
+        if isinstance(db_data, list):
+            tracks = db_data
+        elif isinstance(db_data, dict):
+            if 'tracks' in db_data and isinstance(db_data['tracks'], list):
+                tracks = db_data['tracks']
+            else:
+                tracks = list(db_data.values())
+
+        target_track = None
+        target_file_id_str = str(file_id).strip()
+
+        for track in tracks:
+            if not isinstance(track, dict):
+                continue
+            tid = str(track.get('id') or track.get('driveFileId') or track.get('file_id') or track.get('spotify_id') or '')
+            if tid == target_file_id_str or str(track.get('driveFileId') or '') == target_file_id_str or str(track.get('id') or '') == target_file_id_str:
+                target_track = track
+                break
+
+        if not target_track:
+            return jsonify({"error": f"Track with ID '{file_id}' not found."}), 404
+
+        response = jsonify({
+            "lyrics": target_track.get("lyrics"),
+            "syncedLyrics": target_track.get("syncedLyrics"),
+            "lyricsStatus": target_track.get("lyricsStatus", "ok")
+        })
+        response.headers["Cache-Control"] = "public, max-age=86400"
+        return response
+
+    except Exception as e:
+        logger.error(f"Error in GET /api/tracks/{file_id}/lyrics: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/imported-playlists/details', methods=['GET'])

@@ -36,9 +36,91 @@ from scraper.track_utils import (
     utc_now_iso,
 )
 
+_cached_lite_file_id = None
+
+
+def build_lite_database(db_data):
+    """
+    Builds a copy of the database structure with 'lyrics' and 'syncedLyrics'
+    stripped from each track entry.
+    Preserves the exact top-level structure (list of track dicts or dict with 'tracks' key).
+    """
+    if isinstance(db_data, list):
+        return [
+            {k: v for k, v in track.items() if k not in ('lyrics', 'syncedLyrics')}
+            if isinstance(track, dict) else track
+            for track in db_data
+        ]
+    elif isinstance(db_data, dict) and isinstance(db_data.get("tracks"), list):
+        lite_dict = dict(db_data)
+        lite_dict["tracks"] = [
+            {k: v for k, v in track.items() if k not in ('lyrics', 'syncedLyrics')}
+            if isinstance(track, dict) else track
+            for track in db_data["tracks"]
+        ]
+        return lite_dict
+    elif isinstance(db_data, dict):
+        return {
+            k: ({ik: iv for ik, iv in v.items() if ik not in ('lyrics', 'syncedLyrics')} if isinstance(v, dict) else v)
+            for k, v in db_data.items()
+        }
+    return db_data
+
+
+def get_db_lite_file_id(parent_folder_id=None):
+    """
+    Finds or resolves the database_lite.json file ID on Google Drive.
+    Checks GDRIVE_DB_LITE_FILE_ID env var, then in-memory cache, then searches Drive folder.
+    Returns a tuple: (db_lite_file_id, parent_folder_id)
+    """
+    global _cached_lite_file_id
+    lite_file_id = os.environ.get('GDRIVE_DB_LITE_FILE_ID') or _cached_lite_file_id
+    folder_id = parent_folder_id or os.environ.get('GDRIVE_FOLDER_ID')
+
+    if lite_file_id:
+        return lite_file_id, folder_id
+
+    try:
+        if folder_id:
+            files = list_files(folder_id)
+            for f in files:
+                if f.get('name') == 'database_lite.json':
+                    lite_file_id = f.get('id')
+                    _cached_lite_file_id = lite_file_id
+                    logger.info(f"Found 'database_lite.json' with ID: {lite_file_id}")
+                    return lite_file_id, folder_id
+    except Exception as e:
+        logger.warning(f"Could not search for 'database_lite.json': {e}")
+
+    return None, folder_id
+
+
+def sync_database_lite(db_data, parent_folder_id=None):
+    """
+    Generates a lyrics-stripped database_lite.json and uploads it to Drive.
+    Runs asynchronously/safely without raising errors to ensure the primary
+    database.json upload is never interrupted or rolled back.
+    """
+    global _cached_lite_file_id
+    try:
+        lite_data = build_lite_database(db_data)
+        lite_file_id, target_parent = get_db_lite_file_id(parent_folder_id)
+        with library_write_lock("database_lite"):
+            res = upload_json(lite_file_id, lite_data, 'database_lite.json', parent_id=target_parent)
+            if res and isinstance(res, dict) and res.get('id'):
+                _cached_lite_file_id = res.get('id')
+                logger.info(f"Successfully synced database_lite.json to Google Drive (ID: {_cached_lite_file_id}).")
+            else:
+                logger.info("Successfully synced database_lite.json to Google Drive.")
+    except Exception as e:
+        logger.error(f"Failed to sync database_lite.json (non-fatal): {e}", exc_info=True)
+
+
 def upload_database_json_locked(db_file_id, db_data, parent_folder_id):
     with library_write_lock("database"):
-        return upload_json(db_file_id, db_data, 'database.json', parent_id=parent_folder_id)
+        result = upload_json(db_file_id, db_data, 'database.json', parent_id=parent_folder_id)
+    sync_database_lite(db_data, parent_folder_id)
+    return result
 
 
 def fetch_album_art(track_name, artist_name):
@@ -155,6 +237,7 @@ def update_database(drive_file_id, metadata):
                     db_data = replace_tracks(db_data, tracks, was_dict)
                     upload_json(db_file_id, db_data, 'database.json', parent_id=parent_folder_id)
                     logger.info(f"Merged duplicate track '{title}' by '{artist}' into existing database record ({reason}).")
+                    sync_database_lite(db_data, parent_folder_id)
                     return {"id": db_file_id, "duplicate": True, "merged": True, "track_id": existing_id}
                 logger.info(f"Skipped duplicate track '{title}' by '{artist}' ({reason}); database already has it.")
                 return {"id": db_file_id, "duplicate": True, "merged": False, "track_id": existing_id}
@@ -165,6 +248,7 @@ def update_database(drive_file_id, metadata):
             db_data = replace_tracks(db_data, tracks, was_dict)
             result = upload_json(db_file_id, db_data, 'database.json', parent_id=parent_folder_id)
             logger.info("Successfully updated database.json on Google Drive.")
+            sync_database_lite(db_data, parent_folder_id)
             return result
         
     except Exception as e:
@@ -234,6 +318,8 @@ def bulk_update_database(new_tracks):
                     result = upload_json(db_file_id, db_data, 'database.json', parent_id=parent_folder_id)
                     upload_succeeded = True if result else False
                     logger.info(f"Successfully bulk updated database.json. Inserted: {inserted}, merged: {merged}.")
+                    if upload_succeeded:
+                        sync_database_lite(db_data, parent_folder_id)
                 except Exception as e:
                     logger.error(f"Failed to upload bulk update to Drive: {e}", exc_info=True)
                     upload_succeeded = False
