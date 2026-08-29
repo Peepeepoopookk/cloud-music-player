@@ -9,6 +9,7 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseDownload, MediaInMemoryUpload, MediaFileUpload
 from googleapiclient.errors import HttpError
 import socket
+import threading
 
 # Add explicit timeout for all Google API HTTP requests to prevent hanging
 socket.setdefaulttimeout(60)
@@ -24,9 +25,9 @@ if not logger.handlers:
 
 SCOPES = ['https://www.googleapis.com/auth/drive']
 
-_cached_drive_service = None
 _cached_credentials = None
 _cached_token_path = None
+_thread_local = threading.local()
 
 def _initialize_oauth_from_env():
     """
@@ -62,22 +63,29 @@ _initialize_oauth_from_env()
 def get_drive_service(force_refresh=False):
     """
     Builds and returns an authenticated Google Drive API v3 service object using Service Account.
-    Caches the service and credentials at module level.
+    Caches credentials at module level and service object in threading.local() for thread isolation.
     """
-    global _cached_drive_service, _cached_credentials
-    if not force_refresh and _cached_drive_service is not None and _cached_credentials is not None:
+    global _cached_credentials
+    cached_service = getattr(_thread_local, 'drive_service', None)
+
+    if not force_refresh and cached_service is not None and _cached_credentials is not None:
         if _cached_credentials.valid:
-            return _cached_drive_service
+            return cached_service
         if _cached_credentials.expired:
             try:
                 _cached_credentials.refresh(Request())
                 if _cached_credentials.valid:
-                    _cached_drive_service = build('drive', 'v3', credentials=_cached_credentials)
-                    return _cached_drive_service
+                    new_service = build('drive', 'v3', credentials=_cached_credentials)
+                    _thread_local.drive_service = new_service
+                    return new_service
             except Exception as e:
                 logger.warning(f"Failed to refresh cached service account credentials: {e}")
-                _cached_drive_service = None
+                _thread_local.drive_service = None
                 _cached_credentials = None
+    elif not force_refresh and _cached_credentials is not None and _cached_credentials.valid:
+        new_service = build('drive', 'v3', credentials=_cached_credentials)
+        _thread_local.drive_service = new_service
+        return new_service
 
     credentials = None
     try:
@@ -115,7 +123,7 @@ def get_drive_service(force_refresh=False):
             raise ValueError("No valid service account credentials found. Please set GOOGLE_SERVICE_ACCOUNT env var or provide service_account.json.")
 
         service = build('drive', 'v3', credentials=credentials)
-        _cached_drive_service = service
+        _thread_local.drive_service = service
         _cached_credentials = credentials
         return service
 
@@ -126,16 +134,19 @@ def get_drive_service(force_refresh=False):
 def get_oauth_drive_service(force_refresh=False):
     """
     Builds and returns an authenticated Google Drive API v3 service object using OAuth 2.0.
-    Caches the service object and credentials at module level (singleton) to avoid rebuilding on every call.
-    If the cached token is expired, refreshes it automatically and rebuilds the service.
+    Caches credentials at module level (thread-safe) and the built service object in threading.local()
+    so each thread gets and reuses its own thread-safe Resource instance without cross-thread SSL socket collisions.
+    If the shared credentials are expired, refreshes them and rebuilds the current thread's service instance.
     Falls back to service account authentication if OAuth is unavailable.
     """
-    global _cached_drive_service, _cached_credentials, _cached_token_path
+    global _cached_credentials, _cached_token_path
 
-    # Check if we have a valid cached service and credentials
-    if not force_refresh and _cached_drive_service is not None and _cached_credentials is not None:
+    cached_service = getattr(_thread_local, 'oauth_drive_service', None)
+
+    # Check if we have a valid cached service for this thread and valid shared credentials
+    if not force_refresh and cached_service is not None and _cached_credentials is not None:
         if _cached_credentials.valid:
-            return _cached_drive_service
+            return cached_service
 
         # Token is expired — refresh it
         if _cached_credentials.expired:
@@ -154,13 +165,18 @@ def get_oauth_drive_service(force_refresh=False):
                     _cached_credentials.refresh(Request())
 
                 if _cached_credentials.valid:
-                    _cached_drive_service = build('drive', 'v3', credentials=_cached_credentials)
-                    logger.info("Rebuilt cached Drive service with refreshed credentials.")
-                    return _cached_drive_service
+                    new_service = build('drive', 'v3', credentials=_cached_credentials)
+                    _thread_local.oauth_drive_service = new_service
+                    logger.info("Rebuilt thread-local Drive service with refreshed credentials.")
+                    return new_service
             except Exception as e:
                 logger.error(f"Failed to refresh cached credentials: {e}. Re-authenticating from scratch...")
-                _cached_drive_service = None
+                _thread_local.oauth_drive_service = None
                 _cached_credentials = None
+    elif not force_refresh and _cached_credentials is not None and _cached_credentials.valid:
+        new_service = build('drive', 'v3', credentials=_cached_credentials)
+        _thread_local.oauth_drive_service = new_service
+        return new_service
 
     credentials = None
     project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -195,11 +211,11 @@ def get_oauth_drive_service(force_refresh=False):
     if credentials and credentials.valid:
         try:
             service = build('drive', 'v3', credentials=credentials)
-            _cached_drive_service = service
+            _thread_local.oauth_drive_service = service
             _cached_credentials = credentials
             _cached_token_path = token_path
             logger.info("Authenticated successfully using OAuth credentials.")
-            return _cached_drive_service
+            return service
         except Exception as e:
             logger.error(f"Failed to build Drive service using OAuth credentials: {e}")
             
