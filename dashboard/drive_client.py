@@ -24,6 +24,10 @@ if not logger.handlers:
 
 SCOPES = ['https://www.googleapis.com/auth/drive']
 
+_cached_drive_service = None
+_cached_credentials = None
+_cached_token_path = None
+
 def _initialize_oauth_from_env():
     """
     Checks for OAUTH_TOKEN and OAUTH_CREDENTIALS environment variables.
@@ -55,11 +59,26 @@ def _initialize_oauth_from_env():
 # Run initialization once on module import
 _initialize_oauth_from_env()
 
-def get_drive_service():
+def get_drive_service(force_refresh=False):
     """
-    Builds and returns an authenticated Google Drive API v3 service object.
-    Checks GOOGLE_SERVICE_ACCOUNT env var first, falling back to service_account.json in root.
+    Builds and returns an authenticated Google Drive API v3 service object using Service Account.
+    Caches the service and credentials at module level.
     """
+    global _cached_drive_service, _cached_credentials
+    if not force_refresh and _cached_drive_service is not None and _cached_credentials is not None:
+        if _cached_credentials.valid:
+            return _cached_drive_service
+        if _cached_credentials.expired:
+            try:
+                _cached_credentials.refresh(Request())
+                if _cached_credentials.valid:
+                    _cached_drive_service = build('drive', 'v3', credentials=_cached_credentials)
+                    return _cached_drive_service
+            except Exception as e:
+                logger.warning(f"Failed to refresh cached service account credentials: {e}")
+                _cached_drive_service = None
+                _cached_credentials = None
+
     credentials = None
     try:
         # 1. Try environment variable
@@ -77,7 +96,6 @@ def get_drive_service():
         # 2. Try local fallback file
         if not credentials:
             # Look in the project root (assumed to be parent directory or current directory)
-            # Checking root directory path or just 'service_account.json'
             fallback_paths = [
                 'service_account.json',
                 os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'service_account.json')
@@ -97,18 +115,53 @@ def get_drive_service():
             raise ValueError("No valid service account credentials found. Please set GOOGLE_SERVICE_ACCOUNT env var or provide service_account.json.")
 
         service = build('drive', 'v3', credentials=credentials)
+        _cached_drive_service = service
+        _cached_credentials = credentials
         return service
 
     except Exception as e:
         logger.error(f"Error building Drive service client: {e}", exc_info=True)
         raise
 
-def get_oauth_drive_service():
+def get_oauth_drive_service(force_refresh=False):
     """
     Builds and returns an authenticated Google Drive API v3 service object using OAuth 2.0.
-    If the token is expired, refreshes it automatically and saves it.
+    Caches the service object and credentials at module level (singleton) to avoid rebuilding on every call.
+    If the cached token is expired, refreshes it automatically and rebuilds the service.
     Falls back to service account authentication if OAuth is unavailable.
     """
+    global _cached_drive_service, _cached_credentials, _cached_token_path
+
+    # Check if we have a valid cached service and credentials
+    if not force_refresh and _cached_drive_service is not None and _cached_credentials is not None:
+        if _cached_credentials.valid:
+            return _cached_drive_service
+
+        # Token is expired — refresh it
+        if _cached_credentials.expired:
+            try:
+                if hasattr(_cached_credentials, 'refresh_token') and _cached_credentials.refresh_token:
+                    logger.info("OAuth token is expired, refreshing automatically...")
+                    _cached_credentials.refresh(Request())
+                    if _cached_token_path:
+                        try:
+                            with open(_cached_token_path, 'w', encoding='utf-8') as token_file:
+                                token_file.write(_cached_credentials.to_json())
+                            logger.info("OAuth token refreshed and saved successfully.")
+                        except Exception as write_err:
+                            logger.warning(f"Could not save refreshed token to {_cached_token_path}: {write_err}")
+                else:
+                    _cached_credentials.refresh(Request())
+
+                if _cached_credentials.valid:
+                    _cached_drive_service = build('drive', 'v3', credentials=_cached_credentials)
+                    logger.info("Rebuilt cached Drive service with refreshed credentials.")
+                    return _cached_drive_service
+            except Exception as e:
+                logger.error(f"Failed to refresh cached credentials: {e}. Re-authenticating from scratch...")
+                _cached_drive_service = None
+                _cached_credentials = None
+
     credentials = None
     project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     token_paths = [
@@ -129,9 +182,12 @@ def get_oauth_drive_service():
                 if credentials.expired and credentials.refresh_token:
                     logger.info("OAuth token is expired, refreshing automatically...")
                     credentials.refresh(Request())
-                    with open(token_path, 'w') as token_file:
-                        token_file.write(credentials.to_json())
-                    logger.info("OAuth token refreshed and saved successfully.")
+                    try:
+                        with open(token_path, 'w', encoding='utf-8') as token_file:
+                            token_file.write(credentials.to_json())
+                        logger.info("OAuth token refreshed and saved successfully.")
+                    except Exception as write_err:
+                        logger.warning(f"Could not save refreshed token to {token_path}: {write_err}")
         except Exception as e:
             logger.error(f"Failed to load or refresh OAuth credentials from {token_path}: {e}")
             credentials = None
@@ -139,13 +195,16 @@ def get_oauth_drive_service():
     if credentials and credentials.valid:
         try:
             service = build('drive', 'v3', credentials=credentials)
+            _cached_drive_service = service
+            _cached_credentials = credentials
+            _cached_token_path = token_path
             logger.info("Authenticated successfully using OAuth credentials.")
-            return service
+            return _cached_drive_service
         except Exception as e:
             logger.error(f"Failed to build Drive service using OAuth credentials: {e}")
             
     logger.info("OAuth authentication unavailable or invalid. Falling back to Service Account.")
-    return get_drive_service()
+    return get_drive_service(force_refresh=force_refresh)
 
 def list_files(folder_id=None):
     """
@@ -251,7 +310,7 @@ def upload_json(file_id, data, filename, parent_id=None):
     try:
         service = get_oauth_drive_service()
         json_str = json.dumps(data, indent=2)
-        media = MediaInMemoryUpload(json_str.encode('utf-8'), mimetype='application/json', resumable=True)
+        media = MediaInMemoryUpload(json_str.encode('utf-8'), mimetype='application/json', resumable=False)
         
         if file_id:
             logger.info(f"Updating existing JSON file with ID: {file_id}")

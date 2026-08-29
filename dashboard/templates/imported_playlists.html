@@ -518,8 +518,19 @@
             playlistDetail.innerHTML = `
                 <div class="detail-head">
                     ${coverMarkup(playlist.cover_collage, 'detail-cover')}
-                    <div>
-                        <div class="detail-title">${escapeHtml(playlist.name)}</div>
+                    <div style="display: flex; flex-direction: column; width: 100%; min-width: 0;">
+                        <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap;">
+                            <div class="detail-title" style="flex: 1; min-width: 200px;">${escapeHtml(playlist.name)}</div>
+                            <button class="btn btn-danger" style="background: #ef4444; color: #ffffff; border: none; padding: 6px 14px; border-radius: var(--radius-md); font-size: 0.82rem; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0; box-shadow: 0 1px 2px rgba(0,0,0,0.05);" onclick="deleteSelectedPlaylist('${escapeHtml(playlist.id)}', '${escapeHtml(playlist.name).replace(/'/g, "\\'")}')">
+                                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle;">
+                                    <polyline points="3 6 5 6 21 6"></polyline>
+                                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                    <line x1="10" y1="11" x2="10" y2="17"></line>
+                                    <line x1="14" y1="11" x2="14" y2="17"></line>
+                                </svg>
+                                Delete Playlist
+                            </button>
+                        </div>
                         <div class="detail-stats">
                             <span class="stat-pill">${playlist.resolved_tracks || 0} resolved songs</span>
                             <span class="stat-pill">${playlist.total_tracks || 0} total tracked</span>
@@ -558,6 +569,35 @@
                     </table>
                 </div>
             `;
+        }
+
+        async function deleteSelectedPlaylist(playlistId, playlistName) {
+            if (!playlistId) return;
+            const confirmed = confirm(`Delete '${playlistName}'?\n\nThis won't delete the downloaded songs, only this playlist.`);
+            if (!confirmed) return;
+
+            try {
+                const response = await fetch(`/api/playlists/${encodeURIComponent(playlistId)}`, {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data.error || 'Failed to delete playlist');
+                }
+
+                // Remove from in-memory array and update UI seamlessly
+                allPlaylists = allPlaylists.filter(pl => pl.id !== playlistId);
+                if (selectedPlaylistId === playlistId) {
+                    selectedPlaylistId = allPlaylists[0]?.id || null;
+                }
+                const totalTracks = allPlaylists.reduce((acc, p) => acc + (p.resolved_tracks || 0), 0);
+                playlistSummary.textContent = `${allPlaylists.length} playlists · ${totalTracks} resolved songs`;
+                renderPlaylistList();
+                renderPlaylistDetail();
+            } catch (error) {
+                alert(`Error deleting playlist: ${error.message}`);
+            }
         }
 
         async function loadPlaylists() {

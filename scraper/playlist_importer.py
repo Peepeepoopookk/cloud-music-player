@@ -7,6 +7,8 @@ import time
 import re
 import requests
 import threading
+import concurrent.futures
+from datetime import datetime
 
 # Add project root to sys.path to resolve imports when run directly or as a module
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -17,10 +19,27 @@ from .downloader import download_track
 from .utils import extract_duration
 from .drive_uploader import upload_track, update_database, get_db_file_id
 from dashboard.drive_client import upload_json, download_json, search_file_by_name
-from .playlist_manager import add_playlist, add_track_to_playlist
+from .playlist_manager import (
+    add_playlist,
+    add_track_to_playlist,
+    bulk_add_tracks_to_playlist,
+    find_playlist_by_source_url,
+)
 from .track_utils import extract_tracks, check_playlist_duplicates
 
 logger = logging.getLogger(__name__)
+
+class PlaylistAlreadyDownloadedError(Exception):
+    """
+    Raised when attempting to import a Spotify playlist that is already fully present in playlists.json.
+    """
+    def __init__(self, playlist_id, playlist_name, total_tracks):
+        self.playlist_id = playlist_id
+        self.playlist_name = playlist_name
+        self.total_tracks = total_tracks
+        super().__init__(
+            f"Playlist '{playlist_name}' (ID: {playlist_id}) is already fully downloaded with {total_tracks} tracks."
+        )
 
 # In-memory dictionary to track active playlist imports without querying Google Drive repeatedly
 active_imports = {}
@@ -145,14 +164,73 @@ def start_playlist_import(playlist_url, batch_size=15, device_id=None, imported_
     if not parent_id:
         raise ValueError("Could not determine database folder for playlist import state.")
 
-    # Call add_playlist to create a record and get a unified UUID for this import session
-    playlist_id = add_playlist(
-        name=preview["playlist_name"],
-        source_url=playlist_url,
-        cover_image=None,
-        imported_via=imported_via,
-        requestedBy=device_id
-    )
+    # Check for existing playlist with same source_url
+    existing_playlist = find_playlist_by_source_url(playlist_url)
+    if existing_playlist:
+        existing_id = existing_playlist.get("id")
+        existing_track_ids = set(existing_playlist.get("track_ids", []))
+        existing_total = int(existing_playlist.get("total_tracks") or len(existing_track_ids))
+
+        # Resolve existing playlist's track_ids to spotify_ids using database.json
+        existing_spotify_ids = set()
+        if db_file_id and existing_track_ids:
+            try:
+                db_data = download_json(db_file_id)
+                db_tracks, _ = extract_tracks(db_data)
+                for t in db_tracks:
+                    tid = t.get("driveFileId") or t.get("id")
+                    if tid in existing_track_ids:
+                        sp_id = t.get("spotify_id")
+                        if sp_id and sp_id != "UnknownID":
+                            existing_spotify_ids.add(sp_id)
+            except Exception as e:
+                logger.warning(f"Failed to resolve existing playlist tracks from database.json: {e}")
+
+        # Build set of current Spotify track IDs from embed scrape
+        scraped_spotify_ids = {
+            t.get("spotify_id") for t in tracks if t.get("spotify_id") and t.get("spotify_id") != "UnknownID"
+        }
+
+        # Case 1: Fully downloaded already (all current Spotify tracks are in existing playlist)
+        if scraped_spotify_ids and scraped_spotify_ids.issubset(existing_spotify_ids):
+            logger.info(
+                f"Playlist '{preview['playlist_name']}' (ID: {existing_id}) is already fully up to date "
+                f"({len(existing_spotify_ids)} existing tracks, all {len(scraped_spotify_ids)} current Spotify tracks present). Skipping import."
+            )
+            raise PlaylistAlreadyDownloadedError(
+                playlist_id=existing_id,
+                playlist_name=existing_playlist.get("name") or preview["playlist_name"],
+                total_tracks=existing_total
+            )
+
+        # Fallback check if scraped_spotify_ids was empty (e.g. embed failed to parse IDs)
+        if not scraped_spotify_ids and existing_total >= len(tracks):
+            logger.info(
+                f"Playlist '{preview['playlist_name']}' (ID: {existing_id}) count matches ({existing_total}/{len(tracks)}). Skipping import."
+            )
+            raise PlaylistAlreadyDownloadedError(
+                playlist_id=existing_id,
+                playlist_name=existing_playlist.get("name") or preview["playlist_name"],
+                total_tracks=existing_total
+            )
+
+        # Case 2: Partially downloaded (new/rotated tracks present on Spotify)
+        # Reuse existing playlist_id without creating a new UUID or duplicate record
+        missing_count = len(scraped_spotify_ids - existing_spotify_ids) if scraped_spotify_ids else len(tracks)
+        logger.info(
+            f"Found existing playlist '{preview['playlist_name']}' (ID: {existing_id}) "
+            f"with {missing_count} new/missing track(s) out of {len(tracks)} on Spotify. Resuming import with existing ID."
+        )
+        playlist_id = existing_id
+    else:
+        # Case 3: Brand new playlist
+        playlist_id = add_playlist(
+            name=preview["playlist_name"],
+            source_url=playlist_url,
+            cover_image=None,
+            imported_via=imported_via,
+            requestedBy=device_id
+        )
 
     state = {
         "playlist_id": playlist_id,
@@ -169,6 +247,9 @@ def start_playlist_import(playlist_url, batch_size=15, device_id=None, imported_
         "gemini_status": "idle",
         "gemini_last_batch": None,
         "status": "running",
+        "started_at": datetime.utcnow().isoformat() + 'Z',
+        "completed_at": None,
+        "duration_seconds": None,
         "device_id": device_id,
         "tracks": tracks
     }
@@ -184,6 +265,32 @@ def start_playlist_import(playlist_url, batch_size=15, device_id=None, imported_
     create_cancel_event(playlist_id)
     return playlist_id
 
+def _format_duration(duration_seconds):
+    if duration_seconds is None:
+        return "0s"
+    minutes = int(duration_seconds) // 60
+    seconds = int(duration_seconds) % 60
+    if minutes > 0:
+        return f"{minutes}m {seconds}s"
+    return f"{seconds}s"
+
+def _finalize_state_timing(st, status=None):
+    from datetime import datetime
+    now_iso = datetime.utcnow().isoformat() + 'Z'
+    st["completed_at"] = now_iso
+    if status:
+        st["status"] = status
+    started_iso = st.get("started_at")
+    if started_iso:
+        try:
+            start_dt = datetime.fromisoformat(started_iso.replace("Z", "+00:00"))
+            end_dt = datetime.fromisoformat(now_iso.replace("Z", "+00:00"))
+            duration_sec = max(0, int((end_dt - start_dt).total_seconds()))
+            st["duration_seconds"] = duration_sec
+        except Exception:
+            pass
+    return st
+
 def get_playlist_status(playlist_id):
     if playlist_id in active_imports:
         return active_imports[playlist_id]
@@ -196,6 +303,7 @@ def get_playlist_status(playlist_id):
 
 def run_playlist_import(playlist_id, batch_size=15, source_override=None):
     from datetime import datetime
+    start_time_iso = datetime.utcnow().isoformat() + 'Z'
     logger.info(f"Starting background playlist import for {playlist_id}")
     state_filename = f"playlist_import_state_{playlist_id}.json"
     
@@ -204,16 +312,25 @@ def run_playlist_import(playlist_id, batch_size=15, source_override=None):
 
     def mark_failed_and_raise(e):
         logger.error(f"Error during playlist import: {e}", exc_info=True)
-        if file_id and parent_id:
+        st = active_imports.get(playlist_id)
+        if not st and file_id and parent_id:
             try:
                 st = download_json(file_id)
-                if not is_cancel_requested(playlist_id) and st.get("status") not in ("cancelled", "completed"):
-                    st["status"] = "failed"
-                    st["error"] = str(e)
-                    active_imports[playlist_id] = st
+            except Exception:
+                st = {}
+        if not st:
+            st = {"playlist_id": playlist_id, "status": "failed", "error": str(e), "started_at": start_time_iso}
+        if not is_cancel_requested(playlist_id) and st.get("status") not in ("cancelled", "completed"):
+            _finalize_state_timing(st, "failed")
+            st["error"] = str(e)
+            active_imports[playlist_id] = st
+            dur_str = _format_duration(st.get("duration_seconds"))
+            logger.error(f"Playlist import for {playlist_id} failed after {dur_str}: {e}")
+            if file_id and parent_id:
+                try:
                     upload_json(file_id, st, state_filename, parent_id=parent_id)
-            except Exception as write_err:
-                logger.error(f"Failed to write failure state: {write_err}")
+                except Exception as write_err:
+                    logger.error(f"Failed to write failure state: {write_err}")
         raise e
 
     try:
@@ -260,6 +377,9 @@ def run_playlist_import(playlist_id, batch_size=15, source_override=None):
             except Exception as e:
                 logger.warning(f"Failed to fetch existing tracks: {e}")
                 
+        import_lock = threading.RLock()
+        in_flight_tracks = set()
+
         from scraper.gemini_import_pipeline import GEMINI_IMPORT_BATCH_SIZE
         pending_gemini_batch = []
         deferred_gemini_tracks = []
@@ -267,165 +387,136 @@ def run_playlist_import(playlist_id, batch_size=15, source_override=None):
         def cancel_check():
             return is_cancel_requested(playlist_id)
             
-        def _flush_gemini_batch(batch, state, final_attempt=False, force=False, skip_ai=False):
-            if (cancel_check() and not force) or not batch:
-                return
-                 
-            logger.info(f"Flushing batch of {len(batch)} tracks to Gemini Judge and Database...")
-            deferred_for_retry = False
-            try:
-                from scraper.drive_uploader import bulk_update_database
+        def _check_and_sync_state_locked(cursor, is_batch_end=False):
+            should_sync = ((cursor + 1) % 5 == 0) or is_batch_end
+            if should_sync and file_id and parent_id:
+                try:
+                    upload_json(file_id, state, state_filename, parent_id=parent_id)
+                except Exception as e:
+                    logger.warning(f"Could not persist state checkpoint at cursor {cursor}: {e}")
 
-                if skip_ai:
-                    state["gemini_status"] = "fallback"
+        def _flush_gemini_batch(batch, state, final_attempt=False, force=False, skip_ai=False):
+            with import_lock:
+                if (cancel_check() and not force) or not batch:
+                    return
+                     
+                logger.info(f"Flushing batch of {len(batch)} tracks to Gemini Judge and Database...")
+                deferred_for_retry = False
+                try:
+                    from scraper.drive_uploader import bulk_update_database
+
+                    if skip_ai:
+                        state["gemini_status"] = "fallback"
+                        state["gemini_pending"] = len(batch)
+                        state["gemini_deferred"] = len(deferred_gemini_tracks)
+                        active_imports[playlist_id] = state
+                        try:
+                            upload_json(file_id, state, state_filename, parent_id=parent_id)
+                        except Exception as e:
+                            logger.warning(f"Could not persist fallback flush state before database write: {e}")
+
+                        if not bulk_update_database(batch):
+                            raise RuntimeError("bulk_update_database returned False during playlist fallback batch flush")
+                        batch_ids = []
+                        for t in batch:
+                            existing_tracks.append(t)
+                            tid = t.get("id") or t.get("driveFileId")
+                            if tid:
+                                batch_ids.append(tid)
+                        if batch_ids:
+                            bulk_add_tracks_to_playlist(playlist_id, batch_ids)
+                        return
+
+                    from scraper.gemini_import_pipeline import apply_gemini_to_import_batch
+
+                    state["gemini_status"] = "processing"
                     state["gemini_pending"] = len(batch)
                     state["gemini_deferred"] = len(deferred_gemini_tracks)
                     active_imports[playlist_id] = state
                     try:
                         upload_json(file_id, state, state_filename, parent_id=parent_id)
                     except Exception as e:
-                        logger.warning(f"Could not persist fallback flush state before database write: {e}")
+                        logger.warning(f"Could not persist Gemini processing state before batch flush: {e}")
+
+                    gemini_stats = apply_gemini_to_import_batch(batch, logger, force_fields=["language", "genre"])
+                    state["gemini_last_batch"] = {
+                        "submitted": gemini_stats.get("tracks_submitted", len(batch)),
+                        "tracksUpdated": gemini_stats.get("tracks_updated", 0),
+                        "fieldsUpdated": gemini_stats.get("fields_updated", 0),
+                        "languageUpdates": gemini_stats.get("language_updates", 0),
+                        "genreUpdates": gemini_stats.get("genre_updates", 0),
+                        "errors": gemini_stats.get("errors", []),
+                    }
+
+                    if gemini_stats.get("ai_failed") and not final_attempt:
+                        deferred_gemini_tracks.extend(batch)
+                        state["gemini_deferred"] = len(deferred_gemini_tracks)
+                        state["gemini_status"] = "deferred"
+                        active_imports[playlist_id] = state
+                        deferred_for_retry = True
+                        logger.warning(
+                            f"Gemini failed for {len(batch)} playlist import tracks. "
+                            "Deferring database write until all downloads finish, then retrying AI."
+                        )
+                        return
+
+                    if gemini_stats.get("ai_failed") and final_attempt:
+                        logger.error(
+                            f"Final Gemini retry failed for {len(batch)} playlist import tracks. "
+                            "Writing fallback metadata so downloaded songs are not lost."
+                        )
 
                     if not bulk_update_database(batch):
-                        raise RuntimeError("bulk_update_database returned False during playlist fallback batch flush")
+                        raise RuntimeError("bulk_update_database returned False during playlist Gemini batch flush")
+                    batch_ids = []
                     for t in batch:
                         existing_tracks.append(t)
-                        add_track_to_playlist(playlist_id, t["id"])
-                    return
-
-                from scraper.gemini_import_pipeline import apply_gemini_to_import_batch
-
-                state["gemini_status"] = "processing"
-                state["gemini_pending"] = len(batch)
-                state["gemini_deferred"] = len(deferred_gemini_tracks)
-                active_imports[playlist_id] = state
-                try:
-                    upload_json(file_id, state, state_filename, parent_id=parent_id)
-                except Exception as e:
-                    logger.warning(f"Could not persist Gemini processing state before batch flush: {e}")
-
-                gemini_stats = apply_gemini_to_import_batch(batch, logger, force_fields=["language", "genre"])
-                state["gemini_last_batch"] = {
-                    "submitted": gemini_stats.get("tracks_submitted", len(batch)),
-                    "tracksUpdated": gemini_stats.get("tracks_updated", 0),
-                    "fieldsUpdated": gemini_stats.get("fields_updated", 0),
-                    "languageUpdates": gemini_stats.get("language_updates", 0),
-                    "genreUpdates": gemini_stats.get("genre_updates", 0),
-                    "errors": gemini_stats.get("errors", []),
-                }
-
-                if gemini_stats.get("ai_failed") and not final_attempt:
-                    deferred_gemini_tracks.extend(batch)
+                        tid = t.get("id") or t.get("driveFileId")
+                        if tid:
+                            batch_ids.append(tid)
+                    if batch_ids:
+                        bulk_add_tracks_to_playlist(playlist_id, batch_ids)
+                        
+                except Exception as batch_err:
+                    mark_failed_and_raise(batch_err)
+                finally:
+                    batch.clear()
+                    state["gemini_pending"] = 0
                     state["gemini_deferred"] = len(deferred_gemini_tracks)
-                    state["gemini_status"] = "deferred"
-                    active_imports[playlist_id] = state
-                    deferred_for_retry = True
-                    logger.warning(
-                        f"Gemini failed for {len(batch)} playlist import tracks. "
-                        "Deferring database write until all downloads finish, then retrying AI."
-                    )
-                    return
+                    state["gemini_status"] = "deferred" if deferred_for_retry or deferred_gemini_tracks else "idle"
+                    try:
+                        upload_json(file_id, state, state_filename, parent_id=parent_id)
+                    except Exception as e:
+                        logger.error(f"Failed to update state after flush: {e}")
 
-                if gemini_stats.get("ai_failed") and final_attempt:
-                    logger.error(
-                        f"Final Gemini retry failed for {len(batch)} playlist import tracks. "
-                        "Writing fallback metadata so downloaded songs are not lost."
-                    )
-
-                if not bulk_update_database(batch):
-                    raise RuntimeError("bulk_update_database returned False during playlist Gemini batch flush")
-                for t in batch:
-                    existing_tracks.append(t)
-                    add_track_to_playlist(playlist_id, t["id"])
-                    
-            except Exception as batch_err:
-                mark_failed_and_raise(batch_err)
-            finally:
-                batch.clear()
-                state["gemini_pending"] = 0
-                state["gemini_deferred"] = len(deferred_gemini_tracks)
-                state["gemini_status"] = "deferred" if deferred_for_retry or deferred_gemini_tracks else "idle"
-                try:
-                    upload_json(file_id, state, state_filename, parent_id=parent_id)
-                except Exception as e:
-                    logger.error(f"Failed to update state after flush: {e}")
-                    
-        while True:
-            try:
-                file_id = search_file_by_name(state_filename, parent_id)
-                if not file_id:
-                    logger.error(f"State file {state_filename} not found.")
-                    break
-                state = download_json(file_id)
-            except Exception as e:
-                mark_failed_and_raise(e)
-                break
+        def _process_track_worker(cursor, t, idx, batch_len):
+            title = t.get("title")
+            artist = t.get("artist")
+            spotify_id = t.get("spotify_id")
+            source = source_override or state.get("source_label") or f"Playlist Import ({state.get('playlist_name')})"
+            device_id = state.get("device_id")
 
             if is_cancel_requested(playlist_id):
-                if state:
-                    state["status"] = "cancelled"
-                active_imports[playlist_id] = state or {"status": "cancelled"}
-                logger.info(f"Import {playlist_id} is cancelled. Stopping.")
-                break
+                with import_lock:
+                    state["processed"] = max(state.get("processed", 0), cursor + 1)
+                    active_imports[playlist_id] = state
+                return
 
-            active_imports[playlist_id] = state
-            if state.get("status") in ("cancelled", "completed"):
-                logger.info(f"Import {playlist_id} is {state.get('status')}. Stopping.")
-                break
-                
-            processed = state.get("processed", 0)
-            tracks = state.get("tracks", [])
-            
-            if processed >= len(tracks):
-                try:
-                    latest_state = download_json(file_id)
-                    if is_cancel_requested(playlist_id) or (latest_state and latest_state.get("status") == "cancelled"):
-                        if latest_state:
-                            latest_state["status"] = "cancelled"
-                        active_imports[playlist_id] = latest_state or {"status": "cancelled"}
-                        break
-                    latest_state["status"] = "completed"
-                    active_imports[playlist_id] = latest_state
-                    upload_json(file_id, latest_state, state_filename, parent_id=parent_id)
-                except Exception as e:
-                    mark_failed_and_raise(e)
-                break
-                
-            batch = tracks[processed:processed+batch_size]
-            for idx, t in enumerate(batch):
-                cursor = processed + idx
-                
-                try:
-                    state = download_json(file_id)
-                except Exception as e:
-                    mark_failed_and_raise(e)
+            logger.info(f"Processing playlist track: {title} by {artist}")
 
-                if is_cancel_requested(playlist_id):
-                    if state:
-                        state["status"] = "cancelled"
-                    active_imports[playlist_id] = state or {"status": "cancelled"}
-                    logger.info(f"Import cancelled by user at cursor {cursor}")
-                    break
+            from scraper.state_manager import find_duplicate_track, load_state
+            track_to_check = {
+                "title": title,
+                "artist": artist,
+                "spotify_id": spotify_id
+            }
 
-                active_imports[playlist_id] = state
-                if state.get("status") == "cancelled":
-                    logger.info(f"Import cancelled by user at cursor {cursor}")
-                    break
-                    
-                title = t.get("title")
-                artist = t.get("artist")
-                spotify_id = t.get("spotify_id")
-                source = source_override or state.get("source_label") or f"Playlist Import ({state.get('playlist_name')})"
-                device_id = state.get("device_id")
-                
-                logger.info(f"Processing playlist track: {title} by {artist}")
-                
-                from scraper.state_manager import find_duplicate_track, load_state
-                track_to_check = {
-                    "title": title,
-                    "artist": artist,
-                    "spotify_id": spotify_id
-                }
+            norm_title_artist = f"{(title or '').lower().strip()}__{(artist or '').lower().strip()}"
+            sp_key = f"sp:{spotify_id}" if (spotify_id and spotify_id not in {"UnknownID", "unknown", "None", ""}) else None
+            keys_to_register = [k for k in [sp_key, norm_title_artist] if k]
+
+            # 1. Dedup check + in-flight check & registration under lock
+            with import_lock:
                 try:
                     try:
                         scraper_state = load_state()
@@ -433,103 +524,207 @@ def run_playlist_import(playlist_id, batch_size=15, source_override=None):
                         scraper_state = {}
                     duplicate_track = find_duplicate_track(track_to_check, scraper_state, existing_tracks)
                 except Exception as e:
-                    mark_failed_and_raise(e)
-                
+                    logger.error(f"Error checking duplicates for {title}: {e}")
+                    duplicate_track = None
+
                 if duplicate_track:
                     state["skipped"] += 1
+                    active_imports[playlist_id] = state
                     existing_drive_id = duplicate_track.get("driveFileId") or duplicate_track.get("id")
                     if existing_drive_id:
                         try:
-                            add_track_to_playlist(playlist_id, existing_drive_id)
+                            bulk_add_tracks_to_playlist(playlist_id, [existing_drive_id])
                             logger.info(f"Duplicate '{title}' already exists as {existing_drive_id} — linked to playlist {playlist_id} instead of re-downloading")
                         except Exception as link_err:
                             logger.warning(f"Found duplicate '{title}' but failed to link it to playlist {playlist_id}: {link_err}")
                     else:
-                        logger.warning(f"Found duplicate '{title}' but could not resolve its driveFileId — skipping link, playlist will not include it")
-                else:
-                    local_file_path = None
-                    drive_file_id_upload = None
-                    queued_for_database = False
-                    def track_cancel_check():
-                        return is_cancel_requested(playlist_id)
-                        
-                    try:
-                        unique_id = spotify_id if (spotify_id and spotify_id not in {"UnknownID", "unknown", "None", ""}) else uuid.uuid4().hex
-                        local_file_path = download_track(title, artist, temp_dir, track_id=unique_id, cancel_check_callback=track_cancel_check)
-                        enriched = enrich_track_metadata(title, artist, local_file_path=local_file_path, source=source)
-                        drive_file_id_upload = upload_track(local_file_path)
-                        
-                        metadata = {
-                            "title": title,
-                            "artist": artist,
-                            "album": enriched.get("album", "Single"),
-                            "genre": enriched.get("genre", "Unknown"),
-                            "duration": enriched.get("duration", "--:--"),
-                            "durationSeconds": enriched.get("durationSeconds"),
-                            "spotify_id": spotify_id,
-                            "album_art": enriched.get("album_art"),
-                            "language": enriched.get("language", "unknown"),
-                            "source": source,
-                            "requestedBy": device_id,
-                            "lyrics": enriched.get("lyrics"),
-                            "syncedLyrics": enriched.get("syncedLyrics"),
-                            "lyricsStatus": enriched.get("lyricsStatus", "ok")
-                        }
-                        metadata["id"] = drive_file_id_upload
-                        metadata["driveFileId"] = drive_file_id_upload
-                        
-                        pending_gemini_batch.append(metadata)
-                        queued_for_database = True
-                        state["gemini_pending"] = len(pending_gemini_batch)
-                        
-                        if len(pending_gemini_batch) >= GEMINI_IMPORT_BATCH_SIZE:
-                            _flush_gemini_batch(pending_gemini_batch, state)
-                            
-                        state["downloaded"] += 1
-                    except Exception as e:
-                        if str(e) == "Download cancelled by user":
-                            logger.info(f"Download for {title} aborted: {e}")
-                        else:
-                            logger.error(f"Failed to process {title}: {e}", exc_info=True)
-                            state["failed"] += 1
-                        if drive_file_id_upload and not queued_for_database:
-                            try:
-                                from dashboard.drive_client import delete_file
-                                delete_file(drive_file_id_upload)
-                                logger.info(f"Deleted uploaded media {drive_file_id_upload} after playlist track failure.")
-                            except Exception as cleanup_err:
-                                logger.warning(f"Could not delete uploaded media {drive_file_id_upload} after playlist track failure: {cleanup_err}")
-                    finally:
-                        if local_file_path and os.path.exists(local_file_path):
-                            try:
-                                os.remove(local_file_path)
-                            except:
-                                pass
-                                
-                try:
-                    latest_state = download_json(file_id)
-                    if is_cancel_requested(playlist_id) or (latest_state and latest_state.get("status") == "cancelled"):
-                        if latest_state:
-                            latest_state["status"] = "cancelled"
-                        active_imports[playlist_id] = latest_state or {"status": "cancelled"}
-                        logger.info(f"Import cancelled by user at cursor {cursor}")
-                        break
-                    latest_state["processed"] = cursor + 1
-                    latest_state["downloaded"] = state["downloaded"]
-                    latest_state["skipped"] = state["skipped"]
-                    latest_state["failed"] = state["failed"]
-                    state = latest_state
+                        logger.warning(f"Found duplicate '{title}' but could not resolve its driveFileId — skipping link")
+                    state["processed"] = max(state.get("processed", 0), cursor + 1)
+                    _check_and_sync_state_locked(cursor, idx == batch_len - 1)
+                    return
+
+                # In-flight check: another concurrent worker in this run is already processing this exact song
+                if any(k in in_flight_tracks for k in keys_to_register):
+                    logger.info(f"Track '{title}' by '{artist}' is already in-flight in another worker — skipping concurrent duplicate download")
+                    state["skipped"] += 1
+                    state["processed"] = max(state.get("processed", 0), cursor + 1)
                     active_imports[playlist_id] = state
-                    upload_json(file_id, state, state_filename, parent_id=parent_id)
+                    _check_and_sync_state_locked(cursor, idx == batch_len - 1)
+                    return
+
+                # Register in-flight
+                for k in keys_to_register:
+                    in_flight_tracks.add(k)
+
+            # 2. Download, enrich, upload (Executed concurrently without holding lock)
+            local_file_path = None
+            drive_file_id_upload = None
+            queued_for_database = False
+
+            def track_cancel_check():
+                return is_cancel_requested(playlist_id)
+
+            try:
+                if is_cancel_requested(playlist_id):
+                    logger.info(f"Download for {title} aborted: Cancel requested")
+                    return
+
+                unique_id = spotify_id if (spotify_id and spotify_id not in {"UnknownID", "unknown", "None", ""}) else uuid.uuid4().hex
+                local_file_path = download_track(title, artist, temp_dir, track_id=unique_id, cancel_check_callback=track_cancel_check)
+                enriched = enrich_track_metadata(title, artist, local_file_path=local_file_path, source=source)
+                drive_file_id_upload = upload_track(local_file_path)
+
+                metadata = {
+                    "title": title,
+                    "artist": artist,
+                    "album": enriched.get("album", "Single"),
+                    "genre": enriched.get("genre", "Unknown"),
+                    "duration": enriched.get("duration", "--:--"),
+                    "durationSeconds": enriched.get("durationSeconds"),
+                    "spotify_id": spotify_id,
+                    "album_art": enriched.get("album_art"),
+                    "language": enriched.get("language", "unknown"),
+                    "source": source,
+                    "requestedBy": device_id,
+                    "lyrics": enriched.get("lyrics"),
+                    "syncedLyrics": enriched.get("syncedLyrics"),
+                    "lyricsStatus": enriched.get("lyricsStatus", "ok")
+                }
+                metadata["id"] = drive_file_id_upload
+                metadata["driveFileId"] = drive_file_id_upload
+
+                # 3. Update pending_gemini_batch and state under lock
+                with import_lock:
+                    pending_gemini_batch.append(metadata)
+                    queued_for_database = True
+                    state["gemini_pending"] = len(pending_gemini_batch)
+                    state["downloaded"] += 1
+                    state["processed"] = max(state.get("processed", 0), cursor + 1)
+                    active_imports[playlist_id] = state
+
+                    if len(pending_gemini_batch) >= GEMINI_IMPORT_BATCH_SIZE:
+                        _flush_gemini_batch(pending_gemini_batch, state)
+
+                    _check_and_sync_state_locked(cursor, idx == batch_len - 1)
+
+            except Exception as e:
+                if str(e) == "Download cancelled by user":
+                    logger.info(f"Download for {title} aborted: {e}")
+                else:
+                    logger.error(f"Failed to process {title}: {e}", exc_info=True)
+                    with import_lock:
+                        state["failed"] += 1
+                        state["processed"] = max(state.get("processed", 0), cursor + 1)
+                        active_imports[playlist_id] = state
+                        _check_and_sync_state_locked(cursor, idx == batch_len - 1)
+
+                # Cleanup uploaded media if failed before database queue
+                if drive_file_id_upload and not queued_for_database:
+                    try:
+                        from dashboard.drive_client import delete_file
+                        delete_file(drive_file_id_upload)
+                        logger.info(f"Deleted uploaded media {drive_file_id_upload} after playlist track failure.")
+                    except Exception as cleanup_err:
+                        logger.warning(f"Could not delete uploaded media {drive_file_id_upload} after playlist track failure: {cleanup_err}")
+            finally:
+                # 4. Deregister in-flight and cleanup local temp audio file
+                with import_lock:
+                    for k in keys_to_register:
+                        in_flight_tracks.discard(k)
+                if local_file_path and os.path.exists(local_file_path):
+                    try:
+                        os.remove(local_file_path)
+                    except Exception:
+                        pass
+                    
+        while True:
+            if not file_id and parent_id:
+                try:
+                    file_id = search_file_by_name(state_filename, parent_id)
                 except Exception as e:
                     mark_failed_and_raise(e)
+                    break
 
-        try:
-            final_state = download_json(file_id) if file_id else {}
-        except Exception as e:
-            logger.warning(f"Could not load final playlist state before batch cleanup: {e}")
-            final_state = active_imports.get(playlist_id, {})
+            with import_lock:
+                state = active_imports.get(playlist_id)
+                if not state and file_id:
+                    try:
+                        state = download_json(file_id)
+                        if state:
+                            active_imports[playlist_id] = state
+                    except Exception as e:
+                        mark_failed_and_raise(e)
+                        break
 
+                if not state:
+                    logger.error(f"State file {state_filename} not found.")
+                    break
+
+                if not state.get("started_at"):
+                    state["started_at"] = start_time_iso
+
+                if is_cancel_requested(playlist_id):
+                    state["status"] = "cancelled"
+                    active_imports[playlist_id] = state
+                    try:
+                        if file_id and parent_id:
+                            upload_json(file_id, state, state_filename, parent_id=parent_id)
+                    except Exception as e:
+                        logger.warning(f"Could not persist cancelled state: {e}")
+                    logger.info(f"Import {playlist_id} is cancelled. Stopping.")
+                    break
+
+                if state.get("status") in ("cancelled", "completed"):
+                    logger.info(f"Import {playlist_id} is {state.get('status')}. Stopping.")
+                    break
+                    
+                processed = state.get("processed", 0)
+                tracks = state.get("tracks", [])
+                
+                if processed >= len(tracks):
+                    if is_cancel_requested(playlist_id):
+                        state["status"] = "cancelled"
+                    else:
+                        state["status"] = "completed"
+                    active_imports[playlist_id] = state
+                    try:
+                        if file_id and parent_id:
+                            upload_json(file_id, state, state_filename, parent_id=parent_id)
+                    except Exception as e:
+                        mark_failed_and_raise(e)
+                    break
+                    
+                batch = tracks[processed:processed+batch_size]
+
+            batch_len = len(batch)
+            with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
+                futures = []
+                for idx, t in enumerate(batch):
+                    cursor = processed + idx
+                    if is_cancel_requested(playlist_id):
+                        break
+                    future = executor.submit(_process_track_worker, cursor, t, idx, batch_len)
+                    futures.append(future)
+
+                for future in concurrent.futures.as_completed(futures):
+                    try:
+                        future.result()
+                    except Exception as worker_err:
+                        logger.error(f"Worker task error in playlist import: {worker_err}", exc_info=True)
+
+            if is_cancel_requested(playlist_id):
+                with import_lock:
+                    state["status"] = "cancelled"
+                    active_imports[playlist_id] = state
+                    try:
+                        if file_id and parent_id:
+                            upload_json(file_id, state, state_filename, parent_id=parent_id)
+                    except Exception as e:
+                        logger.warning(f"Could not persist cancelled state: {e}")
+                logger.info(f"Import {playlist_id} is cancelled after batch. Stopping.")
+                break
+
+        final_state = active_imports.get(playlist_id, {})
         if is_cancel_requested(playlist_id):
             if final_state:
                 final_state["status"] = "cancelled"
@@ -562,8 +757,7 @@ def run_playlist_import(playlist_id, batch_size=15, source_override=None):
                 retry_chunk = deferred_gemini_tracks[:GEMINI_IMPORT_BATCH_SIZE]
                 retry_count = len(retry_chunk)
                 try:
-                    state = download_json(file_id)
-                    _flush_gemini_batch(retry_chunk, state, final_attempt=True)
+                    _flush_gemini_batch(retry_chunk, final_state, final_attempt=True)
                     del deferred_gemini_tracks[:retry_count]
                 except Exception as e:
                     logger.error(f"Failed to flush deferred Gemini playlist batch: {e}")
@@ -573,9 +767,32 @@ def run_playlist_import(playlist_id, batch_size=15, source_override=None):
         if pending_gemini_batch and not was_cancelled:
             logger.info(f"Flushing remaining {len(pending_gemini_batch)} tracks after main loop.")
             try:
-                state = download_json(file_id)
-                _flush_gemini_batch(pending_gemini_batch, state, final_attempt=True)
+                _flush_gemini_batch(pending_gemini_batch, final_state, final_attempt=True)
             except Exception as e:
                 logger.error(f"Failed to flush leftover Gemini batch: {e}")
+
+        # Final state persistence guarantee & duration logging
+        target_status = "cancelled" if was_cancelled else ("failed" if final_state.get("status") == "failed" else "completed")
+        _finalize_state_timing(final_state, target_status)
+        active_imports[playlist_id] = final_state
+
+        dur_str = _format_duration(final_state.get("duration_seconds"))
+        if was_cancelled:
+            logger.info(
+                f"Playlist import for {playlist_id} cancelled after {dur_str} "
+                f"(processed: {final_state.get('processed', 0)}/{final_state.get('total_tracks', 0)})."
+            )
+        elif target_status == "completed":
+            logger.info(
+                f"Playlist import completed in {dur_str} "
+                f"(processed: {final_state.get('processed', 0)}, downloaded: {final_state.get('downloaded', 0)}, "
+                f"skipped: {final_state.get('skipped', 0)}, failed: {final_state.get('failed', 0)})."
+            )
+
+        if file_id and parent_id:
+            try:
+                upload_json(file_id, final_state, state_filename, parent_id=parent_id)
+            except Exception as e:
+                logger.warning(f"Could not persist final playlist import state: {e}")
     finally:
         cleanup_cancel_event(playlist_id)

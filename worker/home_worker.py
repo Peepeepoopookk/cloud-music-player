@@ -18,7 +18,12 @@ from dashboard.drive_client import delete_file, download_json
 from scraper.downloader import download_track
 from scraper.drive_uploader import get_db_file_id, update_database, upload_track
 from scraper.metadata_enricher import enrich_track_metadata
-from scraper.playlist_importer import get_playlist_status, run_playlist_import, start_playlist_import
+from scraper.playlist_importer import (
+    get_playlist_status,
+    run_playlist_import,
+    start_playlist_import,
+    PlaylistAlreadyDownloadedError,
+)
 from scraper.spotify_charts import get_track_by_spotify_url
 from scraper.state_manager import is_duplicate, load_state, save_state
 from scraper.track_utils import find_existing_track
@@ -162,11 +167,26 @@ def process_song(job):
 
 
 def process_playlist(job):
-    playlist_id = start_playlist_import(
-        job["url"],
-        device_id=job.get("requested_by"),
-        imported_via="home_worker",
-    )
+    try:
+        playlist_id = start_playlist_import(
+            job["url"],
+            device_id=job.get("requested_by"),
+            imported_via="home_worker",
+        )
+    except PlaylistAlreadyDownloadedError as e:
+        logger.info("Playlist is already fully downloaded: %s", e)
+        return {
+            "type": "playlist",
+            "playlist_id": e.playlist_id,
+            "playlist_name": e.playlist_name,
+            "status": "already_downloaded",
+            "processed": e.total_tracks,
+            "downloaded": 0,
+            "skipped": e.total_tracks,
+            "failed": 0,
+            "total_tracks": e.total_tracks,
+        }
+
     run_playlist_import(playlist_id, source_override="home_relay_playlist")
     state = get_playlist_status(playlist_id)
     if state.get("status") == "failed":

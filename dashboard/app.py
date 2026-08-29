@@ -26,8 +26,13 @@ from scraper.spotify_charts import get_track_by_spotify_url
 from scraper.downloader import download_track
 from scraper.drive_uploader import upload_track, update_database, normalize_database, audit_database_fields, sync_database_lite
 from scraper.metadata_enricher import enrich_track_metadata
-from scraper.main import run_full_enrichment_pass, run_complete_backfill
-from scraper.playlist_importer import get_playlist_preview, start_playlist_import, get_playlist_status, run_playlist_import
+from scraper.playlist_importer import (
+    get_playlist_preview,
+    start_playlist_import,
+    get_playlist_status,
+    run_playlist_import,
+    PlaylistAlreadyDownloadedError,
+)
 from scraper.spotify_library_importer import (
     build_spotify_authorize_url,
     diagnose_spotify_library_playlist,
@@ -231,7 +236,7 @@ SPOTIFY_PLAYLIST_URL_PATTERN = re.compile(
     r'(?:https?://open\.spotify\.com/(?:intl-[a-z]{2}/)?playlist/[A-Za-z0-9]+[^\s<>"\']*|spotify:playlist:[A-Za-z0-9]+)',
     re.IGNORECASE
 )
-PLAYLIST_QUEUE_TERMINAL_STATUSES = {"completed", "failed", "cancelled"}
+PLAYLIST_QUEUE_TERMINAL_STATUSES = {"completed", "failed", "cancelled", "already_downloaded"}
 MAX_DASHBOARD_PLAYLIST_QUEUE_SIZE = 5
 
 def _utc_now_iso():
@@ -356,7 +361,7 @@ def _start_dashboard_playlist_queue(urls):
 def _recalculate_playlist_queue_counts_unlocked(pl_state):
     queue = pl_state.get("queue") or []
     pl_state["queue_total"] = len(queue)
-    pl_state["queue_completed"] = sum(1 for item in queue if item.get("status") == "completed")
+    pl_state["queue_completed"] = sum(1 for item in queue if item.get("status") in ("completed", "already_downloaded"))
     pl_state["queue_failed"] = sum(1 for item in queue if item.get("status") == "failed")
     pl_state["queue_cancelled"] = sum(1 for item in queue if item.get("status") == "cancelled")
     pl_state["downloaded"] = sum(int(item.get("downloaded") or 0) for item in queue)
@@ -548,6 +553,21 @@ def _run_dashboard_playlist_queue(queue_id):
                 if final_status == "failed":
                     current_item["error"] = import_state.get("error") or "Playlist import failed"
                 _recalculate_playlist_queue_counts_unlocked(pl_state)
+        except PlaylistAlreadyDownloadedError as e:
+            logger.info(f"Dashboard playlist queue item already downloaded: {e}")
+            with playlist_queue_lock:
+                pl_state = background_tasks["playlist_import"]
+                if pl_state.get("queue_id") != queue_id:
+                    return
+                current_item = pl_state["queue"][next_index]
+                current_item["playlist_id"] = e.playlist_id
+                current_item["playlist_name"] = e.playlist_name
+                current_item["total_tracks"] = e.total_tracks
+                current_item["processed"] = e.total_tracks
+                current_item["status"] = "already_downloaded"
+                current_item["finished_at"] = _utc_now_iso()
+                _recalculate_playlist_queue_counts_unlocked(pl_state)
+            continue
         except Exception as e:
             logger.error(f"Dashboard playlist queue item failed: {e}", exc_info=True)
             if playlist_id:
@@ -1869,7 +1889,16 @@ def app_playlist_start():
         if app_import_tasks[task_key].get("status") == "running":
             return jsonify({"error": "A playlist import is already in progress for this device"}), 409
 
-        playlist_id = start_playlist_import(url, device_id=device_id, imported_via="app")
+        try:
+            playlist_id = start_playlist_import(url, device_id=device_id, imported_via="app")
+        except PlaylistAlreadyDownloadedError as e:
+            return jsonify({
+                "status": "already_downloaded",
+                "message": f"Playlist '{e.playlist_name}' is already fully downloaded ({e.total_tracks} tracks).",
+                "playlist_id": e.playlist_id,
+                "playlist_name": e.playlist_name,
+                "total_tracks": e.total_tracks
+            }), 200
 
         app_import_tasks[task_key]["status"] = "running"
         app_import_tasks[task_key]["started_at"] = datetime.datetime.utcnow().isoformat() + 'Z'
@@ -2532,6 +2561,29 @@ def get_single_playlist(playlist_id):
         return jsonify(playlist)
     except Exception as e:
         logger.error(f"Error in GET /api/playlists/{playlist_id}: {e}", exc_info=True)
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/playlists/<playlist_id>', methods=['DELETE'])
+@app.route('/api/playlists/<playlist_id>/delete', methods=['POST', 'DELETE'])
+@require_write_auth()
+def delete_playlist_route(playlist_id):
+    try:
+        from scraper.playlist_manager import delete_playlist, get_playlist
+        existing = get_playlist(playlist_id)
+        if not existing:
+            return jsonify({"error": f"Playlist with ID '{playlist_id}' not found."}), 404
+
+        deleted = delete_playlist(playlist_id)
+        if not deleted:
+            return jsonify({"error": f"Failed to delete playlist '{playlist_id}'."}), 404
+
+        return jsonify({
+            "status": "success",
+            "message": f"Playlist '{existing.get('name', playlist_id)}' deleted successfully.",
+            "playlist_id": playlist_id
+        })
+    except Exception as e:
+        logger.error(f"Error in DELETE /api/playlists/{playlist_id}: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/artists', methods=['GET'])
