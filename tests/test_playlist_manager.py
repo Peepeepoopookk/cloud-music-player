@@ -711,6 +711,37 @@ class PlaylistManagerOptimizationTests(unittest.TestCase):
         data_post = res_post_delete.get_json()
         self.assertEqual(data_post.get("status"), "success")
 
+    @patch("scraper.playlist_manager.get_db_file_id", return_value=("db_123", "parent_123"))
+    @patch("scraper.playlist_manager.load_playlists")
+    @patch("scraper.playlist_manager.download_json")
+    def test_get_playlist_database_caching_21_calls(self, mock_download, mock_load, mock_get_db):
+        import scraper.playlist_manager as pm
+        pm.invalidate_db_cache()
+
+        mock_load.return_value = [
+            {"id": f"pl_{i}", "name": f"Playlist {i}", "track_ids": [f"track_{i}"]}
+            for i in range(25)
+        ]
+        mock_download.return_value = {
+            "tracks": [
+                {"id": f"track_{i}", "title": f"Song {i}", "artist": "Artist"}
+                for i in range(25)
+            ]
+        }
+
+        # Perform 21 calls to get_playlist for different playlist IDs
+        results = [pm.get_playlist(f"pl_{i}") for i in range(21)]
+
+        # All 21 playlists must have their tracks populated correctly
+        self.assertEqual(len(results), 21)
+        for i, res in enumerate(results):
+            self.assertIsNotNone(res)
+            self.assertEqual(len(res["tracks"]), 1)
+            self.assertEqual(res["tracks"][0]["title"], f"Song {i}")
+
+        # database.json must only be downloaded ONCE across all 21 calls (cached in memory)
+        self.assertEqual(mock_download.call_count, 1)
+
 
 if __name__ == "__main__":
     unittest.main()

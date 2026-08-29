@@ -211,6 +211,35 @@ def add_track_to_playlist(playlist_id, drive_file_id):
         return
     bulk_add_tracks_to_playlist(playlist_id, [drive_file_id])
 
+import time
+
+_db_cache = {"data": None, "timestamp": 0}
+CACHE_TTL_SECONDS = 30
+
+def get_database_cached(db_file_id=None):
+    """
+    Returns database.json data, caching it in memory for CACHE_TTL_SECONDS (30s)
+    to prevent hammering Google Drive under concurrent playlist reads.
+    """
+    global _db_cache
+    if not db_file_id:
+        db_file_id, _ = get_db_file_id()
+    if not db_file_id:
+        return None
+
+    if _db_cache["data"] is not None and (time.time() - _db_cache["timestamp"]) < CACHE_TTL_SECONDS:
+        return _db_cache["data"]
+
+    data = download_json(db_file_id)
+    _db_cache["data"] = data
+    _db_cache["timestamp"] = time.time()
+    return data
+
+def invalidate_db_cache():
+    global _db_cache
+    _db_cache["data"] = None
+    _db_cache["timestamp"] = 0
+
 def get_playlist(playlist_id):
     """
     Returns a single playlist with full track objects populated by
@@ -231,7 +260,7 @@ def get_playlist(playlist_id):
     all_tracks = []
     if db_file_id:
         try:
-            db_data = download_json(db_file_id)
+            db_data = get_database_cached(db_file_id)
             if isinstance(db_data, list):
                 all_tracks = db_data
             elif isinstance(db_data, dict) and 'tracks' in db_data:
@@ -240,7 +269,18 @@ def get_playlist(playlist_id):
             logger.error(f"Failed to load database.json: {e}")
             raise
             
-    track_map = {t.get("driveFileId", t.get("id")): t for t in all_tracks}
+    track_map = {}
+    for t in all_tracks:
+        if not isinstance(t, dict):
+            continue
+        key1 = t.get("driveFileId")
+        key2 = t.get("id")
+        if key1:
+            track_map[key1] = t
+            track_map[str(key1)] = t
+        if key2:
+            track_map[key2] = t
+            track_map[str(key2)] = t
     
     populated_tracks = []
     for tid in target_playlist.get("track_ids", []):
