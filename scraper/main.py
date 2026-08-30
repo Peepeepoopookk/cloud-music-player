@@ -1122,6 +1122,7 @@ def run_complete_backfill():
     from scraper.drive_uploader import audit_database_fields
     from scraper.metadata_enricher import detect_script_language_from_lyrics
     from scraper.spotify_charts import detect_track_language
+    from scraper.track_utils import normalize_artist
     
     logger.info("Starting run_complete_backfill...")
     db_file_id, parent_id = get_db_file_id()
@@ -1294,8 +1295,17 @@ def run_complete_backfill():
                             best_match = None
                             best_score = -1.0
                             norm_title = title.lower()
+                            norm_artist = normalize_artist(artist) if artist else ""
                             for item in items:
-                                s = difflib.SequenceMatcher(None, norm_title, (item.get("trackName") or "").lower()).ratio()
+                                item_title = (item.get("trackName") or "").lower()
+                                item_artist = normalize_artist(item.get("artistName")) if item.get("artistName") else ""
+                                if norm_artist and item_artist:
+                                    artist_ratio = difflib.SequenceMatcher(None, norm_artist, item_artist).ratio()
+                                    if norm_artist in item_artist or item_artist in norm_artist:
+                                        artist_ratio = max(artist_ratio, 0.86)
+                                    if artist_ratio < 0.3:
+                                        continue
+                                s = difflib.SequenceMatcher(None, norm_title, item_title).ratio()
                                 if s > best_score:
                                     best_score = s
                                     best_match = item

@@ -6,6 +6,7 @@ import difflib
 import logging
 
 from scraper.album_art_resolver import find_itunes_track_metadata, resolve_album_art
+from scraper.lyrics_resolver import resolve_lyrics_with_details
 from scraper.spotify_charts import detect_track_language
 from scraper.utils import extract_duration
 
@@ -238,13 +239,15 @@ def enrich_track_metadata(title, artist, local_file_path=None, source="unknown")
             metadata["album_art"] = fallback_art
             logger.info("metadata_enricher: Album art found via fallback resolver.")
 
-    # 3. Lyrics API (lrclib.net)
+    # 3. Lyrics Resolver (Multi-source: LRCLIB, JioSaavn, Lyrics.ovh)
     d_sec = metadata["durationSeconds"] or 0
     alb = metadata["album"]
     if alb == "Unknown Album":
         alb = ""
         
-    plain_lyrics, synced_lyrics = fetch_lrclib_lyrics(title, artist, alb, d_sec)
+    lyrics_res = resolve_lyrics_with_details(title, artist, album=alb, duration_seconds=d_sec)
+    plain_lyrics = lyrics_res.get("lyrics")
+    synced_lyrics = lyrics_res.get("syncedLyrics")
     metadata["lyrics"] = plain_lyrics
     metadata["syncedLyrics"] = synced_lyrics
 

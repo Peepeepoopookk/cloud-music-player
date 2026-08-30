@@ -104,7 +104,7 @@ def _lrclib_search(title, artist, min_score=1.18):
     return None
 
 
-def _lrclib_title_search(title, artist, min_score=0.86):
+def _lrclib_title_search(title, artist, min_score=0.86, min_artist_ratio=0.3):
     response = requests.get(
         "https://lrclib.net/api/search",
         params={"q": title},
@@ -116,12 +116,19 @@ def _lrclib_title_search(title, artist, min_score=0.86):
     best = None
     best_score = 0.0
     title_norm = normalize_text(title)
+    artist_norm = normalize_artist(artist)
     for item in response.json() or []:
         item_title = normalize_text(item.get("trackName"))
-        score = difflib.SequenceMatcher(None, title_norm, item_title).ratio() if item_title else 0.0
-        if artist:
-            artist_score = _score(title, artist, item.get("trackName"), item.get("artistName"))
-            score = max(score, artist_score / 2)
+        if not item_title:
+            continue
+        item_artist_norm = normalize_artist(item.get("artistName"))
+        if artist_norm and item_artist_norm:
+            artist_ratio = difflib.SequenceMatcher(None, artist_norm, item_artist_norm).ratio()
+            if artist_norm in item_artist_norm or item_artist_norm in artist_norm:
+                artist_ratio = max(artist_ratio, 0.86)
+            if artist_ratio < min_artist_ratio:
+                continue
+        score = difflib.SequenceMatcher(None, title_norm, item_title).ratio()
         if score > best_score:
             best = item
             best_score = score
