@@ -184,8 +184,11 @@ def require_admin_auth(func):
 
 import time
 
-_db_cache = {"data": None, "timestamp": 0}
-CACHE_TTL_SECONDS = 30
+_db_cache = {"data": None, "lite_data": None, "timestamp": 0}
+CACHE_TTL_SECONDS = 60
+
+_media_size_cache = {"map": {}, "timestamp": 0}
+MEDIA_SIZE_CACHE_TTL_SECONDS = 600
 
 def get_database_cached():
     db_file_id = get_db_file_id()
@@ -197,12 +200,64 @@ def get_database_cached():
         
     data = download_json(db_file_id)
     _db_cache["data"] = data
+    try:
+        from scraper.drive_uploader import build_lite_database
+        _db_cache["lite_data"] = build_lite_database(data)
+    except Exception as e:
+        logger.warning(f"Could not build lite database for cache: {e}")
+        _db_cache["lite_data"] = data
     _db_cache["timestamp"] = time.time()
     return data
 
+def get_database_lite_cached():
+    now = time.time()
+    if _db_cache.get("lite_data") is not None and (now - _db_cache["timestamp"]) < CACHE_TTL_SECONDS:
+        return _db_cache["lite_data"]
+    
+    db_data = get_database_cached()
+    if not db_data:
+        return None
+    if _db_cache.get("lite_data") is not None:
+        return _db_cache["lite_data"]
+    try:
+        from scraper.drive_uploader import build_lite_database
+        lite = build_lite_database(db_data)
+        _db_cache["lite_data"] = lite
+        return lite
+    except Exception as e:
+        logger.warning(f"Could not build lite database fallback: {e}")
+        return db_data
+
+def get_media_size_map_cached(force_refresh=False):
+    global _media_size_cache
+    now = time.time()
+    if not force_refresh and _media_size_cache["map"] and (now - _media_size_cache["timestamp"]) < MEDIA_SIZE_CACHE_TTL_SECONDS:
+        return _media_size_cache["map"]
+        
+    media_folder_id = os.environ.get('GDRIVE_MEDIA_FOLDER_ID')
+    if not media_folder_id:
+        return _media_size_cache["map"]
+        
+    try:
+        media_files = list_files(media_folder_id)
+        size_map = {}
+        for f in media_files:
+            fid = f.get('id')
+            if fid:
+                size_map[fid] = f.get('size')
+        _media_size_cache["map"] = size_map
+        _media_size_cache["timestamp"] = now
+        return size_map
+    except Exception as e:
+        logger.error(f"Failed to list media files for size mapping: {e}")
+        return _media_size_cache["map"]
+
 def invalidate_db_cache():
     _db_cache["data"] = None
+    _db_cache["lite_data"] = None
     _db_cache["timestamp"] = 0
+    _media_size_cache["map"] = {}
+    _media_size_cache["timestamp"] = 0
 
 
 # Global background tasks state tracking
@@ -863,6 +918,21 @@ def index():
         return f"Error loading page: {str(e)}", 500
 
 
+@app.route('/listen', methods=['GET', 'HEAD'])
+def listen_page():
+    """
+    GET /listen — serves the public Spotify-style web music player
+    HEAD /listen — fast 200 response
+    """
+    if request.method == 'HEAD':
+        return ('', 200)
+    try:
+        return render_template('listen.html')
+    except Exception as e:
+        logger.error(f"Error rendering listen.html: {e}", exc_info=True)
+        return f"Error loading player: {str(e)}", 500
+
+
 @app.route('/admin')
 @require_admin_auth
 def admin_page():
@@ -1032,44 +1102,41 @@ def api_app_release():
 def get_tracks():
     """
     GET /api/tracks — fetches and returns the contents of database.json from Drive.
-    Also dynamically maps track file sizes from Drive.
+    Defaults to database_lite (lyrics stripped) for fast 2.8MB load.
+    Pass ?full=true to include lyrics and syncedLyrics.
+    Pass ?include_size=true to dynamically map file sizes from Drive.
     """
     try:
-        db_file_id = get_db_file_id()
-        if not db_file_id:
+        include_full = request.args.get('full', '').lower() in ('1', 'true', 'yes')
+        if include_full:
+            data = get_database_cached()
+        else:
+            data = get_database_lite_cached()
+            
+        if not data:
             return jsonify([])
-        data = download_json(db_file_id)
         
-        # Ensure it is a list
+        # Ensure it is a list of shallow copies so modifying track['size'] does not mutate cache
         tracks = []
         if isinstance(data, list):
-            tracks = data
+            tracks = [dict(t) if isinstance(t, dict) else t for t in data]
         elif isinstance(data, dict):
-            if 'tracks' in data and isinstance(data['tracks'], list):
-                tracks = data['tracks']
-            else:
-                tracks = list(data.values())
+            raw_tracks = data.get('tracks') if 'tracks' in data and isinstance(data['tracks'], list) else list(data.values())
+            tracks = [dict(t) if isinstance(t, dict) else t for t in raw_tracks]
         
-        # Query media folder files to map sizes dynamically
-        media_folder_id = os.environ.get('GDRIVE_MEDIA_FOLDER_ID')
-        media_files = []
-        if media_folder_id:
-            try:
-                media_files = list_files(media_folder_id)
-            except Exception as e:
-                logger.error(f"Failed to list media files for size mapping: {e}")
-                
-        # Create map of file ID to size
-        size_map = {}
-        for f in media_files:
-            fid = f.get('id')
-            if fid:
-                size_map[fid] = f.get('size')
-                
-        # Inject size into each track
-        for track in tracks:
-            fid = track.get('driveFileId') or track.get('id')
-            track['size'] = size_map.get(fid)
+        # Query media folder files to map sizes dynamically only if requested or already cached
+        include_size = request.args.get('include_size', '').lower() in ('1', 'true', 'yes')
+        size_map = None
+        if include_size:
+            size_map = get_media_size_map_cached()
+        elif _media_size_cache.get("map"):
+            size_map = _media_size_cache["map"]
+
+        if size_map:
+            for track in tracks:
+                if isinstance(track, dict):
+                    fid = track.get('driveFileId') or track.get('id')
+                    track['size'] = size_map.get(fid)
             
         return jsonify(tracks)
     except Exception as e:
@@ -1089,7 +1156,7 @@ def get_storage():
         last_updated = None
         if db_file_id:
             try:
-                db_data = download_json(db_file_id)
+                db_data = get_database_cached()
                 tracks = []
                 if isinstance(db_data, list):
                     tracks = db_data
@@ -2197,7 +2264,7 @@ def stream_track(drive_file_id):
             
         def generate():
             try:
-                for chunk in res.iter_content(chunk_size=40960):  # 40 KB chunk size
+                for chunk in res.iter_content(chunk_size=262144):  # 256 KB chunk size
                     if chunk:
                         yield chunk
             finally:
@@ -2622,7 +2689,8 @@ def get_imported_playlists_details():
 def get_single_playlist(playlist_id):
     try:
         from scraper.playlist_manager import get_playlist
-        playlist = get_playlist(playlist_id)
+        db_data = get_database_lite_cached()
+        playlist = get_playlist(playlist_id, db_data=db_data)
         if not playlist:
             return jsonify({"error": "Playlist not found"}), 404
         return jsonify(playlist)

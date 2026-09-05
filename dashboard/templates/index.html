@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -22,6 +22,7 @@
                 <span class="status-indicator-dot pulsing" id="status-dot"></span>
                 <span class="status-text" id="status-label">Checking Drive Connection...</span>
             </div>
+            <a href="/listen" style="background: var(--primary-color); color: #ffffff; text-decoration: none; font-size: 0.85rem; font-weight: 600; padding: 6px 14px; border-radius: 6px; box-shadow: 0 2px 8px rgba(193, 68, 14, 0.25); display: flex; align-items: center; gap: 6px;"><span>▶</span> Listen Online</a>
             <a href="/download" style="color: var(--text-secondary); text-decoration: none; font-size: 0.85rem; padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border); transition: color 0.2s;">Get App</a>
             <a href="/admin" style="color: var(--text-secondary); text-decoration: none; font-size: 0.85rem; padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border); transition: color 0.2s;">Admin</a>
         </div>
@@ -31,6 +32,10 @@
         <!-- Sidebar Navigation -->
         <aside class="sidebar" id="app-sidebar">
             <nav class="nav-menu">
+                <a href="/listen" class="nav-item" style="text-decoration: none; color: var(--primary-color); font-weight: 600;">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><polygon points="6 3 20 12 6 21 6 3"></polygon></svg>
+                    <span>Web Player</span>
+                </a>
                 <button class="nav-item active" id="nav-btn-library" data-target="section-library">
                     <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M9 18V5l12-2v13M9 9l12-2M9 18c0 1.66-1.34 3-3 3s-3-1.34-3-3 1.34-3 3-3 3 1.34 3 3zm12-2c0 1.66-1.34 3-3 3s-3-1.34-3-3 1.34-3 3-3 3 1.34 3 3z"/>

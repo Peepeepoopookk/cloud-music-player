@@ -27,14 +27,24 @@ def _find_playlists_file(parent_id, force_refresh=False):
     _cached_playlists_file_id = None
     return None
 
-def _load_playlists_unlocked(parent_id):
-    playlists_file_id = _find_playlists_file(parent_id)
+_playlists_cache = {"data": None, "timestamp": 0}
+PLAYLISTS_CACHE_TTL = 60
+
+def _load_playlists_unlocked(parent_id, force_refresh=False):
+    global _playlists_cache
+    now = datetime.datetime.utcnow().timestamp()
+    if not force_refresh and _playlists_cache["data"] is not None and (now - _playlists_cache["timestamp"]) < PLAYLISTS_CACHE_TTL:
+        return _playlists_cache["data"]
+
+    playlists_file_id = _find_playlists_file(parent_id, force_refresh=force_refresh)
     if not playlists_file_id:
         return []
 
     try:
         data = download_json(playlists_file_id)
         if isinstance(data, list):
+            _playlists_cache["data"] = data
+            _playlists_cache["timestamp"] = now
             return data
         return []
     except Exception as e:
@@ -44,6 +54,8 @@ def _load_playlists_unlocked(parent_id):
             return []
         data = download_json(fresh_file_id)
         if isinstance(data, list):
+            _playlists_cache["data"] = data
+            _playlists_cache["timestamp"] = now
             return data
         return []
 
@@ -65,6 +77,8 @@ def _save_playlists_unlocked(parent_id, playlists):
         if res and isinstance(res, dict) and res.get("id"):
             global _cached_playlists_file_id
             _cached_playlists_file_id = res.get("id")
+        _playlists_cache["data"] = playlists
+        _playlists_cache["timestamp"] = datetime.datetime.utcnow().timestamp()
         return res
     except Exception as e:
         logger.warning(f"Failed to upload playlists.json with ID {playlists_file_id}: {e}. Retrying with fresh lookup...")
@@ -72,7 +86,14 @@ def _save_playlists_unlocked(parent_id, playlists):
         res = upload_json(fresh_file_id, playlists, "playlists.json", parent_id=parent_id)
         if res and isinstance(res, dict) and res.get("id"):
             _cached_playlists_file_id = res.get("id")
+        _playlists_cache["data"] = playlists
+        _playlists_cache["timestamp"] = datetime.datetime.utcnow().timestamp()
         return res
+
+def invalidate_playlists_cache():
+    global _playlists_cache
+    _playlists_cache["data"] = None
+    _playlists_cache["timestamp"] = 0
 
 def load_playlists():
     """
@@ -214,11 +235,11 @@ def add_track_to_playlist(playlist_id, drive_file_id):
 import time
 
 _db_cache = {"data": None, "timestamp": 0}
-CACHE_TTL_SECONDS = 30
+CACHE_TTL_SECONDS = 60
 
 def get_database_cached(db_file_id=None):
     """
-    Returns database.json data, caching it in memory for CACHE_TTL_SECONDS (30s)
+    Returns database.json data, caching it in memory for CACHE_TTL_SECONDS (60s)
     to prevent hammering Google Drive under concurrent playlist reads.
     """
     global _db_cache
@@ -240,7 +261,7 @@ def invalidate_db_cache():
     _db_cache["data"] = None
     _db_cache["timestamp"] = 0
 
-def get_playlist(playlist_id):
+def get_playlist(playlist_id, db_data=None):
     """
     Returns a single playlist with full track objects populated by
     cross-referencing track_ids against database.json tracks.
@@ -256,18 +277,24 @@ def get_playlist(playlist_id):
     if target_playlist is None:
         return None
         
-    db_file_id, parent_id = get_db_file_id()
     all_tracks = []
-    if db_file_id:
-        try:
-            db_data = get_database_cached(db_file_id)
-            if isinstance(db_data, list):
-                all_tracks = db_data
-            elif isinstance(db_data, dict) and 'tracks' in db_data:
-                all_tracks = db_data['tracks']
-        except Exception as e:
-            logger.error(f"Failed to load database.json: {e}")
-            raise
+    if db_data is not None:
+        if isinstance(db_data, list):
+            all_tracks = db_data
+        elif isinstance(db_data, dict) and 'tracks' in db_data:
+            all_tracks = db_data['tracks']
+    else:
+        db_file_id, parent_id = get_db_file_id()
+        if db_file_id:
+            try:
+                cached_data = get_database_cached(db_file_id)
+                if isinstance(cached_data, list):
+                    all_tracks = cached_data
+                elif isinstance(cached_data, dict) and 'tracks' in cached_data:
+                    all_tracks = cached_data['tracks']
+            except Exception as e:
+                logger.error(f"Failed to load database.json: {e}")
+                raise
             
     track_map = {}
     for t in all_tracks:
