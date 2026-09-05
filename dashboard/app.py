@@ -50,6 +50,7 @@ from dashboard.import_queue import (
     get_import_job,
     set_import_job_result,
 )
+from scraper.alerting import send_alert
 import ctypes
 import threading
 import datetime
@@ -134,6 +135,51 @@ def require_worker_auth(func):
         if not secrets.compare_digest(supplied_token, expected_token):
             return jsonify({"error": "Unauthorized"}), 401
         return func(*args, **kwargs)
+    return wrapper
+
+
+def is_production_environment():
+    """
+    Detect whether the application is running in a production environment (Render).
+    Render automatically populates RENDER=true and RENDER_SERVICE_ID in service environments.
+    Locally, these variables are absent, indicating local execution.
+    """
+    return bool(
+        (os.environ.get("RENDER") and os.environ.get("RENDER").lower() not in ("false", "0", ""))
+        or os.environ.get("RENDER_SERVICE_ID")
+        or os.environ.get("RENDER_INSTANCE_ID")
+    )
+
+
+def require_admin_auth(func):
+    """
+    HTTP Basic Auth gate specifically for HTML admin pages (/admin, /gemini-backfill, /imported-playlists).
+    In local development (non-production, indicated by absence of Render environment variables),
+    admin routes are freely accessible with no authentication prompts.
+    In production (Render), validates against the ADMIN_PASSWORD environment variable (fail-closed).
+    """
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        if not is_production_environment():
+            return func(*args, **kwargs)
+
+        admin_password = os.environ.get("ADMIN_PASSWORD")
+        if not admin_password:
+            return Response(
+                "Admin access is not configured. Please set ADMIN_PASSWORD.",
+                401,
+                {"WWW-Authenticate": 'Basic realm="Wavify Admin"'}
+            )
+        auth = request.authorization
+        if auth:
+            supplied = auth.password or auth.username or ""
+            if secrets.compare_digest(supplied, admin_password):
+                return func(*args, **kwargs)
+        return Response(
+            "Unauthorized: Valid admin credentials required.",
+            401,
+            {"WWW-Authenticate": 'Basic realm="Wavify Admin"'}
+        )
     return wrapper
 
 import time
@@ -801,18 +847,37 @@ def get_db_file_id():
     db_file_id_cache = db_file_id
     return db_file_id
 
-@app.route('/')
+
+@app.route('/', methods=['GET', 'HEAD'])
 def index():
     """
-    GET / — serves the main dashboard page
+    GET / — serves the public read-only library browser
+    HEAD / — fast 200 response for cold start wake-up (e.g. Android app)
     """
+    if request.method == 'HEAD':
+        return ('', 200)
     try:
         return render_template('index.html')
     except Exception as e:
         logger.error(f"Error rendering index.html: {e}", exc_info=True)
         return f"Error loading page: {str(e)}", 500
 
+
+@app.route('/admin')
+@require_admin_auth
+def admin_page():
+    """
+    GET /admin — serves the full admin control center (Downloader, Storage, Logs, Settings, etc.)
+    """
+    try:
+        return render_template('admin.html')
+    except Exception as e:
+        logger.error(f"Error rendering admin.html: {e}", exc_info=True)
+        return f"Error loading admin page: {str(e)}", 500
+
+
 @app.route('/gemini-backfill')
+@require_admin_auth
 def gemini_backfill_page():
     """
     GET /gemini-backfill — serves the Gemini AI Backfill monitor page
@@ -823,7 +888,9 @@ def gemini_backfill_page():
         logger.error(f"Error rendering gemini_backfill.html: {e}", exc_info=True)
         return f"Error loading page: {str(e)}", 500
 
+
 @app.route('/imported-playlists')
+@require_admin_auth
 def imported_playlists_page():
     """
     GET /imported-playlists - serves the imported playlists browser page.
@@ -3054,6 +3121,59 @@ def ping():
         "status": "alive",
         "timestamp": datetime.datetime.utcnow().isoformat() + 'Z'
     })
+
+
+@app.route('/api/tools/test-alert', methods=['POST'])
+@require_write_auth()
+def test_discord_alert():
+    body = request.json or {}
+    msg = body.get("message", "This is a test notification from Cloud Music Player.")
+    title = body.get("title", "Test Alert")
+    level = body.get("level", "info")
+    webhook_configured = bool(os.environ.get("DISCORD_ALERT_WEBHOOK_URL"))
+    sent = send_alert(title, msg, level=level)
+    return jsonify({
+        "status": "ok",
+        "webhook_configured": webhook_configured,
+        "sent": sent,
+        "message": "Alert sent successfully" if sent else ("Webhook URL not configured" if not webhook_configured else "Failed to send alert")
+    })
+
+
+@app.errorhandler(500)
+def handle_internal_server_error(e):
+    logger.error(f"Unhandled 500 internal server error on {request.method} {request.path}: {e}", exc_info=True)
+    try:
+        error_msg = str(getattr(e, "original_exception", e))
+        send_alert(
+            f"HTTP 500: {request.method} {request.path}",
+            f"Endpoint: {request.method} {request.path}\nError: {error_msg}",
+            level="error"
+        )
+    except Exception as alert_err:
+        logger.warning(f"Error handler alert failed: {alert_err}")
+    return jsonify({"error": "Internal Server Error"}), 500
+
+
+@app.errorhandler(Exception)
+def handle_unhandled_exception(e):
+    from werkzeug.exceptions import HTTPException
+    if isinstance(e, HTTPException):
+        if e.code == 500:
+            return handle_internal_server_error(e)
+        return jsonify({"error": e.description}), e.code
+
+    logger.error(f"Uncaught exception on {request.method} {request.path}: {e}", exc_info=True)
+    try:
+        send_alert(
+            f"Unhandled Exception: {request.method} {request.path}",
+            f"Endpoint: {request.method} {request.path}\nType: {type(e).__name__}\nError: {e}",
+            level="error"
+        )
+    except Exception as alert_err:
+        logger.warning(f"Error handler alert failed: {alert_err}")
+    return jsonify({"error": "Internal Server Error"}), 500
+
 
 # ==============================================================================
 # APP INTEGRATION ROUTES (PART 1 & 2)

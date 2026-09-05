@@ -26,6 +26,7 @@ from .playlist_manager import (
     find_playlist_by_source_url,
 )
 from .track_utils import extract_tracks, check_playlist_duplicates
+from .alerting import send_alert
 
 logger = logging.getLogger(__name__)
 
@@ -331,6 +332,12 @@ def run_playlist_import(playlist_id, batch_size=15, source_override=None):
                     upload_json(file_id, st, state_filename, parent_id=parent_id)
                 except Exception as write_err:
                     logger.error(f"Failed to write failure state: {write_err}")
+            pl_name = st.get("playlist_name") or playlist_id
+            send_alert(
+                f"Playlist Import Failed: {pl_name}",
+                f"Playlist: {pl_name} (ID: {playlist_id})\nDuration: {dur_str}\nError: {e}",
+                level="error"
+            )
         raise e
 
     try:

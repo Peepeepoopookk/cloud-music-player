@@ -174,8 +174,10 @@ document.addEventListener('DOMContentLoaded', () => {
             storageTotalTracks.textContent = totalCount;
         }
 
+        const hasActions = !!document.querySelector('#tracks-table th.actions-col');
         if (filteredTracks.length === 0) {
-            tracksTableBody.innerHTML = `<tr><td colspan="8" class="table-placeholder">${query ? 'No matching tracks found.' : 'No tracks found. Run the scraper to populate database.'}</td></tr>`;
+            const colCount = hasActions ? 8 : 7;
+            tracksTableBody.innerHTML = `<tr><td colspan="${colCount}" class="table-placeholder">${query ? 'No matching tracks found.' : 'No tracks found.'}</td></tr>`;
             return;
         }
 
@@ -206,6 +208,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 artHtml = `<div class="track-art-placeholder">🎵</div>`;
             }
 
+            const actionsHtml = hasActions ? `
+                <td class="actions-col">
+                    <button class="btn btn-danger btn-delete-track" data-id="${fileId}" data-title="${escapeHTML(title)}">Delete</button>
+                </td>
+            ` : '';
+
             tr.innerHTML = `
                 <td class="artwork-col">${artHtml}</td>
                 <td><span class="text-muted">${trackNum}</span></td>
@@ -217,9 +225,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <td>${escapeHTML(duration)}</td>
                 <td>${escapeHTML(dateAdded)}</td>
                 <td>${sizeFormatted}</td>
-                <td class="actions-col">
-                    <button class="btn btn-danger btn-delete-track" data-id="${fileId}" data-title="${escapeHTML(title)}">Delete</button>
-                </td>
+                ${actionsHtml}
             `;
             tracksTableBody.appendChild(tr);
         });
@@ -2457,13 +2463,17 @@ document.addEventListener('DOMContentLoaded', () => {
     // Bootstrap app state
     checkConnection();
     loadTracks(true); // First load shows loader
-    loadStorage();
-    loadPlaylistLogs();
-    loadBackfillStatus();
     
-    // Initialize unified global polling
-    pollBackgroundStatus();
-    setInterval(pollBackgroundStatus, 5000);
+    // Only initialize admin background tasks & polling if admin sections are present
+    if (document.getElementById('section-downloader') || document.getElementById('section-storage')) {
+        loadStorage();
+        loadPlaylistLogs();
+        loadBackfillStatus();
+        
+        // Initialize unified global polling
+        pollBackgroundStatus();
+        setInterval(pollBackgroundStatus, 5000);
+    }
 
     // ==========================================
     // ARTISTS TAB LOGIC

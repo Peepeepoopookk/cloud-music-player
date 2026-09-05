@@ -52,6 +52,7 @@ from scraper.lyrics_resolver import resolve_lyrics_with_details
 from scraper.metadata_enricher import detect_script_mixing
 from dashboard.drive_client import download_json, upload_json
 from scraper.operation_lock import library_write_lock
+from scraper.alerting import send_alert
 from scraper.state_manager import (
     load_config,
     save_config,
@@ -801,6 +802,11 @@ def run_scraper():
             )
 
         if not bulk_update_database(target_batch):
+            send_alert(
+                "Charts Scraper Database Flush Failed",
+                f"bulk_update_database returned False for {len(target_batch)} pending tracks ({reason}).",
+                level="error"
+            )
             raise RuntimeError("bulk_update_database returned False during scraper Gemini import flush")
 
         timestamp = datetime.datetime.utcnow().isoformat() + 'Z'
